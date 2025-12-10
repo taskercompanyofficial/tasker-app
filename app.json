@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "tasker",
-    "slug": "tasker",
+    "name": "Tasker Company",
+    "slug": "tasker-company",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "tasker",
+    "scheme": "tasker-company",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -38,7 +38,9 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "expo-secure-store",
+      "expo-maps"
     ],
     "experiments": {
       "typedRoutes": true,
