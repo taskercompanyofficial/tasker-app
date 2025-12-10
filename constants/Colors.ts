@@ -1,7 +1,7 @@
 // Modern color palette with rose theme
 const Colors = {
   primary: {
-    main: "#F43F5E", // Rose
+    main: "#f43f3fff", // Rose
     light: "#FB7185",
     dark: "#E11D48",
   },

@@ -7,7 +7,7 @@ import useForm from '@/hooks/use-form'
 import { OTP_URL, OTP_VERIFY_URL } from '@/lib/api-endpoints'
 import { Ionicons } from '@expo/vector-icons'
 import React, { useEffect, useRef, useState } from 'react'
-import { Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native'
 import Toast from 'react-native-toast-message'
 type Step = 'phone' | 'otp' | 'success'
 
@@ -77,7 +77,11 @@ export default function Signin() {
             >
                 <View style={styles.header}>
                     <View style={styles.logoContainer}>
-                        <Ionicons name="checkmark-circle" size={50} color={Colors.primary.main} />
+                        <Image
+                            source={require('@/assets/images/signin-illustration.png')}
+                            style={styles.illustration}
+                            resizeMode="contain"
+                        />
                     </View>
                     <Text style={styles.title}>Welcome to Tasker</Text>
                     <Text style={styles.subtitle}>
@@ -265,5 +269,9 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         lineHeight: 20,
         maxWidth: 280,
+    },
+    illustration: {
+        width: 200,
+        height: 200,
     },
 })

@@ -6,20 +6,32 @@ import { useSession } from '@/context/ctx'
 import Colors from '@/constants/Colors'
 import { Spacing } from '@/constants/Styles'
 import { router } from 'expo-router'
+import NotificationBell from '@/components/common/NotificationBell'
+import AlertModal from '@/components/common/AlertModal'
+
+type SettingItem = {
+    icon: string
+    label: string
+    onPress?: () => void
+    toggle?: boolean
+    value?: boolean | string
+    onToggle?: (value: boolean) => void
+}
 
 export default function Settings() {
     const { signOut, session } = useSession()
     const [notifications, setNotifications] = useState(true)
     const [locationServices, setLocationServices] = useState(true)
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
     const settingsSections = [
         {
             title: 'Account',
             items: [
-                { icon: 'person', label: 'Edit Profile', onPress: () => { } },
-                { icon: 'location', label: 'Manage Addresses', onPress: () => { } },
+                { icon: 'person', label: 'Edit Profile', onPress: () => router.push('/profile/edit') },
+                { icon: 'location', label: 'Manage Addresses', onPress: () => router.push('/profile/addresses') },
                 { icon: 'card', label: 'Payment Methods', onPress: () => { } },
-            ],
+            ] as SettingItem[],
         },
         {
             title: 'Preferences',
@@ -27,15 +39,15 @@ export default function Settings() {
                 { icon: 'notifications', label: 'Notifications', toggle: true, value: notifications, onToggle: setNotifications },
                 { icon: 'navigate', label: 'Location Services', toggle: true, value: locationServices, onToggle: setLocationServices },
                 { icon: 'language', label: 'Language', onPress: () => { }, value: 'English' },
-            ],
+            ] as SettingItem[],
         },
         {
             title: 'Support',
             items: [
                 { icon: 'help-circle', label: 'Help Center', onPress: () => { } },
-                { icon: 'chatbubble', label: 'Contact Us', onPress: () => { } },
+                { icon: 'chatbubble', label: 'Contact Us', onPress: () => router.push('/contact-us') },
                 { icon: 'document-text', label: 'Terms & Privacy', onPress: () => { } },
-            ],
+            ] as SettingItem[],
         },
     ]
 
@@ -48,6 +60,7 @@ export default function Settings() {
         <SafeAreaView style={styles.container} edges={['top']}>
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Settings</Text>
+                <NotificationBell />
             </View>
 
             <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -62,7 +75,10 @@ export default function Settings() {
                         <Text style={styles.profileName}>{session.user?.name || 'User'}</Text>
                         <Text style={styles.profileEmail}>{session.user?.email || session.user?.phone}</Text>
                     </View>
-                    <TouchableOpacity style={styles.editButton}>
+                    <TouchableOpacity
+                        style={styles.editButton}
+                        onPress={() => router.push('/profile/edit')}
+                    >
                         <Ionicons name="create" size={18} color={Colors.primary.main} />
                     </TouchableOpacity>
                 </View>
@@ -92,14 +108,14 @@ export default function Settings() {
                                     <View style={styles.settingRight}>
                                         {item.toggle ? (
                                             <Switch
-                                                value={item.value}
+                                                value={typeof item.value === 'boolean' ? item.value : false}
                                                 onValueChange={item.onToggle}
                                                 trackColor={{ false: Colors.neutral.gray[300], true: Colors.primary.main + '50' }}
                                                 thumbColor={item.value ? Colors.primary.main : Colors.neutral.white}
                                             />
                                         ) : (
                                             <>
-                                                {item.value && <Text style={styles.settingValue}>{item.value}</Text>}
+                                                {item.value && typeof item.value === 'string' && <Text style={styles.settingValue}>{item.value}</Text>}
                                                 <Ionicons name="chevron-forward" size={18} color={Colors.text.tertiary} />
                                             </>
                                         )}
@@ -111,7 +127,7 @@ export default function Settings() {
                 ))}
 
                 {/* Sign Out Button */}
-                <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+                <TouchableOpacity style={styles.signOutButton} onPress={() => setShowLogoutConfirm(true)}>
                     <Ionicons name="log-out" size={20} color="#EF4444" />
                     <Text style={styles.signOutText}>Sign Out</Text>
                 </TouchableOpacity>
@@ -119,6 +135,23 @@ export default function Settings() {
                 {/* App Version */}
                 <Text style={styles.versionText}>Version 1.0.0</Text>
             </ScrollView>
+
+            {/* Logout Confirmation Modal */}
+            <AlertModal
+                visible={showLogoutConfirm}
+                type="warning"
+                title="Sign Out"
+                message="Are you sure you want to sign out?"
+                onClose={() => setShowLogoutConfirm(false)}
+                primaryButton={{
+                    text: 'Sign Out',
+                    onPress: handleSignOut,
+                }}
+                secondaryButton={{
+                    text: 'Cancel',
+                    onPress: () => { },
+                }}
+            />
         </SafeAreaView>
     )
 }
@@ -129,6 +162,9 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.neutral.gray[50],
     },
     header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         paddingHorizontal: Spacing.md,
         paddingVertical: Spacing.md,
         backgroundColor: Colors.neutral.white,
@@ -139,6 +175,32 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: '700',
         color: Colors.text.primary,
+    },
+    notificationButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: Colors.neutral.gray[100],
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+    },
+    notificationBadge: {
+        position: 'absolute',
+        top: 6,
+        right: 6,
+        backgroundColor: '#EF4444',
+        borderRadius: 8,
+        minWidth: 16,
+        height: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 4,
+    },
+    notificationBadgeText: {
+        fontSize: 9,
+        fontWeight: '700',
+        color: Colors.neutral.white,
     },
     scrollView: {
         flex: 1,

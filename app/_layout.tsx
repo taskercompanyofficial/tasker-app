@@ -22,24 +22,24 @@ function RootNavigator() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <Stack.Protected guard={!session.isAuthenticated}>
         <Stack.Screen
           name="auth/onboarding"
-          options={{ headerShown: false }}
         />
         <Stack.Screen
           name="auth/sign-in"
-          options={{ headerShown: false }}
         />
       </Stack.Protected>
       <Stack.Protected guard={session.isAuthenticated}>
         <Stack.Screen
-          name="/"
+          name="index"
         />
         <Stack.Screen
-          name="(tabs)/index"
-          options={{ headerShown: false }}
+          name="services/[slug]"
+        />
+        <Stack.Screen
+          name="(tabs)"
         />
       </Stack.Protected>
     </Stack>

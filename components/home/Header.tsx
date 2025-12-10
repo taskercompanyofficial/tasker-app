@@ -7,6 +7,7 @@ import { Spacing } from '@/constants/Styles'
 import AddAddressForm from './AddAddressForm'
 import { ADDRESS_URL } from '@/lib/api-endpoints'
 import myAxios from '@/lib/axios.config'
+import NotificationBell from '../common/NotificationBell'
 
 interface Address {
     id: number
@@ -137,11 +138,7 @@ export default function HomeHeader() {
                         </TouchableOpacity>
                     </View>
                 </View>
-
-                <TouchableOpacity style={styles.notificationButton}>
-                    <Ionicons name="notifications-outline" size={20} color={Colors.text.primary} />
-                    <View style={styles.badge} />
-                </TouchableOpacity>
+                <NotificationBell />
             </View>
 
             {/* Address Bottom Sheet */}

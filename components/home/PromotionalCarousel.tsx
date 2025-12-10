@@ -99,7 +99,7 @@ export default function PromotionalCarousel() {
                 <View style={styles.content}>
                     {/* Icon Container */}
                     <View style={[styles.iconContainer, { backgroundColor: item.accentColor }]}>
-                        <Ionicons name={item.icon as any} size={40} color={item.gradientColors[0]} />
+                        <Ionicons name={item.icon as any} size={32} color={item.gradientColors[0]} />
                     </View>
 
                     {/* Text Content */}
@@ -111,7 +111,7 @@ export default function PromotionalCarousel() {
                     {/* CTA Button */}
                     <View style={[styles.ctaButton, { backgroundColor: item.accentColor }]}>
                         <Text style={[styles.ctaText, { color: item.gradientColors[1] }]}>Book Now</Text>
-                        <Ionicons name="arrow-forward" size={16} color={item.gradientColors[1]} />
+                        <Ionicons name="arrow-forward" size={12} color={item.gradientColors[1]} />
                     </View>
                 </View>
             </LinearGradient>
@@ -159,6 +159,7 @@ export default function PromotionalCarousel() {
 const styles = StyleSheet.create({
     container: {
         marginBottom: Spacing.md,
+        marginTop: Spacing.md
     },
     carouselContent: {
         paddingHorizontal: Spacing.md,
@@ -167,13 +168,13 @@ const styles = StyleSheet.create({
     slide: {
         width: CAROUSEL_WIDTH,
         height: CAROUSEL_HEIGHT,
-        borderRadius: 20,
+        borderRadius: 16,
         overflow: 'hidden',
-        elevation: 4,
+        elevation: 3,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
+        shadowOpacity: 0.12,
+        shadowRadius: 6,
     },
     gradient: {
         flex: 1,
@@ -184,74 +185,75 @@ const styles = StyleSheet.create({
         borderRadius: 999,
     },
     circle1: {
-        width: 120,
-        height: 120,
-        top: -40,
-        right: -30,
+        width: 90,
+        height: 90,
+        top: -30,
+        right: -25,
     },
     circle2: {
-        width: 80,
-        height: 80,
-        bottom: -20,
-        left: -20,
-    },
-    circle3: {
         width: 60,
         height: 60,
-        top: 60,
-        right: 40,
+        bottom: -15,
+        left: -15,
+    },
+    circle3: {
+        width: 45,
+        height: 45,
+        top: 45,
+        right: 30,
     },
     content: {
         flex: 1,
-        padding: Spacing.lg,
-        justifyContent: 'space-between',
-    },
-    iconContainer: {
-        width: 72,
-        height: 72,
-        borderRadius: 16,
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 6,
-    },
-    textContent: {
-        flex: 1,
-        justifyContent: 'center',
-        marginVertical: Spacing.sm,
-    },
-    title: {
-        fontSize: 22,
-        fontWeight: '800',
-        color: Colors.neutral.white,
-        marginBottom: 4,
-        letterSpacing: 0.3,
-    },
-    subtitle: {
-        fontSize: 13,
-        color: Colors.neutral.white,
-        opacity: 0.95,
-        lineHeight: 18,
-    },
-    ctaButton: {
+        padding: Spacing.md,
         flexDirection: 'row',
         alignItems: 'center',
-        alignSelf: 'flex-start',
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 25,
-        gap: 6,
+        gap: Spacing.sm,
+    },
+    iconContainer: {
+        width: 56,
+        height: 56,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.15,
         shadowRadius: 4,
         elevation: 3,
     },
+    textContent: {
+        flex: 1,
+        justifyContent: 'center',
+    },
+    title: {
+        fontSize: 16,
+        fontWeight: '800',
+        color: Colors.neutral.white,
+        marginBottom: 2,
+        letterSpacing: 0.2,
+    },
+    subtitle: {
+        fontSize: 11,
+        color: Colors.neutral.white,
+        opacity: 0.9,
+        lineHeight: 15,
+    },
+    ctaButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        paddingHorizontal: 14,
+        paddingVertical: 7,
+        borderRadius: 20,
+        gap: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.12,
+        shadowRadius: 3,
+        elevation: 2,
+    },
     ctaText: {
-        fontSize: 13,
+        fontSize: 11,
         fontWeight: '700',
     },
     pagination: {

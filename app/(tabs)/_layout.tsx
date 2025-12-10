@@ -48,9 +48,9 @@ export default function TabsLayout() {
                 }}
             />
             <Tabs.Screen
-                name="bookings"
+                name="orders"
                 options={{
-                    title: 'Bookings',
+                    title: 'My Orders',
                     tabBarIcon: ({ color, focused }) => (
                         <Ionicons
                             name={focused ? 'calendar' : 'calendar-outline'}
@@ -61,12 +61,12 @@ export default function TabsLayout() {
                 }}
             />
             <Tabs.Screen
-                name="history"
+                name="services"
                 options={{
-                    title: 'History',
+                    title: 'Services',
                     tabBarIcon: ({ color, focused }) => (
                         <Ionicons
-                            name={focused ? 'time' : 'time-outline'}
+                            name={focused ? 'grid' : 'grid-outline'}
                             size={24}
                             color={color}
                         />

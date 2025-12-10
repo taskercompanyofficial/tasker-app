@@ -12,7 +12,7 @@ export type Service = {
   notes: string;
   status: string;
   category_id: number;
-  parentServices: ParentService[];
+  parent_services: ParentService[];
 };
 
 export type ServiceTable = {

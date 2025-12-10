@@ -40,6 +40,7 @@ const styles = StyleSheet.create({
     },
     content: {
         marginHorizontal: Spacing.md,
+        marginVertical: Spacing.md,
     },
     title: {
         fontSize: 24,

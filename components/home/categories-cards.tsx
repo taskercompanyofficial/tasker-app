@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import React, { useEffect, useState } from 'react'
 import { Dimensions, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import Loader from '../Loader'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 const { width } = Dimensions.get('window')
 const CARD_WIDTH = width * 0.42
@@ -85,9 +87,9 @@ export default function CategoriesCards() {
 
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
-                <Text style={styles.loadingText}>Loading categories...</Text>
-            </View>
+            <SafeAreaView style={styles.container} edges={['top']}>
+                <Loader fullScreen size='small' />
+            </SafeAreaView>
         )
     }
 
@@ -109,6 +111,7 @@ export default function CategoriesCards() {
                 horizontal={false}
                 numColumns={2}
                 showsVerticalScrollIndicator={false}
+                scrollEnabled={false}
                 contentContainerStyle={styles.listContent}
                 columnWrapperStyle={styles.row}
             />
