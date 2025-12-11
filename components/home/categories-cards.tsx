@@ -31,7 +31,6 @@ export default function CategoriesCards() {
     useEffect(() => {
         fetchCategories()
     }, [])
-
     const renderCategoryCard = ({ item }: { item: Category }) => {
         const imageUrl = item.image ? `${BACKEND_URL}/storage/${item.image}` : null
         const tagCount = Array.isArray(item.tags) ? item.tags.length : 0
@@ -92,16 +91,6 @@ export default function CategoriesCards() {
             </SafeAreaView>
         )
     }
-
-    if (categories.length === 0) {
-        return (
-            <View style={styles.emptyContainer}>
-                <Ionicons name="grid-outline" size={48} color={Colors.text.tertiary} />
-                <Text style={styles.emptyText}>No categories available</Text>
-            </View>
-        )
-    }
-
     return (
         <View style={styles.container}>
             <FlatList
@@ -114,6 +103,10 @@ export default function CategoriesCards() {
                 scrollEnabled={false}
                 contentContainerStyle={styles.listContent}
                 columnWrapperStyle={styles.row}
+                ListEmptyComponent={<View style={styles.emptyContainer}>
+                    <Ionicons name="grid-outline" size={48} color={Colors.text.tertiary} />
+                    <Text style={styles.emptyText}>No categories available</Text>
+                </View>}
             />
         </View>
     )
@@ -122,6 +115,8 @@ export default function CategoriesCards() {
 const styles = StyleSheet.create({
     container: {
         marginTop: Spacing.md,
+        flex: 1,
+        height: '100%',
     },
     listContent: {
         paddingHorizontal: Spacing.md,

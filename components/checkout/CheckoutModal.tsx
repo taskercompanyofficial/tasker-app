@@ -1,4 +1,4 @@
-import AddAddressForm from '@/components/home/AddAddressForm'
+import AddressSelector from '@/components/AddressSelector'
 import OrderSuccessModal from '@/components/orders/OrderSuccessModal'
 import Colors from '@/constants/Colors'
 import { Spacing } from '@/constants/Styles'
@@ -22,6 +22,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native'
+import AddAddressForm from '../home/AddAddressForm'
 
 interface CheckoutItem {
     serviceId: number
@@ -228,62 +229,10 @@ export default function CheckoutModal({ visible, onClose, items, totalAmount }: 
                             {/* Address Selection */}
                             <View style={styles.section}>
                                 <Text style={styles.sectionTitle}>Service Address</Text>
-                                {addresses.length > 0 ? (
-                                    <>
-                                        {addresses.map((address) => (
-                                            <TouchableOpacity
-                                                key={address.id}
-                                                style={[
-                                                    styles.addressCard,
-                                                    selectedAddress === address.id && styles.addressCardSelected
-                                                ]}
-                                                onPress={() => setSelectedAddress(address.id)}
-                                            >
-                                                <View style={styles.addressHeader}>
-                                                    <View style={styles.addressLabelContainer}>
-                                                        <Ionicons
-                                                            name={address.address_type === 'home' ? 'home' : address.address_type === 'office' ? 'briefcase' : 'location'}
-                                                            size={16}
-                                                            color={selectedAddress === address.id ? Colors.primary.main : Colors.text.secondary}
-                                                        />
-                                                        <Text style={[
-                                                            styles.addressLabel,
-                                                            selectedAddress === address.id && styles.addressLabelSelected
-                                                        ]}>
-                                                            {address.address_type.charAt(0).toUpperCase() + address.address_type.slice(1)}
-                                                        </Text>
-                                                    </View>
-                                                    <View style={[
-                                                        styles.radioButton,
-                                                        selectedAddress === address.id && styles.radioButtonSelected
-                                                    ]}>
-                                                        {selectedAddress === address.id && (
-                                                            <View style={styles.radioButtonInner} />
-                                                        )}
-                                                    </View>
-                                                </View>
-                                                <Text style={styles.addressText}>{address.address_line_1}</Text>
-                                                <Text style={styles.addressText}>{address.city}, {address.state} {address.zip_code}</Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                        <TouchableOpacity
-                                            style={styles.addAddressButton}
-                                            onPress={() => setShowAddressForm(true)}
-                                        >
-                                            <Ionicons name="add-circle" size={16} color={Colors.primary.main} />
-                                            <Text style={styles.addAddressText}>Add New Address</Text>
-                                        </TouchableOpacity>
-                                    </>
-                                ) : (
-                                    <TouchableOpacity
-                                        style={styles.emptyAddressButton}
-                                        onPress={() => setShowAddressForm(true)}
-                                    >
-                                        <Ionicons name="location-outline" size={32} color={Colors.text.tertiary} />
-                                        <Text style={styles.emptyAddressText}>No addresses found</Text>
-                                        <Text style={styles.addAddressText}>Add New Address</Text>
-                                    </TouchableOpacity>
-                                )}
+                                <AddressSelector
+                                    selectedAddressId={selectedAddress}
+                                    onSelectAddress={(addressId) => setSelectedAddress(addressId)}
+                                />
                             </View>
 
                             {/* Schedule */}

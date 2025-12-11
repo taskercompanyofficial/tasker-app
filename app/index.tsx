@@ -1,5 +1,7 @@
 import CategoriesCards from '@/components/home/categories-cards'
 import HomeHeader from '@/components/home/Header'
+import IndustrialServicesCard from '@/components/home/industrial-servies-card'
+import FreeInstallationCard from '@/components/home/free-installation-card'
 import Colors from '@/constants/Colors'
 import { Spacing } from '@/constants/Styles'
 import React from 'react'
@@ -19,9 +21,9 @@ export default function LandingPage() {
                     <Text style={styles.title}>Welcome to Tasker Company</Text>
                     <Text style={styles.subtitle}>Choose a service to get started</Text>
                 </View>
-
-                {/* Categories Grid */}
                 <CategoriesCards />
+                <FreeInstallationCard />
+                <IndustrialServicesCard />
             </ScrollView>
         </SafeAreaView>
     )
@@ -30,7 +32,7 @@ export default function LandingPage() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.neutral.gray[50],
+        backgroundColor: "#ffffff",
     },
     scrollView: {
         flex: 1,
@@ -45,7 +47,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 24,
         fontWeight: '700',
-        color: Colors.text.primary,
+        color: "#000000",
         marginBottom: Spacing.md,
     },
     subtitle: {

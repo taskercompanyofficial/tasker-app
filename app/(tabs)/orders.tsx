@@ -29,23 +29,56 @@ export default function OrdersPage() {
     const [selectedFilter, setSelectedFilter] = useState('all')
     const [showContactModal, setShowContactModal] = useState(false)
 
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1)
+    const [lastPage, setLastPage] = useState(1)
+    const [loadingMore, setLoadingMore] = useState(false)
+
     useFocusEffect(
         useCallback(() => {
-            fetchOrders()
+            // Reset and fetch first page
+            setCurrentPage(1)
+            fetchOrders(1, true)
         }, [])
     )
 
-    const fetchOrders = async () => {
+    const fetchOrders = async (page: number = 1, reset: boolean = false) => {
         try {
-            const res = await myAxios.get(`${ORDER_URL}/my-orders`)
-            const fetchedOrders = res.data.data.data || []
-            setOrders(fetchedOrders)
-            filterOrders(fetchedOrders, selectedFilter)
+            if (reset) {
+                setLoading(true)
+            } else {
+                setLoadingMore(true)
+            }
+
+            const res = await myAxios.get(`${ORDER_URL}/my-orders?page=${page}`)
+            const paginationData = res.data.data
+            const fetchedOrders = paginationData.data || []
+
+            // Update pagination info
+            setCurrentPage(paginationData.current_page)
+            setLastPage(paginationData.last_page)
+
+            // Append or replace orders
+            if (reset) {
+                setOrders(fetchedOrders)
+                filterOrders(fetchedOrders, selectedFilter)
+            } else {
+                const updatedOrders = [...orders, ...fetchedOrders]
+                setOrders(updatedOrders)
+                filterOrders(updatedOrders, selectedFilter)
+            }
         } catch (error) {
             console.error('Failed to fetch orders:', error)
         } finally {
             setLoading(false)
             setRefreshing(false)
+            setLoadingMore(false)
+        }
+    }
+
+    const loadMoreOrders = () => {
+        if (!loadingMore && currentPage < lastPage) {
+            fetchOrders(currentPage + 1, false)
         }
     }
 
@@ -64,7 +97,8 @@ export default function OrdersPage() {
 
     const onRefresh = () => {
         setRefreshing(true)
-        fetchOrders()
+        setCurrentPage(1)
+        fetchOrders(1, true)
     }
 
     const getStatusColor = (status: string) => {
@@ -260,6 +294,25 @@ export default function OrdersPage() {
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
                 }
+                onEndReached={loadMoreOrders}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={() => {
+                    if (loadingMore) {
+                        return (
+                            <View style={styles.loadingMoreContainer}>
+                                <Text style={styles.loadingMoreText}>Loading more orders...</Text>
+                            </View>
+                        )
+                    }
+                    if (currentPage >= lastPage && filteredOrders.length > 0) {
+                        return (
+                            <View style={styles.endOfListContainer}>
+                                <Text style={styles.endOfListText}>No more orders</Text>
+                            </View>
+                        )
+                    }
+                    return null
+                }}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
                         <Ionicons name="receipt-outline" size={64} color={Colors.text.tertiary} />
@@ -514,4 +567,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: Spacing.md,
     },
+
+    loadingMoreContainer: {
+        paddingVertical: Spacing.md,
+        alignItems: 'center',
+    },
+    loadingMoreText: {
+        fontSize: 14,
+        color: Colors.text.secondary,
+    },
+    endOfListContainer: {
+        paddingVertical: Spacing.md,
+        alignItems: 'center',
+    },
+    endOfListText: {
+        fontSize: 14,
+        color: Colors.text.tertiary,
+    },
+
 })

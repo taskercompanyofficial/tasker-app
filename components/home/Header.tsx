@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList, Pressable } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
-import { useSession } from '@/context/ctx'
 import Colors from '@/constants/Colors'
 import { Spacing } from '@/constants/Styles'
-import AddAddressForm from './AddAddressForm'
+import { useSession } from '@/context/ctx'
 import { ADDRESS_URL } from '@/lib/api-endpoints'
 import myAxios from '@/lib/axios.config'
+import { Ionicons } from '@expo/vector-icons'
+import { Image } from 'expo-image'
+import React, { useEffect, useState } from 'react'
+import { FlatList, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import NotificationBell from '../common/NotificationBell'
+import AddAddressForm from './AddAddressForm'
 
 interface Address {
     id: number
@@ -118,9 +119,16 @@ export default function HomeHeader() {
             <View style={styles.container}>
                 <View style={styles.leftSection}>
                     {/* User Avatar */}
-                    <View style={styles.avatar}>
-                        <Text style={styles.avatarText}>{userInitials}</Text>
-                    </View>
+                    {session.user?.avatar_url ? (
+                        <Image source={{ uri: session.user.avatar_url }} style={styles.avatarImage} />
+                    ) : (
+                        <View style={styles.avatar}>
+                            <Text style={styles.avatarText}>
+                                {session.user?.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U'}
+
+                            </Text>
+                        </View>
+                    )}
 
                     {/* User Info */}
                     <View style={styles.userInfo}>
@@ -226,6 +234,11 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.primary.main,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    avatarImage: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
     },
     avatarText: {
         fontSize: 13,

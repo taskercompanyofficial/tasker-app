@@ -1,19 +1,26 @@
 import AlertModal from '@/components/common/AlertModal'
-import Loader from '@/components/Loader'
+import Input from '@/components/Input'
 import Colors from '@/constants/Colors'
 import { Spacing } from '@/constants/Styles'
 import { useSession } from '@/context/ctx'
-import { useForm } from '@/hooks/useForm'
-import myAxios from '@/lib/axios.config'
+import useForm from '@/hooks/use-form'
+import { APP_URL } from '@/lib/api-endpoints'
 import { Ionicons } from '@expo/vector-icons'
+import * as ImagePicker from 'expo-image-picker'
 import { router } from 'expo-router'
 import React, { useState } from 'react'
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+interface ProfileForm {
+    name: string
+    email: string
+    avatar?: File | null
+}
+
 export default function EditProfilePage() {
-    const { session } = useSession()
-    const [saving, setSaving] = useState(false)
+    const { session, refetchUser } = useSession()
+    const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null)
     const [alertModal, setAlertModal] = useState({
         visible: false,
         type: 'success' as 'success' | 'error',
@@ -21,37 +28,81 @@ export default function EditProfilePage() {
         message: '',
     })
 
-    const { formData, handleChange, handleSubmit, loading } = useForm({
-        initialValues: {
-            name: session.user?.name || '',
-            email: session.user?.email || '',
-            phone: session.user?.phone || '',
-        },
-        onSubmit: async (values) => {
-            setSaving(true)
-            try {
-                const response = await myAxios.post('/auth/update', values)
+    const { data, setData, errors, processing, post } = useForm<ProfileForm>({
+        name: session.user?.name || '',
+        email: session.user?.email || '',
+        avatar: null,
+    })
 
-                if (response.data.status === 'success') {
-                    setAlertModal({
-                        visible: true,
-                        type: 'success',
-                        title: 'Success',
-                        message: 'Profile updated successfully!',
-                    })
-                }
-            } catch (error: any) {
+    const pickImage = async () => {
+        // Request permission
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+
+        if (status !== 'granted') {
+            setAlertModal({
+                visible: true,
+                type: 'error',
+                title: 'Permission Denied',
+                message: 'Sorry, we need camera roll permissions to change your profile picture.',
+            })
+            return
+        }
+
+        // Pick image
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+        })
+
+        if (!result.canceled && result.assets[0]) {
+            const asset = result.assets[0]
+            const uri = asset.uri
+            setSelectedImageUri(uri)
+
+            // Create file object for upload - React Native style
+            const filename = uri.split('/').pop() || 'avatar.jpg'
+            const match = /\.(\w+)$/.exec(filename)
+            const type = match ? `image/${match[1]}` : 'image/jpeg'
+
+            const file = {
+                uri,
+                name: filename,
+                type,
+            } as any
+
+            setData('avatar', file)
+        }
+    }
+
+    const handleSubmit = () => {
+        post(`${APP_URL}/auth/update`, {
+            onSuccess: async (response) => {
+                // Refetch user data to update context
+                await refetchUser()
+
+                setAlertModal({
+                    visible: true,
+                    type: 'success',
+                    title: 'Success',
+                    message: response.message || 'Profile updated successfully!',
+                })
+                // Reset selected image after successful upload
+                setSelectedImageUri(null)
+            },
+            onError: (error) => {
                 setAlertModal({
                     visible: true,
                     type: 'error',
                     title: 'Error',
-                    message: error.response?.data?.message || 'Failed to update profile',
+                    message: error.message,
                 })
-            } finally {
-                setSaving(false)
             }
-        },
-    })
+        })
+    }
+
+    const displayImage = selectedImageUri || (session.user?.avatar_url)
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
@@ -68,12 +119,17 @@ export default function EditProfilePage() {
                 {/* Avatar Section */}
                 <View style={styles.avatarSection}>
                     <View style={styles.avatarContainer}>
-                        <View style={styles.avatar}>
-                            <Text style={styles.avatarText}>
-                                {formData.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U'}
-                            </Text>
-                        </View>
-                        <TouchableOpacity style={styles.avatarEditButton}>
+                        {displayImage ? (
+                            <Image source={{ uri: displayImage }} style={styles.avatarImage} />
+                        ) : (
+                            <View style={styles.avatar}>
+                                <Text style={styles.avatarText}>
+                                    {data.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U'}
+
+                                </Text>
+                            </View>
+                        )}
+                        <TouchableOpacity style={styles.avatarEditButton} onPress={pickImage}>
                             <Ionicons name="camera" size={16} color={Colors.neutral.white} />
                         </TouchableOpacity>
                     </View>
@@ -82,64 +138,36 @@ export default function EditProfilePage() {
 
                 {/* Form Fields */}
                 <View style={styles.formSection}>
-                    {/* Name */}
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Full Name</Text>
-                        <View style={styles.inputContainer}>
-                            <Ionicons name="person-outline" size={20} color={Colors.text.tertiary} />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Enter your name"
-                                placeholderTextColor={Colors.text.tertiary}
-                                value={formData.name}
-                                onChangeText={(text) => handleChange('name', text)}
-                            />
-                        </View>
-                    </View>
+                    <Input
+                        label="Full Name"
+                        placeholder="Enter your name"
+                        value={data.name}
+                        onChangeText={(text) => setData('name', text)}
+                        error={errors.name}
+                        leftIcon={<Ionicons name="person-outline" size={20} color={Colors.text.tertiary} />}
+                    />
 
-                    {/* Email */}
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Email Address</Text>
-                        <View style={styles.inputContainer}>
-                            <Ionicons name="mail-outline" size={20} color={Colors.text.tertiary} />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Enter your email"
-                                placeholderTextColor={Colors.text.tertiary}
-                                value={formData.email}
-                                onChangeText={(text) => handleChange('email', text)}
-                                keyboardType="email-address"
-                                autoCapitalize="none"
-                            />
-                        </View>
-                    </View>
-
-                    {/* Phone */}
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Phone Number</Text>
-                        <View style={styles.inputContainer}>
-                            <Ionicons name="call-outline" size={20} color={Colors.text.tertiary} />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Enter your phone"
-                                placeholderTextColor={Colors.text.tertiary}
-                                value={formData.phone}
-                                onChangeText={(text) => handleChange('phone', text)}
-                                keyboardType="phone-pad"
-                            />
-                        </View>
-                    </View>
+                    <Input
+                        label="Email Address"
+                        placeholder="Enter your email"
+                        value={data.email}
+                        onChangeText={(text) => setData('email', text)}
+                        error={errors.email}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        leftIcon={<Ionicons name="mail-outline" size={20} color={Colors.text.tertiary} />}
+                    />
                 </View>
 
                 {/* Save Button */}
                 <View style={styles.buttonSection}>
                     <TouchableOpacity
-                        style={[styles.saveButton, (loading || saving) && styles.saveButtonDisabled]}
+                        style={[styles.saveButton, processing && styles.saveButtonDisabled]}
                         onPress={handleSubmit}
-                        disabled={loading || saving}
+                        disabled={processing}
                     >
                         <Text style={styles.saveButtonText}>
-                            {loading || saving ? 'Saving...' : 'Save Changes'}
+                            {processing ? 'Saving...' : 'Save Changes'}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -213,6 +241,11 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.primary.main,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    avatarImage: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
     },
     avatarText: {
         fontSize: 36,

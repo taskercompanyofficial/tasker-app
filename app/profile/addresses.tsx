@@ -203,7 +203,6 @@ export default function MyAddressesPage() {
                 }}
                 onSave={handleSaveAddress}
                 customer_id={session.user?.id}
-                editAddress={editingAddress}
             />
         </SafeAreaView>
     )

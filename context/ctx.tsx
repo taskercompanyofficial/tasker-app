@@ -16,10 +16,12 @@ interface Session {
 const AuthContext = createContext<{
   signIn: (token: string) => Promise<void>;
   signOut: () => Promise<void>;
+  refetchUser: () => Promise<void>;
   session: Session;
 }>({
   signIn: async () => { },
   signOut: async () => { },
+  refetchUser: async () => { },
   session: { isLoading: true, token: null, isAuthenticated: false, user: null },
 });
 
@@ -84,7 +86,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
     }
   };
 
-  const signIn = async (token: string) => {
+  const signIn = async (token: string,) => {
     const userData = await fetchUser(token);
     await SecureStore.setItemAsync(TOKEN_KEY, token);
     setSession({
@@ -105,11 +107,22 @@ export function SessionProvider({ children }: PropsWithChildren) {
     });
   };
 
+  const refetchUser = async () => {
+    if (session.token) {
+      const userData = await fetchUser(session.token);
+      setSession(prev => ({
+        ...prev,
+        user: userData,
+      }));
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
         signIn,
         signOut,
+        refetchUser,
         session,
       }}>
       {children}

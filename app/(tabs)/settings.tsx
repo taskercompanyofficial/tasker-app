@@ -8,6 +8,7 @@ import { Spacing } from '@/constants/Styles'
 import { router } from 'expo-router'
 import NotificationBell from '@/components/common/NotificationBell'
 import AlertModal from '@/components/common/AlertModal'
+import { Image } from 'expo-image'
 
 type SettingItem = {
     icon: string
@@ -67,9 +68,16 @@ export default function Settings() {
                 {/* User Profile Card */}
                 <View style={styles.profileCard}>
                     <View style={styles.avatar}>
-                        <Text style={styles.avatarText}>
-                            {session.user?.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U'}
-                        </Text>
+                        {session.user?.avatar_url ? (
+                            <Image source={{ uri: session.user.avatar_url }} style={styles.avatarImage} />
+                        ) : (
+                            <View style={styles.avatar}>
+                                <Text style={styles.avatarText}>
+                                    {session.user?.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U'}
+
+                                </Text>
+                            </View>
+                        )}
                     </View>
                     <View style={styles.profileInfo}>
                         <Text style={styles.profileName}>{session.user?.name || 'User'}</Text>
@@ -214,6 +222,11 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         borderWidth: 1,
         borderColor: Colors.border.light,
+    },
+    avatarImage: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
     },
     avatar: {
         width: 56,

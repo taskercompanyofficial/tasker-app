@@ -1,8 +1,9 @@
 import Splash from "@/components/splash";
 import { SessionProvider, useSession } from "@/context/ctx";
 import { Stack } from "expo-router";
-import Toast from 'react-native-toast-message';
 import { StatusBar } from 'expo-status-bar';
+import Toast from 'react-native-toast-message';
+
 
 export default function RootLayout() {
   return (
@@ -20,7 +21,6 @@ function RootNavigator() {
   if (session.isLoading) {
     return <Splash />
   }
-
   return (
     <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <Stack.Protected guard={!session.isAuthenticated}>

@@ -48,7 +48,7 @@ export default function Signin() {
     }, [step])
     const handleVerifyOtp = async () => {
         post(OTP_VERIFY_URL, {
-            onSuccess: (response: { message: string, token: string }) => {
+            onSuccess: (response: { message: string, token: string, isNew: boolean }) => {
                 setStep('success')
                 signIn(response.token)
             },

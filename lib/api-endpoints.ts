@@ -1,4 +1,5 @@
-export const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://api.taskercompany.cloud';
+export const BACKEND_URL =
+  process.env.EXPO_PUBLIC_BACKEND_URL || "https://api.taskercompany.cloud";
 export const API_URL = `${BACKEND_URL}/api`;
 export const APP_URL = `${API_URL}/tasker-app`;
 
@@ -19,3 +20,5 @@ export const ADDRESS_URL = `${APP_URL}/address`;
 export const ORDER_URL = `${APP_URL}/orders`;
 export const PARENT_SERVICE_URL = `${APP_URL}/parent-services`;
 export const NOTIFICATION_URL = `${APP_URL}/notifications`;
+export const COMMERCIAL_QUOTE_URL = `${APP_URL}/commercial-quotes`;
+export const FREE_INSTALLATION_URL = `${APP_URL}/free-installations`;

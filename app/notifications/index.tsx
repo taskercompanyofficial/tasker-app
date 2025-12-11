@@ -13,7 +13,8 @@ interface Notification {
     id: number
     title: string
     message: string
-    type: 'order' | 'promotion' | 'system'
+    type: 'order' | 'promotion' | 'system' | 'free_installation'
+    order_id: number | null
     read: boolean
     created_at: string
 }
@@ -63,6 +64,7 @@ export default function NotificationsPage() {
     const getNotificationIcon = (type: string) => {
         switch (type) {
             case 'order': return 'receipt'
+            case 'free_installation': return 'construct'
             case 'promotion': return 'pricetag'
             case 'system': return 'information-circle'
             default: return 'notifications'
@@ -72,6 +74,7 @@ export default function NotificationsPage() {
     const getNotificationColor = (type: string) => {
         switch (type) {
             case 'order': return Colors.primary.main
+            case 'free_installation': return Colors.success
             case 'promotion': return '#10B981'
             case 'system': return '#3B82F6'
             default: return Colors.text.secondary
@@ -98,10 +101,22 @@ export default function NotificationsPage() {
         })
     }
 
+    const handleNotificationPress = async (notification: Notification) => {
+        // Mark as read
+        if (!notification.read) {
+            await markAsRead(notification.id)
+        }
+
+        // Navigate to order if order_id exists
+        if (notification.order_id) {
+            router.push(`/orders/${notification.order_id}`)
+        }
+    }
+
     const renderNotification = ({ item }: { item: Notification }) => (
         <TouchableOpacity
             style={[styles.notificationCard, !item.read && styles.notificationCardUnread]}
-            onPress={() => markAsRead(item.id)}
+            onPress={() => handleNotificationPress(item)}
             activeOpacity={0.7}
         >
             <View style={[styles.iconContainer, { backgroundColor: getNotificationColor(item.type) + '15' }]}>

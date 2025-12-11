@@ -142,24 +142,43 @@ export default function useForm<TForm extends FormDataType>(
     try {
       let submissionData: TForm | FormData = data;
 
-      // Check if any value is a File or an array containing Files
+      // Helper to check if value is a React Native file object
+      const isReactNativeFile = (value: any) => {
+        return (
+          value &&
+          typeof value === "object" &&
+          "uri" in value &&
+          "name" in value &&
+          "type" in value
+        );
+      };
+
+      // Check if any value is a File or React Native file object
       const hasFiles = Object.values(data).some(
         (value) =>
           value instanceof File ||
-          (Array.isArray(value) && value.some((item) => item instanceof File))
+          isReactNativeFile(value) ||
+          (Array.isArray(value) &&
+            value.some(
+              (item) => item instanceof File || isReactNativeFile(item)
+            ))
       );
 
       if (hasFiles) {
         const formData = new FormData();
         for (const [key, value] of Object.entries(data)) {
-          if (value instanceof File) {
-            formData.append(key, value);
+          if (value instanceof File || isReactNativeFile(value)) {
+            formData.append(key, value as any);
           } else if (Array.isArray(value)) {
             // Handle arrays of files
-            if (value.some((item) => item instanceof File)) {
+            if (
+              value.some(
+                (item) => item instanceof File || isReactNativeFile(item)
+              )
+            ) {
               value.forEach((file, index) => {
-                if (file instanceof File) {
-                  formData.append(`${key}[]`, file);
+                if (file instanceof File || isReactNativeFile(file)) {
+                  formData.append(`${key}[]`, file as any);
                 }
               });
             } else {

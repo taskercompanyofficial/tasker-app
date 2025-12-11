@@ -19,7 +19,11 @@ myAxios.interceptors.request.use(
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
         config.headers.Accept = "application/json";
-        config.headers["Content-Type"] = "application/json";
+
+        // Don't override Content-Type if it's already set (e.g., for FormData)
+        if (!config.headers["Content-Type"]) {
+          config.headers["Content-Type"] = "application/json";
+        }
       }
     } catch (error) {
       console.error("Error retrieving token:", error);
