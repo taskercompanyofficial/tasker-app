@@ -13,7 +13,7 @@ export default function IndustrialServicesCard() {
     return (
         <View style={styles.container}>
             <Image
-                source={require('@/assets/images/industrial/factory.png')}
+                source={{ uri: 'https://images.unsplash.com/photo-1565008576549-57569a49371d?w=800&q=80' }}
                 style={styles.backgroundImage}
                 resizeMode="cover"
             />

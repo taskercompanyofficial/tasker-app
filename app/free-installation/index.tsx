@@ -32,9 +32,9 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 const { width } = Dimensions.get('window')
 
 const CAROUSEL_IMAGES = [
-    require('@/assets/images/industrial/factory.png'),
-    require('@/assets/images/industrial/office.png'),
-    require('@/assets/images/industrial/warehouse.png'),
+    { uri: 'https://images.unsplash.com/photo-1565008576549-57569a49371d?w=800&q=80' }, // Factory
+    { uri: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80' }, // Office
+    { uri: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&q=80' }, // Warehouse
 ]
 
 const PRODUCT_TYPES = [
