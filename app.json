@@ -19,7 +19,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.hanjaaji.taskercompany"
+      "package": "com.taskercompany.company"
     },
     "web": {
       "output": "static",
@@ -46,9 +46,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "26641204-ac05-405b-9504-cb98769d66ee"
+        "projectId": "4408fc40-2932-4da5-9fc6-77ea2457a8da"
       }
     },
-    "owner": "hanjaaji"
+    "owner": "tasker-company"
   }
 }
