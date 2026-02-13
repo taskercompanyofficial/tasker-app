@@ -160,7 +160,7 @@ export default function Loader({ size = 'medium', fullScreen = false }: LoaderPr
                     }
                 ]}
             >
-                <Ionicons name="snow" size={sizes.icon} color={Colors.primary.main} />
+                <Ionicons name="snow" size={sizes.icon} color={Colors.themes.customer.primary} />
             </Animated.View>
 
             {/* Pulsing dots at bottom */}
@@ -229,8 +229,8 @@ const styles = StyleSheet.create({
         position: 'absolute',
         borderWidth: 3,
         borderColor: 'transparent',
-        borderTopColor: Colors.primary.main,
-        borderRightColor: Colors.primary.light,
+        borderTopColor: Colors.themes.customer.primary,
+        borderRightColor: Colors.themes.customer.primaryLight,
     },
     circleSegment: {
         width: '100%',
@@ -246,6 +246,6 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     dot: {
-        backgroundColor: Colors.primary.main,
+        backgroundColor: Colors.themes.customer.primary,
     },
 })

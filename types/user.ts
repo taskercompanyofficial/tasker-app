@@ -6,6 +6,6 @@ export type User = {
   role: string;
   avatar_url: string;
   status: string;
-  created_at: Date;
-  updated_at: Date;
+  created_at: string;
+  updated_at: string;
 };

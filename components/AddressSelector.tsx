@@ -83,7 +83,7 @@ export default function AddressSelector({ selectedAddressId, onSelectAddress, er
                                         <Ionicons
                                             name={address.address_type === 'home' ? 'home' : address.address_type === 'office' ? 'briefcase' : 'location'}
                                             size={16}
-                                            color={selectedAddressId === address.id ? Colors.primary.main : Colors.text.secondary}
+                                            color={selectedAddressId === address.id ? Colors.themes.customer.primary : Colors.text.secondary}
                                         />
                                         <Text style={[
                                             styles.addressLabel,
@@ -110,7 +110,7 @@ export default function AddressSelector({ selectedAddressId, onSelectAddress, er
                             style={styles.addAddressButton}
                             onPress={() => setShowAddressForm(true)}
                         >
-                            <Ionicons name="add-circle" size={16} color={Colors.primary.main} />
+                            <Ionicons name="add-circle" size={16} color={Colors.themes.customer.primary} />
                             <Text style={styles.addAddressText}>Add New Address</Text>
                         </TouchableOpacity>
                     </>
@@ -132,6 +132,7 @@ export default function AddressSelector({ selectedAddressId, onSelectAddress, er
                 visible={showAddressForm}
                 onClose={() => setShowAddressForm(false)}
                 onSave={handleSaveAddress}
+                customer_id={session.user?.id}
             />
         </>
     )
@@ -158,8 +159,7 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.neutral.white,
     },
     addressCardSelected: {
-        borderColor: Colors.primary.main,
-        backgroundColor: Colors.primary.light,
+        borderColor: Colors.themes.customer.primary,
     },
     addressHeader: {
         flexDirection: 'row',
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
         textTransform: 'capitalize',
     },
     addressLabelSelected: {
-        color: Colors.primary.main,
+        color: Colors.themes.customer.primary,
     },
     radioButton: {
         width: 20,
@@ -191,13 +191,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     radioButtonSelected: {
-        borderColor: Colors.primary.main,
+        borderColor: Colors.themes.customer.primary,
     },
     radioButtonInner: {
         width: 10,
         height: 10,
         borderRadius: 5,
-        backgroundColor: Colors.primary.main,
+        backgroundColor: Colors.themes.customer.primary,
     },
     addressText: {
         fontSize: 13,
@@ -208,17 +208,16 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        padding: Spacing.sm,
+        padding: Spacing.md,
         borderRadius: 8,
         borderWidth: 1,
         borderStyle: 'dashed',
-        borderColor: Colors.primary.main,
-        backgroundColor: Colors.primary.light,
+        borderColor: Colors.themes.customer.primary,
     },
     addAddressText: {
         fontSize: 13,
         fontWeight: '600',
-        color: Colors.primary.main,
+        color: Colors.themes.customer.primary,
     },
     emptyAddressButton: {
         padding: Spacing.xl,

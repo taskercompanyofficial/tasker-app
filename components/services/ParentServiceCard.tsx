@@ -1,11 +1,12 @@
 import Colors from '@/constants/Colors'
-import { Spacing } from '@/constants/Styles'
+import { Spacing, BorderRadius, Typography } from '@/constants/Styles'
 import getImageUrl from '@/lib/utils'
 import { ParentService } from '@/types/parent-service'
 import { Ionicons } from '@expo/vector-icons'
 import { Image } from 'expo-image'
 import React from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { router } from 'expo-router'
 
 interface ParentServiceCardProps {
     service: ParentService
@@ -32,7 +33,9 @@ export default function ParentServiceCard({ service, quantity, onUpdateQuantity 
             {/* Service Info */}
             <View style={styles.infoSection}>
                 <View style={styles.textContainer}>
-                    <Text style={styles.serviceName}>{service.name}</Text>
+                    <TouchableOpacity onPress={() => service.slug && router.push(`/customer/services/parent/${service.slug}`)}>
+                        <Text style={styles.serviceName}>{service.name}</Text>
+                    </TouchableOpacity>
                     <Text style={styles.description} numberOfLines={1}>
                         {service.description}
                     </Text>
@@ -68,14 +71,14 @@ export default function ParentServiceCard({ service, quantity, onUpdateQuantity 
                             style={styles.quantityButton}
                             onPress={() => onUpdateQuantity(-1)}
                         >
-                            <Ionicons name="remove" size={18} color={Colors.primary.main} />
+                            <Ionicons name="remove" size={18} color={Colors.themes.customer.primary} />
                         </TouchableOpacity>
                         <Text style={styles.quantityText}>{quantity}</Text>
                         <TouchableOpacity
                             style={styles.quantityButton}
                             onPress={() => onUpdateQuantity(1)}
                         >
-                            <Ionicons name="add" size={18} color={Colors.primary.main} />
+                            <Ionicons name="add" size={18} color={Colors.themes.customer.primary} />
                         </TouchableOpacity>
                     </View>
                 )}
@@ -87,19 +90,19 @@ export default function ParentServiceCard({ service, quantity, onUpdateQuantity 
 const styles = StyleSheet.create({
     card: {
         backgroundColor: Colors.neutral.white,
-        borderRadius: 12,
-        padding: Spacing.md,
+        borderRadius: BorderRadius.sm,
+        padding: Spacing.sm,
         marginBottom: Spacing.sm,
         borderWidth: 1,
         borderColor: Colors.border.light,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: Spacing.sm,
+        gap: Spacing.xs,
     },
     serviceImage: {
-        width: 60,
-        height: 60,
-        borderRadius: 10,
+        width: 56,
+        height: 56,
+        borderRadius: BorderRadius.sm,
         backgroundColor: Colors.neutral.gray[100],
     },
     infoSection: {
@@ -109,13 +112,13 @@ const styles = StyleSheet.create({
         marginBottom: Spacing.xs,
     },
     serviceName: {
-        fontSize: 15,
+        fontSize: Typography.sizes.sm,
         fontWeight: '700',
         color: Colors.text.primary,
         marginBottom: 2,
     },
     description: {
-        fontSize: 12,
+        fontSize: Typography.sizes.xs,
         color: Colors.text.secondary,
         lineHeight: 16,
     },
@@ -130,23 +133,23 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     originalPrice: {
-        fontSize: 12,
+        fontSize: Typography.sizes.xs,
         color: Colors.text.tertiary,
         textDecorationLine: 'line-through',
     },
     price: {
-        fontSize: 16,
+        fontSize: Typography.sizes.base,
         fontWeight: '800',
-        color: Colors.primary.main,
+        color: Colors.themes.customer.primary,
     },
     discountBadge: {
         backgroundColor: Colors.success + '15',
         paddingHorizontal: 6,
         paddingVertical: 2,
-        borderRadius: 4,
+        borderRadius: BorderRadius.sm,
     },
     discountText: {
-        fontSize: 10,
+        fontSize: Typography.sizes.xs,
         fontWeight: '700',
         color: Colors.success,
     },
@@ -156,34 +159,34 @@ const styles = StyleSheet.create({
     addButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.primary.main,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 8,
+        backgroundColor: Colors.themes.customer.primary,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: BorderRadius.sm,
         gap: 4,
     },
     addButtonText: {
         color: Colors.neutral.white,
-        fontSize: 13,
+        fontSize: Typography.sizes.xs,
         fontWeight: '700',
     },
     quantitySelector: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: Colors.neutral.gray[100],
-        borderRadius: 8,
+        borderRadius: BorderRadius.sm,
         padding: 2,
     },
     quantityButton: {
-        width: 28,
-        height: 28,
-        borderRadius: 6,
+        width: 24,
+        height: 24,
+        borderRadius: BorderRadius.sm,
         backgroundColor: Colors.neutral.white,
         justifyContent: 'center',
         alignItems: 'center',
     },
     quantityText: {
-        fontSize: 14,
+        fontSize: Typography.sizes.sm,
         fontWeight: '700',
         color: Colors.text.primary,
         marginHorizontal: 12,

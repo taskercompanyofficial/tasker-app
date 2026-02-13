@@ -1,5 +1,5 @@
 import Colors from '@/constants/Colors'
-import { Spacing } from '@/constants/Styles'
+import { Spacing, BorderRadius, Typography } from '@/constants/Styles'
 import { Ionicons } from '@expo/vector-icons'
 import React from 'react'
 import { Alert, Linking, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
@@ -55,7 +55,7 @@ export default function ContactSupportModal({ visible, onClose }: ContactSupport
                     {/* Header */}
                     <View style={styles.header}>
                         <View style={styles.iconContainer}>
-                            <Ionicons name="headset" size={32} color={Colors.primary.main} />
+                            <Ionicons name="headset" size={Typography.sizes.xl} color={Colors.themes.customer.primary} />
                         </View>
                         <Text style={styles.title}>Contact Support</Text>
                         <Text style={styles.subtitle}>How would you like to reach us?</Text>
@@ -64,25 +64,25 @@ export default function ContactSupportModal({ visible, onClose }: ContactSupport
                     {/* Contact Options */}
                     <View style={styles.optionsContainer}>
                         <TouchableOpacity style={styles.optionButton} onPress={handleCall}>
-                            <View style={[styles.optionIcon, { backgroundColor: '#10B98115' }]}>
-                                <Ionicons name="call" size={24} color="#10B981" />
+                            <View style={[styles.optionIcon, { backgroundColor: Colors.success + '15' }]}>
+                                <Ionicons name="call" size={Typography.sizes.lg} color={Colors.success} />
                             </View>
                             <View style={styles.optionContent}>
                                 <Text style={styles.optionTitle}>Phone Call</Text>
                                 <Text style={styles.optionSubtitle}>{PHONE_NUMBER}</Text>
                             </View>
-                            <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
+                            <Ionicons name="chevron-forward" size={Typography.sizes.base} color={Colors.text.tertiary} />
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.optionButton} onPress={handleWhatsApp}>
-                            <View style={[styles.optionIcon, { backgroundColor: '#25D36615' }]}>
-                                <Ionicons name="logo-whatsapp" size={24} color="#25D366" />
+                            <View style={[styles.optionIcon, { backgroundColor: Colors.social.whatsapp + '15' }]}>
+                                <Ionicons name="logo-whatsapp" size={Typography.sizes.lg} color={Colors.social.whatsapp} />
                             </View>
                             <View style={styles.optionContent}>
                                 <Text style={styles.optionTitle}>WhatsApp</Text>
                                 <Text style={styles.optionSubtitle}>Chat with us</Text>
                             </View>
-                            <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
+                            <Ionicons name="chevron-forward" size={Typography.sizes.base} color={Colors.text.tertiary} />
                         </TouchableOpacity>
                     </View>
 
@@ -102,81 +102,81 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0, 0, 0, 0.6)',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: Spacing.lg,
+        padding: Spacing.md,
     },
     container: {
         backgroundColor: Colors.neutral.white,
-        borderRadius: 20,
-        padding: Spacing.xl,
+        borderRadius: BorderRadius.sm,
+        padding: Spacing.md,
         width: '100%',
         maxWidth: 400,
     },
     header: {
         alignItems: 'center',
-        marginBottom: Spacing.lg,
+        marginBottom: Spacing.sm,
     },
     iconContainer: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
-        backgroundColor: Colors.primary.main + '15',
+        width: Spacing.xl * 2,
+        height: Spacing.xl * 2,
+        borderRadius: BorderRadius.sm,
+        backgroundColor: Colors.themes.customer.primary + '15',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: Spacing.md,
+        marginBottom: Spacing.sm,
     },
     title: {
-        fontSize: 22,
+        fontSize: Typography.sizes.lg,
         fontWeight: '800',
         color: Colors.text.primary,
         marginBottom: Spacing.xs,
     },
     subtitle: {
-        fontSize: 14,
+        fontSize: Typography.sizes.sm,
         color: Colors.text.secondary,
         textAlign: 'center',
     },
     optionsContainer: {
-        gap: Spacing.sm,
-        marginBottom: Spacing.lg,
+        gap: Spacing.xs,
+        marginBottom: Spacing.md,
     },
     optionButton: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: Colors.neutral.gray[50],
-        padding: Spacing.md,
-        borderRadius: 12,
+        padding: Spacing.sm,
+        borderRadius: BorderRadius.sm,
         borderWidth: 1,
         borderColor: Colors.border.light,
     },
     optionIcon: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
+        width: Spacing.xl * 2,
+        height: Spacing.xl * 2,
+        borderRadius: BorderRadius.sm,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: Spacing.sm,
+        marginRight: Spacing.xs,
     },
     optionContent: {
         flex: 1,
     },
     optionTitle: {
-        fontSize: 15,
+        fontSize: Typography.sizes.sm,
         fontWeight: '700',
         color: Colors.text.primary,
         marginBottom: 2,
     },
     optionSubtitle: {
-        fontSize: 13,
+        fontSize: Typography.sizes.xs,
         color: Colors.text.secondary,
     },
     closeButton: {
         backgroundColor: Colors.neutral.gray[100],
-        paddingVertical: 14,
-        borderRadius: 12,
+        paddingVertical: Spacing.xs,
+        borderRadius: BorderRadius.sm,
         alignItems: 'center',
     },
     closeButtonText: {
-        fontSize: 15,
+        fontSize: Typography.sizes.sm,
         fontWeight: '700',
         color: Colors.text.primary,
     },

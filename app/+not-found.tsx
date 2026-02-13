@@ -1,71 +1,69 @@
-import { Link, Stack } from 'expo-router'
-import { StyleSheet, Text, View, Image } from 'react-native'
+import { Link, Stack } from "expo-router";
+import { StyleSheet, Text, View, Image } from "react-native";
+import Colors from "@/constants/Colors";
+import { Spacing, BorderRadius, Typography, Shadows } from "@/constants/Styles";
 
 export default function NotFoundScreen() {
   return (
     <>
-      <Stack.Screen options={{ title: 'Oops! Page Not Found' }} />
+      <Stack.Screen options={{ title: "Oops! Page Not Found" }} />
       <View style={styles.container}>
         <Image
-          source={require('@/assets/images/not-found.png')}
+          source={require("@/assets/images/not-found.png")}
           style={styles.image}
           resizeMode="contain"
         />
         <Text style={styles.title}>Page Not Found</Text>
         <Text style={styles.subtitle}>
-          Sorry, we couldn't find the page you're looking for.
+          Sorry, we couldn&apos;t find the page you&apos;re looking for.
         </Text>
 
-        <Link href="/" style={styles.link}>
+        <Link href="/customer" style={styles.link}>
           <Text style={styles.linkText}>Go to Home</Text>
         </Link>
       </View>
     </>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: '#FAFAFA',
+    alignItems: "center",
+    justifyContent: "center",
+    padding: Spacing.md,
+    backgroundColor: Colors.neutral.gray[50],
   },
   image: {
     width: 280,
     height: 200,
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '800',
-    marginBottom: 8,
-    color: '#1F2937',
-    textAlign: 'center',
+    fontSize: Typography.sizes.xxl,
+    fontWeight: Typography.weights.extrabold,
+    marginBottom: Spacing.xs,
+    color: Colors.text.primary,
+    textAlign: "center",
   },
   subtitle: {
-    fontSize: 15,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 32,
+    fontSize: Typography.sizes.sm,
+    color: Colors.text.secondary,
+    textAlign: "center",
+    marginBottom: Spacing.xl,
     lineHeight: 22,
     maxWidth: 300,
   },
   link: {
     paddingVertical: 14,
-    paddingHorizontal: 32,
-    backgroundColor: '#F43F5E',
-    borderRadius: 12,
-    shadowColor: '#F43F5E',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    paddingHorizontal: Spacing.xl,
+    backgroundColor: Colors.themes.customer.primary,
+    borderRadius: BorderRadius.md,
+    ...Shadows.md,
   },
   linkText: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: '700',
+    fontSize: Typography.sizes.base,
+    color: Colors.neutral.white,
+    fontWeight: Typography.weights.bold,
   },
-})
+});

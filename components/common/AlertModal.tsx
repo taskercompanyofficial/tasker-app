@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     primaryButton: {
-        backgroundColor: Colors.primary.main,
+        backgroundColor: Colors.themes.customer.primary,
     },
     primaryButtonText: {
         color: Colors.neutral.white,

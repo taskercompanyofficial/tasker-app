@@ -1,21 +1,23 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { View, Text, StyleSheet, FlatList, Dimensions, Pressable } from 'react-native'
-import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
+import { Image } from 'expo-image'
+import { router } from 'expo-router'
 import Colors from '@/constants/Colors'
-import { Spacing } from '@/constants/Styles'
+import { BorderRadius, Spacing } from '@/constants/Styles'
 
 const { width } = Dimensions.get('window')
-const CAROUSEL_WIDTH = width - (Spacing.md * 2)
-const CAROUSEL_HEIGHT = 140
+const CAROUSEL_WIDTH = width
+const CAROUSEL_HEIGHT = 160
 
 interface CarouselSlide {
     id: string
     title: string
     subtitle: string
     icon: string
-    gradientColors: string[]
+    gradientColors?: string[]
     accentColor: string
+    bgImage?: string
 }
 
 const slides: CarouselSlide[] = [
@@ -24,38 +26,51 @@ const slides: CarouselSlide[] = [
         title: 'Professional Services',
         subtitle: 'Expert technicians at your doorstep',
         icon: 'construct',
-        gradientColors: ['#F43F5E', '#BE123C'],
-        accentColor: '#FFF1F2',
+        accentColor: Colors.background.secondary,
+        bgImage: 'https://hadielectronics.com.pk/wp-content/uploads/2026/01/wa-cover.jpg'
     },
     {
         id: '2',
         title: 'AC Repair & Service',
         subtitle: 'Keep your home cool & comfortable',
         icon: 'snow',
-        gradientColors: ['#3B82F6', '#1E40AF'],
-        accentColor: '#EFF6FF',
+        accentColor: Colors.themes.provider.background,
+        bgImage: 'https://aws-obg-image-lb-3.tcl.com/content/dam/brandsite/global/homepage/banner/team-tcl-pc-4.jpg?t=1761819109917&w=2560&webp=true&dpr=1.5&rendition=2400'
     },
     {
         id: '3',
         title: 'Deep Cleaning',
         subtitle: 'Sparkling clean homes guaranteed',
         icon: 'sparkles',
-        gradientColors: ['#10B981', '#047857'],
-        accentColor: '#ECFDF5',
+        accentColor: Colors.themes.customer.background,
+        bgImage: 'https://global.gree.com/upload/images/2026/1/2c29924cc12b966d.jpg'
     },
     {
         id: '4',
         title: 'Electrical Solutions',
         subtitle: 'Safe & reliable electrical work',
         icon: 'flash',
-        gradientColors: ['#F59E0B', '#D97706'],
-        accentColor: '#FEF3C7',
+        accentColor: Colors.background.tertiary,
+        bgImage: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1600&q=80'
     },
 ]
 
 export default function PromotionalCarousel() {
     const [activeIndex, setActiveIndex] = useState(0)
     const flatListRef = useRef<FlatList>(null)
+    const bgImages = (() => {
+        const raw = process.env.EXPO_PUBLIC_PROMO_BG_IMAGES?.trim()
+        if (!raw) return [] as string[]
+        try {
+            const arr = JSON.parse(raw)
+            if (Array.isArray(arr)) return arr.filter((x) => typeof x === 'string')
+        } catch { }
+        return raw.split(',').map((s) => s.trim()).filter(Boolean)
+    })()
+    const slidesWithBg: CarouselSlide[] = slides.map((s, i) => ({
+        ...s,
+        bgImage: bgImages[i] || s.bgImage,
+    }))
 
     // Auto-scroll carousel
     useEffect(() => {
@@ -84,37 +99,36 @@ export default function PromotionalCarousel() {
     }).current
 
     const renderSlide = ({ item }: { item: CarouselSlide }) => (
-        <Pressable style={styles.slide}>
-            <LinearGradient
-                colors={item.gradientColors as [string, string, ...string[]]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.gradient}
-            >
-                {/* Decorative circles */}
-                <View style={[styles.circle, styles.circle1, { backgroundColor: item.accentColor + '20' }]} />
-                <View style={[styles.circle, styles.circle2, { backgroundColor: item.accentColor + '15' }]} />
-                <View style={[styles.circle, styles.circle3, { backgroundColor: item.accentColor + '10' }]} />
-
-                <View style={styles.content}>
-                    {/* Icon Container */}
-                    <View style={[styles.iconContainer, { backgroundColor: item.accentColor }]}>
-                        <Ionicons name={item.icon as any} size={32} color={item.gradientColors[0]} />
+        <Pressable style={styles.slide} onPress={() => router.push('/customer/(tabs)/services')}>
+            <View style={styles.card}>
+                <View style={[styles.leftBand, { backgroundColor: item.accentColor + '20' }]} />
+                {item.bgImage && (
+                    <Image
+                        source={{ uri: item.bgImage }}
+                        style={styles.bgImage}
+                        contentFit="cover"
+                        transition={200}
+                        cachePolicy="disk"
+                        placeholder={require('@/assets/images/banner-1.png')}
+                        onError={() => {
+                            // fallback to local banner if remote host blocks hotlinking or fails
+                        }}
+                    />
+                )}
+                {/* <View style={styles.content}>
+                    <View style={[styles.iconContainer, { backgroundColor: item.accentColor + '15' }]}>
+                        <Ionicons name={item.icon as any} size={28} color={Colors.neutral.white} />
                     </View>
-
-                    {/* Text Content */}
                     <View style={styles.textContent}>
                         <Text style={styles.title}>{item.title}</Text>
                         <Text style={styles.subtitle}>{item.subtitle}</Text>
                     </View>
-
-                    {/* CTA Button */}
-                    <View style={[styles.ctaButton, { backgroundColor: item.accentColor }]}>
-                        <Text style={[styles.ctaText, { color: item.gradientColors[1] }]}>Book Now</Text>
-                        <Ionicons name="arrow-forward" size={12} color={item.gradientColors[1]} />
+                    <View style={styles.ctaButton}>
+                        <Text style={styles.ctaText}>Book Now</Text>
+                        <Ionicons name="arrow-forward" size={12} color={Colors.neutral.white} />
                     </View>
-                </View>
-            </LinearGradient>
+                </View> */}
+            </View>
         </Pressable>
     )
 
@@ -122,36 +136,22 @@ export default function PromotionalCarousel() {
         <View style={styles.container}>
             <FlatList
                 ref={flatListRef}
-                data={slides}
+                data={slidesWithBg}
                 renderItem={renderSlide}
                 keyExtractor={(item) => item.id}
                 horizontal
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
-                snapToInterval={CAROUSEL_WIDTH + Spacing.sm}
+                snapToInterval={CAROUSEL_WIDTH}
                 decelerationRate="fast"
-                contentContainerStyle={styles.carouselContent}
                 onViewableItemsChanged={onViewableItemsChanged}
                 viewabilityConfig={viewabilityConfig}
                 getItemLayout={(_, index) => ({
-                    length: CAROUSEL_WIDTH + Spacing.sm,
-                    offset: (CAROUSEL_WIDTH + Spacing.sm) * index,
+                    length: CAROUSEL_WIDTH,
+                    offset: CAROUSEL_WIDTH * index,
                     index,
                 })}
             />
-
-            {/* Pagination Dots */}
-            <View style={styles.pagination}>
-                {slides.map((_, index) => (
-                    <View
-                        key={index}
-                        style={[
-                            styles.dot,
-                            index === activeIndex && styles.dotActive,
-                        ]}
-                    />
-                ))}
-            </View>
         </View>
     )
 }
@@ -159,48 +159,41 @@ export default function PromotionalCarousel() {
 const styles = StyleSheet.create({
     container: {
         marginBottom: Spacing.md,
-        marginTop: Spacing.md
-    },
-    carouselContent: {
-        paddingHorizontal: Spacing.md,
-        gap: Spacing.sm,
     },
     slide: {
         width: CAROUSEL_WIDTH,
         height: CAROUSEL_HEIGHT,
-        borderRadius: 16,
         overflow: 'hidden',
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.12,
-        shadowRadius: 6,
     },
-    gradient: {
+    card: {
         flex: 1,
+        backgroundColor: Colors.neutral.gray[200],
+        borderWidth: 1,
+        borderColor: Colors.border.light,
         position: 'relative',
     },
-    circle: {
+    bgImage: {
         position: 'absolute',
-        borderRadius: 999,
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
     },
-    circle1: {
-        width: 90,
-        height: 90,
-        top: -30,
-        right: -25,
+    bgOverlay: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
+        backgroundColor: Colors.neutral.black,
+        opacity: 0.35,
     },
-    circle2: {
-        width: 60,
-        height: 60,
-        bottom: -15,
-        left: -15,
-    },
-    circle3: {
-        width: 45,
-        height: 45,
-        top: 45,
-        right: 30,
+    leftBand: {
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: 6,
     },
     content: {
         flex: 1,
@@ -212,14 +205,10 @@ const styles = StyleSheet.create({
     iconContainer: {
         width: 56,
         height: 56,
-        borderRadius: 14,
+        borderRadius: BorderRadius.sm,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 4,
-        elevation: 3,
+        backgroundColor: Colors.neutral.gray[100],
     },
     textContent: {
         flex: 1,
@@ -235,26 +224,24 @@ const styles = StyleSheet.create({
     subtitle: {
         fontSize: 11,
         color: Colors.neutral.white,
-        opacity: 0.9,
         lineHeight: 15,
     },
     ctaButton: {
         flexDirection: 'row',
         alignItems: 'center',
         alignSelf: 'flex-start',
-        paddingHorizontal: 14,
-        paddingVertical: 7,
-        borderRadius: 20,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: BorderRadius.sm,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.4)',
         gap: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.12,
-        shadowRadius: 3,
-        elevation: 2,
     },
     ctaText: {
         fontSize: 11,
         fontWeight: '700',
+        color: Colors.neutral.white,
     },
     pagination: {
         flexDirection: 'row',
@@ -271,6 +258,6 @@ const styles = StyleSheet.create({
     },
     dotActive: {
         width: 24,
-        backgroundColor: Colors.primary.main,
+        backgroundColor: Colors.themes.customer.primary,
     },
 })

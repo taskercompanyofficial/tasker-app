@@ -1,4 +1,4 @@
-import { useState } from "react";
+ import { useState, useRef } from "react";
 import { AxiosProgressEvent, AxiosResponse, AxiosError } from "axios";
 import myAxios from "@/lib/axios.config";
 
@@ -105,6 +105,7 @@ export default function useForm<TForm extends FormDataType>(
   const [progress, setProgress] = useState<Progress | null>(null);
   const [wasSuccessful, setWasSuccessful] = useState(false);
   const [recentlySuccessful, setRecentlySuccessful] = useState(false);
+  const controllerRef = useRef<AbortController | null>(null);
   const handleSetData: setDataByObject<TForm> &
     setDataByMethod<TForm> &
     setDataByKeyValuePair<TForm> = (
@@ -154,15 +155,18 @@ export default function useForm<TForm extends FormDataType>(
       };
 
       // Check if any value is a File or React Native file object
-      const hasFiles = Object.values(data).some(
-        (value) =>
-          value instanceof File ||
-          isReactNativeFile(value) ||
-          (Array.isArray(value) &&
-            value.some(
-              (item) => item instanceof File || isReactNativeFile(item)
-            ))
-      );
+      const hasFiles = Object.values(data).some((value) => {
+        const hasFileGlobal = typeof File !== "undefined";
+        const isFile = hasFileGlobal && (value as any) instanceof File;
+        const isRNFile = isReactNativeFile(value);
+        const isArrayWithFile =
+          Array.isArray(value) &&
+          value.some((item) => {
+            const itemIsFile = hasFileGlobal && (item as any) instanceof File;
+            return itemIsFile || isReactNativeFile(item);
+          });
+        return isFile || isRNFile || isArrayWithFile;
+      });
 
       if (hasFiles) {
         const formData = new FormData();
@@ -196,8 +200,8 @@ export default function useForm<TForm extends FormDataType>(
         submissionData = formData;
       }
 
-      const response: AxiosResponse<TResponse & ApiResponse<TForm>> =
-        await myAxios({
+      controllerRef.current = new AbortController();
+      const response: AxiosResponse<TResponse & ApiResponse<TForm>> = await myAxios({
           method,
           url,
           data: submissionData,
@@ -207,6 +211,7 @@ export default function useForm<TForm extends FormDataType>(
               ? { "Content-Type": "multipart/form-data" }
               : {}),
           },
+          signal: controllerRef.current.signal,
           onUploadProgress: (event: AxiosProgressEvent) => {
             if (event.total) {
               setProgress({
@@ -331,8 +336,10 @@ export default function useForm<TForm extends FormDataType>(
     post: (url, options, token) => handleSubmit("POST", url, options, token),
     put: (url, options, token) => handleSubmit("PUT", url, options, token),
     patch: (url, options, token) => handleSubmit("PATCH", url, options, token),
-    delete: (url, options, token) =>
-      handleSubmit("DELETE", url, options, token),
-    cancel: () => setProcessing(false),
+    delete: (url, options, token) => handleSubmit("DELETE", url, options, token),
+    cancel: () => {
+      controllerRef.current?.abort();
+      setProcessing(false);
+    },
   };
 }

@@ -1,173 +1,186 @@
-import React from 'react'
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, View, ViewStyle, TextStyle } from 'react-native'
-import Colors from '@/constants/Colors'
-import { Spacing } from '@/constants/Styles'
+import React from "react";
+import {
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  View,
+  ViewStyle,
+  TextStyle,
+} from "react-native";
+import Colors from "@/constants/Colors";
+import { Spacing } from "@/constants/Styles";
 
 interface ButtonProps {
-    title: string
-    onPress: () => void
-    variant?: 'primary' | 'secondary' | 'outline' | 'ghost'
-    size?: 'small' | 'medium' | 'large'
-    fullWidth?: boolean
-    loading?: boolean
-    disabled?: boolean
-    icon?: React.ReactNode
+  title: string;
+  onPress: () => void;
+  variant?: "primary" | "secondary" | "outline" | "ghost";
+  size?: "small" | "medium" | "large";
+  fullWidth?: boolean;
+  loading?: boolean;
+  disabled?: boolean;
+  icon?: React.ReactNode;
+  theme?: "customer" | "vendor";
 }
 
 export default function Button({
-    title,
-    onPress,
-    variant = 'primary',
-    size = 'medium',
-    fullWidth = false,
-    loading = false,
-    disabled = false,
-    icon,
+  title,
+  onPress,
+  variant = "primary",
+  size = "medium",
+  fullWidth = false,
+  loading = false,
+  disabled = false,
+  icon,
+  theme = "customer",
 }: ButtonProps) {
-    const getButtonStyle = (): ViewStyle[] => {
-        const baseStyle: ViewStyle[] = [styles.button, styles[`button_${size}`]]
+  const themeColor =
+    theme === "vendor"
+      ? Colors.themes.provider.primary
+      : Colors.themes.customer.primary;
 
-        if (fullWidth) baseStyle.push(styles.fullWidth)
-        if (disabled || loading) baseStyle.push(styles.disabled)
+  const getButtonStyle = (): ViewStyle[] => {
+    const baseStyle: ViewStyle[] = [styles.button, styles[`button_${size}`]];
 
-        switch (variant) {
-            case 'primary':
-                baseStyle.push(styles.primaryButton)
-                break
-            case 'secondary':
-                baseStyle.push(styles.secondaryButton)
-                break
-            case 'outline':
-                baseStyle.push(styles.outlineButton)
-                break
-            case 'ghost':
-                baseStyle.push(styles.ghostButton)
-                break
-        }
+    if (fullWidth) baseStyle.push(styles.fullWidth);
+    if (disabled || loading) baseStyle.push(styles.disabled);
 
-        return baseStyle
+    switch (variant) {
+      case "primary":
+        baseStyle.push({ backgroundColor: themeColor });
+        break;
+      case "secondary":
+        baseStyle.push(styles.secondaryButton, {
+          backgroundColor: themeColor + "15",
+          borderWidth: 1,
+          borderColor: themeColor,
+        });
+        break;
+      case "outline":
+        baseStyle.push({ ...styles.outlineButton, borderColor: themeColor });
+        break;
+      case "ghost":
+        baseStyle.push(styles.ghostButton);
+        break;
     }
 
-    const getTextStyle = (): TextStyle[] => {
-        const baseStyle: TextStyle[] = [styles.text, styles[`text_${size}`]]
+    return baseStyle;
+  };
 
-        switch (variant) {
-            case 'primary':
-                baseStyle.push(styles.primaryText)
-                break
-            case 'secondary':
-                baseStyle.push(styles.secondaryText)
-                break
-            case 'outline':
-                baseStyle.push(styles.outlineText)
-                break
-            case 'ghost':
-                baseStyle.push(styles.ghostText)
-                break
-        }
+  const getTextStyle = (): TextStyle[] => {
+    const baseStyle: TextStyle[] = [styles.text, styles[`text_${size}`]];
 
-        return baseStyle
+    switch (variant) {
+      case "primary":
+        baseStyle.push(styles.primaryText);
+        break;
+      case "secondary":
+        baseStyle.push({ color: themeColor });
+        break;
+      case "outline":
+        baseStyle.push({ color: themeColor });
+        break;
+      case "ghost":
+        baseStyle.push({ color: themeColor });
+        break;
     }
 
-    return (
-        <TouchableOpacity
-            style={getButtonStyle()}
-            onPress={onPress}
-            disabled={disabled || loading}
-            activeOpacity={0.8}
-        >
-            {loading ? (
-                <ActivityIndicator
-                    color={variant === 'primary' || variant === 'secondary' ? Colors.neutral.white : Colors.primary.main}
-                    size="small"
-                />
-            ) : (
-                <View style={styles.content}>
-                    {icon && <View style={styles.icon}>{icon}</View>}
-                    <Text style={getTextStyle()}>{title}</Text>
-                </View>
-            )}
-        </TouchableOpacity>
-    )
+    return baseStyle;
+  };
+
+  return (
+    <TouchableOpacity
+      style={getButtonStyle()}
+      onPress={onPress}
+      disabled={disabled || loading}
+      activeOpacity={0.8}
+    >
+      {loading ? (
+        <ActivityIndicator
+          color={
+            variant === "primary" || variant === "secondary"
+              ? Colors.neutral.white
+              : themeColor
+          }
+          size="small"
+        />
+      ) : (
+        <View style={styles.content}>
+          {icon && <View style={styles.icon}>{icon}</View>}
+          <Text style={getTextStyle()}>{title}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
 }
 
 const styles = StyleSheet.create({
-    button: {
-        borderRadius: 10,
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'row',
-    },
-    content: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    icon: {
-        marginRight: Spacing.xs,
-    },
-    fullWidth: {
-        width: '100%',
-    },
-    disabled: {
-        opacity: 0.5,
-    },
+  button: {
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+  },
+  content: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  icon: {
+    marginRight: Spacing.xs,
+  },
+  fullWidth: {
+    width: "100%",
+  },
+  disabled: {
+    opacity: 0.5,
+  },
 
-    // Sizes
-    button_small: {
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-    },
-    button_medium: {
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-    },
-    button_large: {
-        paddingVertical: 14,
-        paddingHorizontal: 20,
-    },
+  // Sizes
+  button_small: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  button_medium: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  button_large: {
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+  },
 
-    // Variants
-    primaryButton: {
-        backgroundColor: Colors.primary.main,
-    },
-    secondaryButton: {
-        backgroundColor: Colors.secondary.main,
-    },
-    outlineButton: {
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        borderColor: Colors.primary.main,
-    },
-    ghostButton: {
-        backgroundColor: 'transparent',
-    },
+  // Variants
+  secondaryButton: {
+    backgroundColor: "transparent",
+  },
+  outlineButton: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+  },
+  ghostButton: {
+    backgroundColor: "transparent",
+  },
 
-    // Text styles
-    text: {
-        fontWeight: '600',
-    },
-    text_small: {
-        fontSize: 13,
-    },
-    text_medium: {
-        fontSize: 14,
-    },
-    text_large: {
-        fontSize: 15,
-    },
+  // Text styles
+  text: {
+    fontWeight: "600",
+  },
+  text_small: {
+    fontSize: 13,
+  },
+  text_medium: {
+    fontSize: 14,
+  },
+  text_large: {
+    fontSize: 15,
+  },
 
-    // Text colors
-    primaryText: {
-        color: Colors.neutral.white,
-    },
-    secondaryText: {
-        color: Colors.neutral.white,
-    },
-    outlineText: {
-        color: Colors.primary.main,
-    },
-    ghostText: {
-        color: Colors.primary.main,
-    },
-})
+  // Text colors
+  primaryText: {
+    color: Colors.neutral.white,
+  },
+  secondaryText: {
+    color: Colors.neutral.white,
+  },
+});

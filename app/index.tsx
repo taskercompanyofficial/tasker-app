@@ -1,57 +1,30 @@
-import CategoriesCards from '@/components/home/categories-cards'
-import HomeHeader from '@/components/home/Header'
-import IndustrialServicesCard from '@/components/home/industrial-servies-card'
-import FreeInstallationCard from '@/components/home/free-installation-card'
-import Colors from '@/constants/Colors'
-import { Spacing } from '@/constants/Styles'
-import React from 'react'
-import { ScrollView, StyleSheet, Text, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import React from "react";
+import { Redirect } from "expo-router";
+import Splash from "@/components/splash";
+import { useSession } from "@/context/ctx";
 
-export default function LandingPage() {
-    return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <ScrollView
-                style={styles.scrollView}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}
-            >
-                <HomeHeader />
-                <View style={styles.content}>
-                    <Text style={styles.title}>Welcome to Tasker Company</Text>
-                    <Text style={styles.subtitle}>Choose a service to get started</Text>
-                </View>
-                <CategoriesCards />
-                <FreeInstallationCard />
-                <IndustrialServicesCard />
-            </ScrollView>
-        </SafeAreaView>
-    )
+export default function Index() {
+  const { session } = useSession();
+
+  if (session.isLoading) {
+    return <Splash />;
+  }
+
+  const hasCustomer = !!session.customerToken;
+  const hasVendor = !!session.vendorToken;
+
+  let href = "/auth/role-selection";
+
+  if (session.appMode === "customer") {
+    href = hasCustomer ? "/customer" : "/auth/customer/sign-in";
+  } else if (session.appMode === "vendor") {
+    href = hasVendor ? "/vendor" : "/auth/vendor/sign-in";
+  } else if (hasCustomer) {
+    href = "/customer";
+  } else if (hasVendor) {
+    href = "/vendor";
+  }
+
+  return <Redirect href={href as any} />;
 }
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "#ffffff",
-    },
-    scrollView: {
-        flex: 1,
-    },
-    scrollContent: {
-        paddingBottom: Spacing.xl,
-    },
-    content: {
-        marginHorizontal: Spacing.md,
-        marginVertical: Spacing.md,
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: "#000000",
-        marginBottom: Spacing.md,
-    },
-    subtitle: {
-        fontSize: 14,
-        color: Colors.text.secondary,
-    },
-})

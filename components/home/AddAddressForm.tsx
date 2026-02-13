@@ -9,6 +9,7 @@ import React, { useState } from 'react'
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import Toast from 'react-native-toast-message'
 import MapPicker from './MapPicker'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 interface Addressdata {
     address_type: 'home' | 'office' | 'other'
@@ -44,7 +45,7 @@ const AddressTypeButton = ({
         <Ionicons
             name={icon}
             size={18}
-            color={selected ? Colors.primary.main : Colors.text.tertiary}
+            color={selected ? Colors.themes.customer.primary : Colors.text.tertiary}
         />
         <Text style={[styles.typeButtonText, selected && styles.typeButtonTextActive]}>
             {label}
@@ -68,6 +69,7 @@ export default function AddAddressForm({ visible, onClose, onSave, customer_id }
         }
     )
     const [showMapPicker, setShowMapPicker] = useState(false)
+    const insets = useSafeAreaInsets()
 
     const updateField = (field: keyof Addressdata, value: string) => {
         setData(prev => ({ ...prev, [field]: value }))
@@ -137,7 +139,7 @@ export default function AddAddressForm({ visible, onClose, onSave, customer_id }
             onRequestClose={onClose}
         >
             <Pressable style={styles.overlay} onPress={onClose}>
-                <Pressable style={styles.modal} onPress={(e) => e.stopPropagation()}>
+                <Pressable style={[styles.modal, { paddingBottom: Math.max(insets.bottom, 12) }]} onPress={(e) => e.stopPropagation()}>
                     {/* Handle Bar */}
                     <View style={styles.handleBar} />
 
@@ -151,7 +153,7 @@ export default function AddAddressForm({ visible, onClose, onSave, customer_id }
                                 style={styles.locationButton}
                                 onPress={() => setShowMapPicker(true)}
                             >
-                                <Ionicons name="map" size={16} color={Colors.primary.main} />
+                                <Ionicons name="map" size={16} color={Colors.themes.customer.primary} />
                                 <Text style={styles.locationButtonText}>
                                     Map
                                 </Text>
@@ -163,7 +165,11 @@ export default function AddAddressForm({ visible, onClose, onSave, customer_id }
                     </View>
 
                     {/* Form */}
-                    <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
+                    <ScrollView
+                        style={styles.form}
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={{ paddingBottom: Spacing.lg }}
+                    >
                         {/* Address Type */}
                         <View style={styles.section}>
                             <Text style={styles.label}>Address Type *</Text>
@@ -297,7 +303,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing.lg,
-        paddingBottom: Spacing.md,
+        paddingBottom: Spacing.xl,
         borderBottomWidth: 1,
         borderBottomColor: Colors.border.light,
     },
@@ -339,8 +345,8 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.neutral.white,
     },
     typeButtonActive: {
-        borderColor: Colors.primary.main,
-        backgroundColor: Colors.primary.main + '10',
+        borderColor: Colors.themes.customer.primary,
+        backgroundColor: Colors.themes.customer.primary + '10',
     },
     typeButtonText: {
         fontSize: 12,
@@ -348,7 +354,7 @@ const styles = StyleSheet.create({
         color: Colors.text.secondary,
     },
     typeButtonTextActive: {
-        color: Colors.primary.main,
+        color: Colors.themes.customer.primary,
         fontWeight: '600',
     },
     inputGroup: {
@@ -385,8 +391,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: Colors.primary.main,
-        backgroundColor: Colors.primary.main + '10',
+        borderColor: Colors.themes.customer.primary,
+        backgroundColor: Colors.themes.customer.primary + '10',
     },
     locationButtonDisabled: {
         opacity: 0.6,
@@ -394,7 +400,7 @@ const styles = StyleSheet.create({
     locationButtonText: {
         fontSize: 13,
         fontWeight: '600',
-        color: Colors.primary.main,
+        color: Colors.themes.customer.primary,
     },
     error: {
         fontSize: 12,

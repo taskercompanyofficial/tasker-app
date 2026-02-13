@@ -1,5 +1,5 @@
 import Colors from '@/constants/Colors'
-import { Spacing } from '@/constants/Styles'
+import { Spacing, BorderRadius } from '@/constants/Styles'
 import { Ionicons } from '@expo/vector-icons'
 import React, { useState } from 'react'
 import { Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
@@ -36,7 +36,7 @@ export default function CancelOrderModal({ visible, onClose, onConfirm, loading 
                     {/* Icon */}
                     <View style={styles.iconContainer}>
                         <View style={styles.iconCircle}>
-                            <Ionicons name="warning" size={40} color="#EF4444" />
+                            <Ionicons name="warning" size={40} color={Colors.error} />
                         </View>
                     </View>
 
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     },
     container: {
         backgroundColor: Colors.neutral.white,
-        borderRadius: 20,
+        borderRadius: BorderRadius.lg,
         padding: Spacing.xl,
         width: '100%',
         maxWidth: 400,
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     },
     confirmButton: {
         flex: 1,
-        backgroundColor: '#EF4444',
+        backgroundColor: Colors.error,
         paddingVertical: 13,
         borderRadius: 10,
         alignItems: 'center',

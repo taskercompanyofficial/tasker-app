@@ -49,6 +49,12 @@
         "projectId": "4408fc40-2932-4da5-9fc6-77ea2457a8da"
       }
     },
-    "owner": "tasker-company"
+    "owner": "tasker-company",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/4408fc40-2932-4da5-9fc6-77ea2457a8da"
+    }
   }
 }

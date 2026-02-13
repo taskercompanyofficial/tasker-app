@@ -1,15 +1,5 @@
 // Modern color palette with rose theme
 const Colors = {
-  primary: {
-    main: "#f43f3fff", // Rose
-    light: "#FB7185",
-    dark: "#E11D48",
-  },
-  secondary: {
-    main: "#F97316", // Orange
-    light: "#FB923C",
-    dark: "#EA580C",
-  },
   success: "#10B981", // Green
   warning: "#F59E0B", // Amber
   error: "#EF4444", // Red
@@ -54,6 +44,27 @@ const Colors = {
     google: "#DB4437",
     facebook: "#1877F2",
     twitter: "#1DA1F2",
+    instagram: "#E4405F",
+    linkedin: "#0A66C2",
+    whatsapp: "#25D366",
+  },
+
+  // App Themes
+  themes: {
+    customer: {
+      primary: "#0F766E", // Professional Teal
+      primaryLight: "#14B8A6",
+      primaryDark: "#0D5550",
+      accent: "#5EEAD4",
+      background: "#F0FDFA",
+    },
+    provider: {
+      primary: "#1E40AF", // Medium Dark Blue
+      primaryLight: "#3B82F6",
+      primaryDark: "#1E3A8A",
+      accent: "#60A5FA",
+      background: "#EFF6FF",
+    },
   },
 };
 

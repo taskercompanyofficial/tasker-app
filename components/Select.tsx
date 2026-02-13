@@ -98,7 +98,7 @@ export default function Select({
                                         {option.label}
                                     </Text>
                                     {value === option.value && (
-                                        <Ionicons name="checkmark" size={20} color={Colors.primary.main} />
+                                        <Ionicons name="checkmark" size={20} color={Colors.themes.customer.primary} />
                                     )}
                                 </TouchableOpacity>
                             ))}
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     optionItemSelected: {
-        backgroundColor: Colors.primary.light,
+        backgroundColor: Colors.themes.customer.primaryLight,
     },
     optionText: {
         fontSize: 15,
@@ -194,6 +194,6 @@ const styles = StyleSheet.create({
     },
     optionTextSelected: {
         fontWeight: '600',
-        color: Colors.primary.main,
+        color: Colors.themes.customer.primary,
     },
 })
