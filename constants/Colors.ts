@@ -3,11 +3,13 @@ const Colors = {
   success: "#10B981", // Green
   warning: "#F59E0B", // Amber
   error: "#EF4444", // Red
+  info: "#3B82F6", // Blue
 
   text: {
     primary: "#1F2937", // Dark gray
     secondary: "#6B7280", // Medium gray
     tertiary: "#9CA3AF", // Light gray
+    quaternary: "#D1D5DB", // Extra Light gray
   },
 
   neutral: {

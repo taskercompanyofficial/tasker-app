@@ -12,23 +12,25 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Colors from "@/constants/Colors";
 import { Spacing, BorderRadius } from "@/constants/Styles";
+import { useSession } from "@/context/ctx";
 
 type Role = "customer" | "provider" | null;
 
 export default function RoleSelectionScreen() {
   const router = useRouter();
+  const { setAppMode } = useSession();
   const [selectedRole, setSelectedRole] = useState<Role>(null);
 
-  const handleRoleSelect = (role: Role) => {
+  const handleRoleSelect = async (role: Role) => {
     setSelectedRole(role);
+    if (role === "customer") {
+      await setAppMode("customer");
+      router.push("/auth/customer/sign-in");
+    } else {
+      await setAppMode("vendor");
+      router.push("/auth/vendor/sign-in");
+    }
 
-    setTimeout(() => {
-      if (role === "customer") {
-        router.push("/auth/customer/sign-in");
-      } else {
-        router.push("/auth/vendor/sign-in");
-      }
-    }, 150);
   };
 
   return (

@@ -1,10 +1,9 @@
-import React, { useRef, useState, useEffect } from 'react'
-import { View, Text, StyleSheet, FlatList, Dimensions, Pressable } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
-import { Image } from 'expo-image'
-import { router } from 'expo-router'
 import Colors from '@/constants/Colors'
 import { BorderRadius, Spacing } from '@/constants/Styles'
+import { Image } from 'expo-image'
+import { router } from 'expo-router'
+import React, { useEffect, useRef, useState } from 'react'
+import { Dimensions, FlatList, Pressable, StyleSheet, View } from 'react-native'
 
 const { width } = Dimensions.get('window')
 const CAROUSEL_WIDTH = width

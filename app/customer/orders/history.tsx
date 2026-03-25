@@ -28,8 +28,8 @@ export default function OrderHistoryPage() {
 
   const fetchOrders = async () => {
     try {
-      const res = await myAxios.get(`${ORDER_URL}/my-orders`);
-      const allOrders = res.data.data.data || [];
+      const res = await myAxios.get(`${ORDER_URL}`);
+      const allOrders = (res.data.data?.data) || [];
       // Filter only completed and cancelled orders for history
       const historyOrders = allOrders.filter((order: Order) =>
         ["completed", "cancelled", "refunded"].includes(order.status),

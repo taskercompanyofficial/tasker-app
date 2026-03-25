@@ -3,7 +3,7 @@ import CancelOrderModal from "@/components/orders/CancelOrderModal";
 import ContactSupportModal from "@/components/orders/ContactSupportModal";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
-import { ORDER_URL } from "@/lib/api-endpoints";
+import { WORK_ORDER_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
 import { Order, OrderItem } from "@/types/order";
 import { Ionicons } from "@expo/vector-icons";
@@ -37,7 +37,7 @@ export default function OrderDetailsPage() {
 
   const fetchOrderDetails = async () => {
     try {
-      const res = await myAxios.get(`${ORDER_URL}/${orderNumber}`);
+      const res = await myAxios.get(`${WORK_ORDER_URL}/${orderNumber}`);
       setOrder(res.data.data);
     } catch (error) {
       console.error("Failed to fetch order details:", error);
@@ -90,7 +90,7 @@ export default function OrderDetailsPage() {
     setCancelling(true);
     try {
       const response = await myAxios.post(
-        `${ORDER_URL}/${orderNumber}/cancel`,
+        `${WORK_ORDER_URL}/${orderNumber}/cancel`,
         { reason },
       );
 
@@ -246,6 +246,61 @@ export default function OrderDetailsPage() {
                   ₨{Math.round(item.subtotal)}
                 </Text>
               </View>
+              <View style={styles.stepperRowSmall}>
+                {["pending", "assigned", "in_progress", "completed", "closed"].map((s, idx, arr) => {
+                  const currentIdx =
+                    item.status === "assigned"
+                      ? 1
+                      : item.status === "in_progress"
+                      ? 2
+                      : item.status === "completed"
+                      ? 3
+                      : item.status === "cancelled"
+                      ? 4
+                      : 0;
+                  const isDone = idx <= currentIdx;
+                  return (
+                    <React.Fragment key={s}>
+                      <View
+                        style={[
+                          styles.stepCircleSmall,
+                          isDone && { backgroundColor: Colors.themes.customer.primary },
+                        ]}
+                      />
+                      {idx < arr.length - 1 && (
+                        <View
+                          style={[
+                            styles.stepConnectorSmall,
+                            isDone && { backgroundColor: Colors.themes.customer.primary },
+                          ]}
+                        />
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </View>
+              <TouchableOpacity
+                style={styles.viewServiceBtn}
+                onPress={() =>
+                  router.push({
+                    pathname: "/customer/orders/service/[serviceId]",
+                    params: { serviceId: String(item.id), orderNumber: String(order.order_number) },
+                  })
+                }
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="eye-outline"
+                  size={16}
+                  color={Colors.themes.customer.primary}
+                />
+                <Text style={styles.viewServiceBtnText}>View Service</Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color={Colors.themes.customer.primary}
+                />
+              </TouchableOpacity>
             </View>
           ))}
         </View>
@@ -425,7 +480,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   orderNumber: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: "700",
     color: Colors.text.primary,
   },
@@ -435,7 +490,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "600",
     textTransform: "capitalize",
   },
@@ -445,7 +500,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dateText: {
-    fontSize: 13,
+    fontSize: 11,
     color: Colors.text.secondary,
   },
   section: {
@@ -454,7 +509,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "700",
     color: Colors.text.primary,
     marginBottom: Spacing.sm,
@@ -477,13 +532,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   serviceName: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
     color: Colors.text.primary,
     marginBottom: 2,
   },
   serviceQuantity: {
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.text.secondary,
   },
   itemStatusBadge: {
@@ -503,7 +558,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   scheduleText: {
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.text.secondary,
   },
   priceRow: {
@@ -515,13 +570,50 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border.light,
   },
   priceLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: Colors.text.tertiary,
   },
   priceValue: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "700",
     color: Colors.text.primary,
+  },
+  viewServiceBtn: {
+    marginTop: Spacing.xs,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+    paddingVertical: 8,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    backgroundColor: Colors.neutral.white,
+    alignSelf: "flex-start",
+  },
+  viewServiceBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.themes.customer.primary,
+  },
+  stepperRowSmall: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  stepCircleSmall: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.border.light,
+  },
+  stepConnectorSmall: {
+    width: 12,
+    height: 2,
+    backgroundColor: Colors.border.light,
+    marginHorizontal: 2,
   },
   addressCard: {
     backgroundColor: Colors.neutral.gray[50],
@@ -537,12 +629,12 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   addressType: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
     color: Colors.text.primary,
   },
   addressText: {
-    fontSize: 13,
+    fontSize: 11,
     color: Colors.text.secondary,
     lineHeight: 18,
   },
@@ -560,11 +652,11 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   paymentLabel: {
-    fontSize: 13,
+    fontSize: 11,
     color: Colors.text.secondary,
   },
   paymentValue: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "600",
     color: Colors.text.primary,
     textTransform: "capitalize",
@@ -575,12 +667,12 @@ const styles = StyleSheet.create({
     marginVertical: Spacing.xs,
   },
   totalLabel: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "700",
     color: Colors.text.primary,
   },
   totalValue: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: "800",
     color: Colors.themes.customer.primary,
   },
@@ -592,7 +684,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border.light,
   },
   notesText: {
-    fontSize: 13,
+    fontSize: 11,
     color: Colors.text.secondary,
     lineHeight: 18,
   },
@@ -611,7 +703,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.error,
   },
   cancelOrderButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "700",
     color: Colors.error,
   },
@@ -627,7 +719,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border.light,
   },
   supportButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "700",
     color: Colors.themes.customer.primary,
   },
@@ -637,7 +729,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   errorText: {
-    fontSize: 16,
+    fontSize: 12,
     color: Colors.text.secondary,
   },
 });

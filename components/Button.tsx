@@ -14,7 +14,13 @@ import { Spacing } from "@/constants/Styles";
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: "primary" | "secondary" | "outline" | "ghost";
+  variant?:
+    | "primary"
+    | "secondary"
+    | "outline"
+    | "ghost"
+    | "success"
+    | "danger";
   size?: "small" | "medium" | "large";
   fullWidth?: boolean;
   loading?: boolean;
@@ -62,6 +68,12 @@ export default function Button({
       case "ghost":
         baseStyle.push(styles.ghostButton);
         break;
+      case "success":
+        baseStyle.push({ backgroundColor: Colors.success });
+        break;
+      case "danger":
+        baseStyle.push({ backgroundColor: Colors.error });
+        break;
     }
 
     return baseStyle;
@@ -72,14 +84,12 @@ export default function Button({
 
     switch (variant) {
       case "primary":
+      case "success":
+      case "danger":
         baseStyle.push(styles.primaryText);
         break;
       case "secondary":
-        baseStyle.push({ color: themeColor });
-        break;
       case "outline":
-        baseStyle.push({ color: themeColor });
-        break;
       case "ghost":
         baseStyle.push({ color: themeColor });
         break;
@@ -98,7 +108,9 @@ export default function Button({
       {loading ? (
         <ActivityIndicator
           color={
-            variant === "primary" || variant === "secondary"
+            variant === "primary" ||
+            variant === "success" ||
+            variant === "danger"
               ? Colors.neutral.white
               : themeColor
           }

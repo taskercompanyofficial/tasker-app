@@ -1,4 +1,5 @@
-const BACKEND_URL_ENV = 'https://api.taskercompany.cloud';
+const BACKEND_URL_ENV =
+  process.env.EXPO_PUBLIC_BACKEND_URL ?? "https://api.taskercompany.cloud";
 if (!BACKEND_URL_ENV) {
   throw new Error("EXPO_PUBLIC_BACKEND_URL is not set");
 }
@@ -20,12 +21,14 @@ export const GET_CATEGORIES_URL = `${APP_URL}/categories`;
 export const GET_SERVICES_URL = `${APP_URL}/services`;
 export const GET_AUTHORIZED_BRANDS_URL = `${APP_URL}/authorized-brands`;
 export const ADDRESS_URL = `${APP_URL}/address`;
-export const ORDER_URL = `${APP_URL}/orders`;
-export const WORK_ORDER_URL = `${APP_URL}/my-work-orders`;
+export const ORDER_URL = `${APP_URL}/work-orders/my-work-orders`;
+export const WORK_ORDER_URL = `${APP_URL}/work-orders`;
 export const TRENDING_PARENT_SERVICE_URL = `${APP_URL}/trending-services`;
 export const PARENT_SERVICE_URL = `${APP_URL}/parent-services`;
 export const NOTIFICATION_URL = `${APP_URL}/notifications`;
 export const COMMERCIAL_QUOTE_URL = `${APP_URL}/commercial-quotes`;
+export const WALLET_URL = `${APP_URL}/wallet`;
+export const GIFTS_URL = `${APP_URL}/gifts`;
 export const FREE_INSTALLATION_URL = `${APP_URL}/free-installations`;
 export const VENDOR_LOGIN_URL = `${API_URL}/vendor/login`;
 export const VENDOR_REGISTER_URL = `${API_URL}/vendor/register`;
@@ -35,3 +38,65 @@ export const VENDOR_UPDATE_PROFILE_URL = `${API_URL}/vendor/update-profile`;
 export const VENDOR_CHANGE_PASSWORD_URL = `${API_URL}/vendor/change-password`;
 export const VENDOR_OTP_URL = `${API_URL}/vendor/auth/check-credentials`;
 export const VENDOR_OTP_VERIFY_URL = `${API_URL}/vendor/auth/verify-otp`;
+export const VENDOR_EARNINGS_URL = `${API_URL}/vendor/earnings`;
+export const VENDOR_NOTIFICATIONS_URL = `${API_URL}/vendor/notifications`;
+export const VENDOR_NOTIFICATIONS_UNREAD_COUNT_URL = `${VENDOR_NOTIFICATIONS_URL}/unread-count`;
+export const VENDOR_NOTIFICATIONS_MARK_READ_URL = (id: number | string) =>
+  `${VENDOR_NOTIFICATIONS_URL}/${id}/read`;
+export const VENDOR_NOTIFICATIONS_MARK_ALL_READ_URL = `${VENDOR_NOTIFICATIONS_URL}/mark-all-read`;
+export const VENDOR_RATES_URL = `${API_URL}/vendor/rates`;
+export const VENDOR_STAFF_URL = `${API_URL}/vendor/staff`;
+export const VENDOR_STAFF_DETAILS_URL = (id: number) =>
+  `${VENDOR_STAFF_URL}/${id}`;
+export const VENDOR_STAFF_UPDATE_URL = (id: number) =>
+  `${VENDOR_STAFF_URL}/${id}`;
+export const VENDOR_STAFF_DELETE_URL = (id: number) =>
+  `${VENDOR_STAFF_URL}/${id}`;
+export const VENDOR_STAFF_TOGGLE_STATUS_URL = (id: number) =>
+  `${VENDOR_STAFF_URL}/${id}/toggle-status`;
+export const VENDOR_STAFF_WORK_ORDERS_URL_BY_ID = (id: number) =>
+  `${VENDOR_STAFF_URL}/${id}/work-orders`;
+export const VENDOR_STAFF_RESET_PASSWORD_URL = (id: number) =>
+  `${VENDOR_STAFF_URL}/${id}/reset-password`;
+// Service Concerns endpoints
+export const SERVICE_CONCERNS_URL = `${APP_URL}/service-concerns-raw`;
+export const SERVICE_SUB_CONCERNS_URL = (concernId: number) =>
+  `${APP_URL}/service-sub-concerns-raw?service_concern_id=${concernId}`;
+export const WARRANTY_TYPES_URL = `${APP_URL}/warranty-types-raw`;
+
+// Vendor Work Orders
+export const VENDOR_WORK_ORDER_SUMMARY_URL = `${API_URL}/vendor/work-orders/summary`;
+export const VENDOR_WORK_ORDER_URL = `${API_URL}/vendor/work-orders`;
+export const VENDOR_WORK_ORDER_DETAILS_URL = (id: number) =>
+  `${VENDOR_WORK_ORDER_URL}/${id}`;
+export const VENDOR_ACCEPT_WORK_ORDER_URL = (id: number) =>
+  `${VENDOR_WORK_ORDER_URL}/${id}/accept`;
+export const VENDOR_REJECT_WORK_ORDER_URL = (id: number) =>
+  `${VENDOR_WORK_ORDER_URL}/${id}/reject`;
+export const VENDOR_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL = (id: number) =>
+  `${VENDOR_WORK_ORDER_URL}/${id}/update-status-by-slug`;
+export const VENDOR_SCHEDULE_WORK_ORDER_URL = (id: number) =>
+  `${VENDOR_WORK_ORDER_URL}/${id}/schedule`;
+export const VENDOR_CANCEL_WORK_ORDER_URL = (id: number) =>
+  `${VENDOR_WORK_ORDER_URL}/${id}/cancel`;
+export const VENDOR_ASSIGN_STAFF_URL = (id: number | string) =>
+  `${VENDOR_WORK_ORDER_URL}/${id}/assign-staff`;
+export const VENDOR_UPDATE_WORK_ORDER_DETAILS_URL = (id: number) =>
+  `${VENDOR_WORK_ORDER_URL}/${id}/update-details`;
+export const VENDOR_FILE_TYPES_URL = `${VENDOR_WORK_ORDER_URL}/file-types`;
+export const VENDOR_UPLOAD_WORK_ORDER_FILE_URL = (id: number) =>
+  `${VENDOR_WORK_ORDER_URL}/${id}/upload-file`;
+export const VENDOR_DELETE_WORK_ORDER_FILE_URL = (id: number, fileId: number) =>
+  `${VENDOR_WORK_ORDER_URL}/${id}/files/${fileId}`;
+export const VENDOR_SERVICE_CONCERNS_URL = `${VENDOR_WORK_ORDER_URL}/service-concerns`;
+export const VENDOR_SERVICE_SUB_CONCERNS_URL = (id: number) =>
+  `${VENDOR_WORK_ORDER_URL}/service-concerns/${id}/sub-concerns`;
+export const VENDOR_WARRANTY_TYPES_URL = `${VENDOR_WORK_ORDER_URL}/warranty-types`;
+
+// Vendor Staff Auth
+export const VENDOR_STAFF_LOGIN_URL = `${API_URL}/vendor-staff/login`;
+export const VENDOR_STAFF_ME_URL = `${API_URL}/vendor-staff/me`;
+export const VENDOR_STAFF_SIGN_OUT_URL = `${API_URL}/vendor-staff/sign-out`;
+export const VENDOR_STAFF_CHANGE_PASSWORD_URL = `${API_URL}/vendor-staff/change-password`;
+export const VENDOR_STAFF_WORK_ORDERS_URL = `${API_URL}/vendor-staff/work-orders`;
+export const VENDOR_STAFF_WORK_ORDER_SUMMARY_URL = `${API_URL}/vendor-staff/work-orders/summary`;

@@ -17,6 +17,7 @@
         "foregroundImage": "./assets/icons/adaptive-icon.png",
         "monochromeImage": "./assets/icons/adaptive-icon.png"
       },
+      "googleServicesFile": "./google-services.json",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.taskercompany.company"
@@ -37,7 +38,8 @@
         }
       ],
       "expo-secure-store",
-      "expo-maps"
+      "expo-maps",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true,

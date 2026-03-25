@@ -56,7 +56,7 @@ export default function OrdersPage() {
         setLoadingMore(true);
       }
 
-      const res = await myAxios.get(`${ORDER_URL}/my-orders?page=${page}`);
+      const res = await myAxios.get(`${ORDER_URL}?page=${page}`);
       const paginationData = res.data.data;
       const fetchedOrders = paginationData.data || [];
 

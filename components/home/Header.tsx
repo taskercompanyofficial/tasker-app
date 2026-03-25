@@ -1,6 +1,7 @@
 import Colors from "@/constants/Colors";
 import { Spacing, Typography } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
+import { useEcho } from "@/context/EchoProvider";
 import { ADDRESS_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,6 +17,7 @@ import {
   View,
 } from "react-native";
 import NotificationBell from "../common/NotificationBell";
+import { useRouter } from "expo-router";
 import AddAddressForm from "./AddAddressForm";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -41,7 +43,9 @@ interface Address {
 
 export default function HomeHeader() {
   const { session } = useSession();
+  const { isConnected, connectionState } = useEcho();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [userAddresses, setUserAddresses] = useState<Address[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [showAddressSheet, setShowAddressSheet] = useState(false);
@@ -54,7 +58,6 @@ export default function HomeHeader() {
       );
       const addresses: Address[] = res.data.data || [];
 
-      // Prefer API default address if provided; fallback to first
       if (addresses.length > 0) {
         const def = addresses.find(a => a.is_default);
         const chosen = def ?? addresses[0];
@@ -74,12 +77,6 @@ export default function HomeHeader() {
 
   const userName = session.user?.name || "Guest";
   const firstName = userName.split(" ")[0];
-  const userInitials = userName
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .substring(0, 2)
-    .toUpperCase();
 
   const handleAddressSelect = async (address: Address) => {
     try {
@@ -101,6 +98,20 @@ export default function HomeHeader() {
 
   const handleSaveAddress = () => {
     fetchAddress();
+  };
+
+  const ConnectionStatus = () => {
+    const isLive = isConnected;
+    const isConnecting = connectionState === "connecting" || connectionState === "initialized";
+    const dotColor = isLive ? Colors.success : isConnecting ? "#F59E0B" : Colors.error;
+    const label = isLive ? "Live" : isConnecting ? "..." : "Offline";
+
+    return (
+      <View style={styles.statusBadge}>
+        <View style={[styles.statusDot, { backgroundColor: dotColor }]} />
+        <Text style={[styles.statusText, { color: dotColor }]}>{label}</Text>
+      </View>
+    );
   };
 
   const renderAddressItem = ({ item }: { item: Address }) => (
@@ -185,7 +196,10 @@ export default function HomeHeader() {
 
           {/* User Info */}
           <View style={styles.userInfo}>
-            <Text style={styles.greeting}>Hi, {firstName}! 👋</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={styles.greeting}>Hi, {firstName}! 👋</Text>
+              <ConnectionStatus />
+            </View>
             <TouchableOpacity
               style={styles.addressRow}
               onPress={() => setShowAddressSheet(true)}
@@ -209,7 +223,17 @@ export default function HomeHeader() {
             </TouchableOpacity>
           </View>
         </View>
-        <NotificationBell />
+        <View style={styles.rightSection}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => router.push("/customer/gifts")}
+            activeOpacity={0.7}
+            accessibilityLabel="Open Gifts"
+          >
+            <Ionicons name="gift-outline" size={18} color={Colors.themes.customer.primary} />
+          </TouchableOpacity>
+          <NotificationBell />
+        </View>
       </View>
 
       {/* Address Bottom Sheet */}
@@ -336,27 +360,19 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: Colors.text.tertiary,
   },
-  notificationButton: {
+  rightSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  iconButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
     backgroundColor: Colors.neutral.gray[100],
     justifyContent: "center",
     alignItems: "center",
-    position: "relative",
   },
-  badge: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.error,
-    borderWidth: 1.5,
-    borderColor: Colors.neutral.white,
-  },
-
   // Bottom Sheet Styles
   modalOverlay: {
     flex: 1,
@@ -473,4 +489,23 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     textAlign: "center",
   },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  statusDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  statusText: {
+    fontSize: 8,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  }
 });

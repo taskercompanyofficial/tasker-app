@@ -5,10 +5,13 @@ import { Spacing } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
 import useForm from "@/hooks/use-form";
 import { Ionicons } from "@expo/vector-icons";
-import { VENDOR_OTP_URL, VENDOR_OTP_VERIFY_URL } from "@/lib/api-endpoints";
-import { useEffect } from "react";
+import { VENDOR_OTP_URL, VENDOR_OTP_VERIFY_URL, GET_CATEGORIES_URL } from "@/lib/api-endpoints";
+import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
+import * as ImagePicker from 'expo-image-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import React from "react";
+import { compressImage } from "@/lib/image";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -18,11 +21,14 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
+import axios from "axios";
 
-type Step = "phone" | "otp" | "success";
+type Step = "basic" | "profile" | "otp" | "success";
 export default function VendorRegister() {
   const router = useRouter();
   const { signIn, setAppMode } = useSession();
@@ -31,16 +37,71 @@ export default function VendorRegister() {
     phone: "",
     password: "",
     password_confirmation: "",
+    cnic: "",
+    dob: new Date().toISOString().split('T')[0],
+    experience: "",
+    handled_categories: [] as string[],
+    profile_image_file: null as any,
+    cnic_front_file: null as any,
+    cnic_back_file: null as any,
     source: "vendor-app",
     otp: "",
+    intent: "register",
   });
-  const [step, setStep] = React.useState<Step>("phone");
+  const [step, setStep] = React.useState<Step>("basic");
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [loadingCats, setLoadingCats] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
     void setAppMode("vendor");
-  }, [setAppMode]);
+    fetchCategories();
+  }, []);
 
-  const handleSendOtp = () => {
+  const fetchCategories = async () => {
+    try {
+      setLoadingCats(true);
+      const res = await axios.get(GET_CATEGORIES_URL);
+      if (res.data && res.data.data) {
+        setCategories(res.data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch categories", err);
+    } finally {
+      setLoadingCats(false);
+    }
+  };
+
+  const pickImage = async (field: 'profile_image_file' | 'cnic_front_file' | 'cnic_back_file') => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Toast.show({ type: 'error', text1: 'Permission to access gallery is required' });
+      return;
+    }
+
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: field === 'profile_image_file' ? [1, 1] : [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      const asset = result.assets[0];
+      let uri = asset.uri;
+
+      // Professional Compression (WhatsApp Style)
+      uri = await compressImage(uri, 1600, 0.8);
+
+      setData(field, {
+        uri: uri,
+        name: uri.split('/').pop() || 'upload.jpg',
+        type: 'image/jpeg',
+      } as any);
+    }
+  };
+
+  const handleGoToProfile = () => {
     const phoneRegex = /^\+?[0-9]{10,15}$/;
     if (!phoneRegex.test(data.phone)) {
       Toast.show({ type: "error", text1: "Enter a valid phone number" });
@@ -58,8 +119,29 @@ export default function VendorRegister() {
       Toast.show({ type: "error", text1: "Passwords do not match" });
       return;
     }
+    setStep("profile");
+  };
+
+  const handleSendOtp = () => {
+    // Validate Profile Step
+    if (!data.cnic || data.cnic.length < 5) {
+      Toast.show({ type: "error", text1: "Enter a valid CNIC" });
+      return;
+    }
+    if (!data.experience) {
+      Toast.show({ type: "error", text1: "Please mention your experience" });
+      return;
+    }
+    if (data.handled_categories.length === 0) {
+      Toast.show({ type: "error", text1: "Select at least one product category" });
+      return;
+    }
+    if (!data.cnic_front_file || !data.cnic_back_file) {
+      Toast.show({ type: "error", text1: "CNIC images are required" });
+      return;
+    }
+
     post(VENDOR_OTP_URL, {
-      data: { phone: data.phone, source: data.source, intent: "register" },
       onSuccess: (response) => {
         setStep("otp");
         Toast.show({
@@ -83,12 +165,6 @@ export default function VendorRegister() {
       return;
     }
     post(VENDOR_OTP_VERIFY_URL, {
-      data: {
-        phone: data.phone,
-        otp: data.otp,
-        name: data.name,
-        password: data.password,
-      },
       onSuccess: (response: { message: string; token: string }) => {
         setStep("success");
         Toast.show({
@@ -102,10 +178,21 @@ export default function VendorRegister() {
       onError: (error) => {
         Toast.show({
           type: "error",
-          text1: error?.message || "Invalid OTP",
+          text1: error?.message || "Verification failed",
         });
       },
     });
+  };
+
+  const toggleCategory = (catName: string) => {
+    const current = [...data.handled_categories];
+    const index = current.indexOf(catName);
+    if (index > -1) {
+      current.splice(index, 1);
+    } else {
+      current.push(catName);
+    }
+    setData("handled_categories", current);
   };
 
   return (
@@ -136,32 +223,32 @@ export default function VendorRegister() {
           <View style={styles.centeredContent}>
             {/* Header Text - Left Aligned */}
             <View style={styles.headerTextContainer}>
-              <Text style={styles.title}>Register as Provider</Text>
+              <Text style={styles.title}>
+                {step === "basic" && "Create Account"}
+                {step === "profile" && "Professional Details"}
+                {step === "otp" && "Verify Phone"}
+              </Text>
               <Text style={styles.subtitle}>
-                Join our platform today and start growing your business with us
+                {step === "basic" && "Join our platform today and start growing your business with us"}
+                {step === "profile" && "Please provide your professional documents for verification"}
+                {step === "otp" && `We've sent a 6-digit code to ${data.phone}`}
               </Text>
             </View>
 
             {/* Form */}
             <View style={styles.formContainer}>
-              <Input
-                label="Full Name"
-                placeholder="Enter your full name"
-                value={data.name}
-                onChangeText={(text) => setData({ ...data, name: text })}
-                error={errors.name}
-                theme="vendor"
-                leftIcon={
-                  <Ionicons
-                    name="person-outline"
-                    size={18}
-                    color={Colors.themes.provider.primary}
+              {step === "basic" && (
+                <>
+                  <Input
+                    label="Full Name"
+                    placeholder="Enter your full name"
+                    value={data.name}
+                    onChangeText={(text) => setData({ ...data, name: text })}
+                    error={errors.name}
+                    theme="vendor"
+                    leftIcon={<Ionicons name="person-outline" size={18} color={Colors.themes.provider.primary} />}
                   />
-                }
-              />
 
-              <View style={styles.row}>
-                <View style={{ flex: 1 }}>
                   <Input
                     label="Phone Number"
                     placeholder="03XXXXXXXXX"
@@ -170,61 +257,153 @@ export default function VendorRegister() {
                     keyboardType="phone-pad"
                     error={errors.phone}
                     theme="vendor"
-                    leftIcon={
-                      <Ionicons
-                        name="call-outline"
-                        size={18}
-                        color={Colors.themes.provider.primary}
-                      />
-                    }
+                    leftIcon={<Ionicons name="call-outline" size={18} color={Colors.themes.provider.primary} />}
                   />
-                </View>
-              </View>
 
-              <Input
-                label="Password"
-                placeholder="Create a password"
-                value={data.password}
-                onChangeText={(text) => setData({ ...data, password: text })}
-                secureTextEntry
-                error={errors.password}
-                theme="vendor"
-                leftIcon={
-                  <Ionicons
-                    name="lock-closed-outline"
-                    size={18}
-                    color={Colors.themes.provider.primary}
+                  <Input
+                    label="Password"
+                    placeholder="Create a password"
+                    value={data.password}
+                    onChangeText={(text) => setData({ ...data, password: text })}
+                    secureTextEntry
+                    error={errors.password}
+                    theme="vendor"
+                    leftIcon={<Ionicons name="lock-closed-outline" size={18} color={Colors.themes.provider.primary} />}
                   />
-                }
-              />
 
-              <Input
-                label="Confirm Password"
-                placeholder="Confirm your password"
-                value={data.password_confirmation}
-                onChangeText={(text) =>
-                  setData({ ...data, password_confirmation: text })
-                }
-                secureTextEntry
-                error={errors.password_confirmation}
-                theme="vendor"
-                leftIcon={
-                  <Ionicons
-                    name="lock-closed-outline"
-                    size={18}
-                    color={Colors.themes.provider.primary}
+                  <Input
+                    label="Confirm Password"
+                    placeholder="Confirm your password"
+                    value={data.password_confirmation}
+                    onChangeText={(text) => setData({ ...data, password_confirmation: text })}
+                    secureTextEntry
+                    error={errors.password_confirmation}
+                    theme="vendor"
+                    leftIcon={<Ionicons name="lock-closed-outline" size={18} color={Colors.themes.provider.primary} />}
                   />
-                }
-              />
 
-              {step === "phone" && (
-                <Button
-                  title={processing ? "Sending OTP..." : "Continue"}
-                  onPress={handleSendOtp}
-                  fullWidth
-                  loading={processing}
-                  theme="vendor"
-                />
+                  <Button
+                    title="Continue"
+                    onPress={handleGoToProfile}
+                    fullWidth
+                    theme="vendor"
+                  />
+                </>
+              )}
+
+              {step === "profile" && (
+                <>
+                  <View style={styles.profileImageContainer}>
+                    <TouchableOpacity onPress={() => pickImage('profile_image_file')} style={styles.imagePickerCircle}>
+                      {data.profile_image_file ? (
+                        <Image source={{ uri: data.profile_image_file.uri }} style={styles.pickedProfileImage} />
+                      ) : (
+                        <View style={styles.profilePlaceholder}>
+                          <Ionicons name="camera" size={30} color={Colors.neutral.gray[400]} />
+                          <Text style={styles.profilePlaceholderText}>Profile Photo</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+
+                  <Input
+                    label="CNIC Number"
+                    placeholder="XXXXX-XXXXXXX-X"
+                    value={data.cnic}
+                    onChangeText={(text) => setData({ ...data, cnic: text })}
+                    error={errors.cnic}
+                    theme="vendor"
+                    leftIcon={<Ionicons name="card-outline" size={18} color={Colors.themes.provider.primary} />}
+                  />
+
+                  <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+                    <Input
+                      label="Date of Birth"
+                      value={data.dob}
+                      editable={false}
+                      theme="vendor"
+                      leftIcon={<Ionicons name="calendar-outline" size={18} color={Colors.themes.provider.primary} />}
+                    />
+                  </TouchableOpacity>
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={new Date(data.dob)}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setShowDatePicker(false);
+                        if (selectedDate) {
+                          setData("dob", selectedDate.toISOString().split('T')[0]);
+                        }
+                      }}
+                    />
+                  )}
+
+                  <Input
+                    label="Years of Experience"
+                    placeholder="e.g. 5 years in AC Repair"
+                    value={data.experience}
+                    onChangeText={(text) => setData({ ...data, experience: text })}
+                    error={errors.experience}
+                    theme="vendor"
+                    leftIcon={<Ionicons name="briefcase-outline" size={18} color={Colors.themes.provider.primary} />}
+                  />
+
+                  <Text style={styles.sectionLabel}>Products You Handle</Text>
+                  {loadingCats ? (
+                    <ActivityIndicator color={Colors.themes.provider.primary} />
+                  ) : (
+                    <View style={styles.categoriesList}>
+                      {categories.map((cat) => (
+                        <TouchableOpacity
+                          key={cat.id}
+                          style={[
+                            styles.categoryChip,
+                            data.handled_categories.includes(cat.name) && styles.categoryChipSelected
+                          ]}
+                          onPress={() => toggleCategory(cat.name)}
+                        >
+                          <Text style={[
+                            styles.categoryChipText,
+                            data.handled_categories.includes(cat.name) && styles.categoryChipTextSelected
+                          ]}>{cat.name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+
+                  <View style={styles.documentRow}>
+                    <TouchableOpacity onPress={() => pickImage('cnic_front_file')} style={styles.docPicker}>
+                      {data.cnic_front_file ? (
+                        <Image source={{ uri: data.cnic_front_file.uri }} style={styles.pickedDoc} />
+                      ) : (
+                        <View style={styles.docPlaceholder}>
+                          <Ionicons name="image-outline" size={24} color={Colors.neutral.gray[400]} />
+                          <Text style={styles.docPlaceholderText}>CNIC Front</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={() => pickImage('cnic_back_file')} style={styles.docPicker}>
+                      {data.cnic_back_file ? (
+                        <Image source={{ uri: data.cnic_back_file.uri }} style={styles.pickedDoc} />
+                      ) : (
+                        <View style={styles.docPlaceholder}>
+                          <Ionicons name="image-outline" size={24} color={Colors.neutral.gray[400]} />
+                          <Text style={styles.docPlaceholderText}>CNIC Back</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+
+                  <Button
+                    title={processing ? "Sending OTP..." : "Continue to Verification"}
+                    onPress={handleSendOtp}
+                    fullWidth
+                    loading={processing}
+                    theme="vendor"
+                  />
+                </>
               )}
               {step === "otp" && (
                 <>
@@ -252,8 +431,19 @@ export default function VendorRegister() {
                     loading={processing}
                     theme="vendor"
                   />
-                  <TouchableOpacity onPress={handleSendOtp} style={{ alignSelf: "center" }}>
-                    <Text style={{ color: Colors.themes.provider.primary, fontSize: 12, fontWeight: "500" }}>Resend OTP</Text>
+                  <TouchableOpacity
+                    onPress={handleSendOtp}
+                    style={{ alignSelf: "center" }}
+                  >
+                    <Text
+                      style={{
+                        color: Colors.themes.provider.primary,
+                        fontSize: 12,
+                        fontWeight: "500",
+                      }}
+                    >
+                      Resend OTP
+                    </Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -297,9 +487,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: "center",
     paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.xs,
+    paddingTop: Spacing.md,
     paddingBottom: Spacing.xl,
   },
   centeredContent: {
@@ -322,13 +511,99 @@ const styles = StyleSheet.create({
     textAlign: "left",
     lineHeight: 20,
   },
-  row: {
-    flexDirection: "row",
-    gap: Spacing.md,
-  },
   formContainer: {
     gap: Spacing.sm,
     width: "100%",
+  },
+  profileImageContainer: {
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  imagePickerCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: Colors.neutral.gray[100],
+    borderWidth: 1,
+    borderColor: Colors.neutral.gray[200],
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pickedProfileImage: {
+    width: '100%',
+    height: '100%',
+  },
+  profilePlaceholder: {
+    alignItems: 'center',
+  },
+  profilePlaceholderText: {
+    fontSize: 10,
+    color: Colors.neutral.gray[500],
+    marginTop: 4,
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  categoriesList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: Spacing.md,
+  },
+  categoryChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.neutral.gray[300],
+    backgroundColor: Colors.neutral.white,
+  },
+  categoryChipSelected: {
+    borderColor: Colors.themes.provider.primary,
+    backgroundColor: Colors.themes.provider.primary + '10',
+  },
+  categoryChipText: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+  },
+  categoryChipTextSelected: {
+    color: Colors.themes.provider.primary,
+    fontWeight: '600',
+  },
+  documentRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  docPicker: {
+    flex: 1,
+    height: 100,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: Colors.neutral.gray[300],
+    backgroundColor: Colors.neutral.gray[50],
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  pickedDoc: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  docPlaceholder: {
+    alignItems: 'center',
+  },
+  docPlaceholderText: {
+    fontSize: 11,
+    color: Colors.neutral.gray[500],
+    marginTop: 4,
   },
   footer: {
     flexDirection: "row",

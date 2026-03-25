@@ -16,9 +16,10 @@ interface ModalProps {
   visible: boolean;
   type?: ModalType;
   title: string;
-  message: string;
+  message?: string;
   actions?: ModalAction[];
   onClose?: () => void;
+  children?: React.ReactNode;
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -28,6 +29,7 @@ const Modal: React.FC<ModalProps> = ({
   message,
   actions,
   onClose,
+  children,
 }) => {
   const getIcon = () => {
     switch (type) {
@@ -92,7 +94,10 @@ const Modal: React.FC<ModalProps> = ({
           <Text style={styles.title}>{title}</Text>
 
           {/* Message */}
-          <Text style={styles.message}>{message}</Text>
+          {message && <Text style={styles.message}>{message}</Text>}
+
+          {/* Children */}
+          {children && <View style={styles.childrenContainer}>{children}</View>}
 
           {/* Actions */}
           <View style={styles.actionsContainer}>
@@ -172,6 +177,10 @@ const styles = StyleSheet.create({
   },
   actionButtonFull: {
     flex: 1,
+  },
+  childrenContainer: {
+    width: "100%",
+    marginBottom: Spacing.lg,
   },
 });
 

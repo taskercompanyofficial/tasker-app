@@ -10,14 +10,13 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
+  Image,
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Image,
 } from "react-native";
 import Toast from "react-native-toast-message";
 type Step = "phone" | "otp" | "success";
@@ -34,7 +33,8 @@ export default function Signin() {
   const isValidPhone = /^03\d{9}$/.test(data.phone);
   useEffect(() => {
     void setAppMode("customer");
-  }, [setAppMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const handleSendOtp = () => {
     post(OTP_URL, {
       onSuccess: (response) => {
@@ -88,13 +88,51 @@ export default function Signin() {
     console.log("Google sign in");
   };
 
+  const autoVerifyRef = useRef(false);
+  const clipboardIntervalRef = useRef<number | null>(null);
 
+  useEffect(() => {
+    autoVerifyRef.current = false;
+    if (clipboardIntervalRef.current) {
+      clearInterval(clipboardIntervalRef.current);
+      clipboardIntervalRef.current = null;
+    }
+    if (step !== "otp") {
+      return;
+    }
+    const checkClipboard = async () => {
+      try {
+        const Clipboard = await import("expo-clipboard");
+        const text = await Clipboard.getStringAsync();
+        if (text && /^\d{6}$/.test(text)) {
+          if (data.otp !== text) {
+            setData({ ...data, otp: text });
+          }
+        }
+      } catch {}
+    };
+    void checkClipboard();
+    const id = setInterval(() => {
+      void checkClipboard();
+    }, 1500) as unknown as number;
+    clipboardIntervalRef.current = id;
+    return () => {
+      if (clipboardIntervalRef.current) {
+        clearInterval(clipboardIntervalRef.current);
+        clipboardIntervalRef.current = null;
+      }
+    };
+  }, [step, data, setData]);
+
+  useEffect(() => {
+    if (step === "otp" && isValidOtp && !processing && !autoVerifyRef.current) {
+      autoVerifyRef.current = true;
+      void handleVerifyOtp();
+    }
+  }, [step, isValidOtp, processing]);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
+    <KeyboardAvoidingView style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -144,26 +182,6 @@ export default function Signin() {
                 loading={processing}
                 disabled={!isValidPhone}
               />
-
-              <View style={styles.dividerContainer}>
-                <View style={styles.divider} />
-                <Text style={styles.dividerText}>or</Text>
-                <View style={styles.divider} />
-              </View>
-
-              <Button
-                title="Continue with Google"
-                onPress={handleGoogleSignIn}
-                variant="outline"
-                fullWidth
-                icon={
-                  <Ionicons
-                    name="logo-google"
-                    size={18}
-                    color={Colors.social.google}
-                  />
-                }
-              />
             </View>
           )}
 
@@ -189,6 +207,8 @@ export default function Signin() {
                 keyboardType="number-pad"
                 maxLength={6}
                 error={errors.otp}
+                textContentType="oneTimeCode"
+                autoComplete="one-time-code"
                 leftIcon={
                   <Ionicons
                     name="lock-closed-outline"

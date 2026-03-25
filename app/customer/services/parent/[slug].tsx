@@ -7,7 +7,13 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useMemo, useState } from "react";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  ScrollView,
+} from "react-native";
 import CheckoutModal from "@/components/checkout/CheckoutModal";
 
 export default function ParentServiceDetailPage() {
@@ -31,7 +37,10 @@ export default function ParentServiceDetailPage() {
   const totalAmount = useMemo(() => {
     const item = checkoutItems[0];
     if (!item) return 0;
-    const dp = item.discountType === "percentage" ? item.price * (1 - item.discount / 100) : item.price - item.discount;
+    const dp =
+      item.discountType === "percentage"
+        ? item.price * (1 - item.discount / 100)
+        : item.price - item.discount;
     return Math.max(dp, 0) * item.quantity;
   }, [checkoutItems]);
   const increment = () => setQuantity((q) => q + 1);
@@ -41,8 +50,15 @@ export default function ParentServiceDetailPage() {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={Typography.sizes.base} color={Colors.text.primary} />
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={Typography.sizes.base}
+              color={Colors.text.primary}
+            />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Service Details</Text>
           <View style={{ width: 32 }} />
@@ -58,8 +74,15 @@ export default function ParentServiceDetailPage() {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={Typography.sizes.base} color={Colors.text.primary} />
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={Typography.sizes.base}
+              color={Colors.text.primary}
+            />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Service Details</Text>
           <View style={{ width: 32 }} />
@@ -74,13 +97,22 @@ export default function ParentServiceDetailPage() {
   const price = data?.price || 0;
   const discount = data?.discount || 0;
   const discountedPrice =
-    (data?.discount_type || "percentage") === "percentage" ? price * (1 - discount / 100) : price - discount;
+    (data?.discount_type || "percentage") === "percentage"
+      ? price * (1 - discount / 100)
+      : price - discount;
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={Typography.sizes.base} color={Colors.text.primary} />
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Ionicons
+            name="chevron-back"
+            size={Typography.sizes.base}
+            color={Colors.text.primary}
+          />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Service Details</Text>
         <View style={{ width: 32 }} />
@@ -102,24 +134,27 @@ export default function ParentServiceDetailPage() {
             ) : null}
             <View style={styles.topControls}>
               <View style={styles.priceRow}>
-                <Text style={styles.finalPrice}>₨{Math.round(discountedPrice)}</Text>
+                <Text style={styles.finalPrice}>
+                  ₨{Math.round(discountedPrice)}
+                </Text>
                 {discount > 0 && (
                   <View style={styles.discountRow}>
-                    <Text style={styles.originalPrice}>₨{price}</Text>
-                    <View style={styles.discountBadge}>
-                      <Text style={styles.discountText}>
-                        {data.discount_type === "percentage" ? `${discount}%` : `₨${discount}`}
-                      </Text>
-                    </View>
+                    <Text style={styles.originalPrice}>₨ {price}</Text>
                   </View>
                 )}
               </View>
               <View style={styles.quantitySelector}>
-                <TouchableOpacity style={styles.quantityButton} onPress={decrement}>
+                <TouchableOpacity
+                  style={styles.quantityButton}
+                  onPress={decrement}
+                >
                   <Text style={{ color: Colors.text.primary }}>−</Text>
                 </TouchableOpacity>
                 <Text style={styles.quantityText}>{quantity}</Text>
-                <TouchableOpacity style={styles.quantityButton} onPress={increment}>
+                <TouchableOpacity
+                  style={styles.quantityButton}
+                  onPress={increment}
+                >
                   <Text style={{ color: Colors.text.primary }}>+</Text>
                 </TouchableOpacity>
               </View>
@@ -133,7 +168,11 @@ export default function ParentServiceDetailPage() {
             <View style={styles.listItems}>
               {data.includes.map((item, idx) => (
                 <View key={`inc-${idx}`} style={styles.listRow}>
-                  <Ionicons name="checkmark" size={Typography.sizes.sm} color={Colors.success} />
+                  <Ionicons
+                    name="checkmark"
+                    size={Typography.sizes.sm}
+                    color={Colors.success}
+                  />
                   <Text style={styles.listText}>{item}</Text>
                 </View>
               ))}
@@ -147,7 +186,11 @@ export default function ParentServiceDetailPage() {
             <View style={styles.listItems}>
               {data.excludes.map((item, idx) => (
                 <View key={`exc-${idx}`} style={styles.listRow}>
-                  <Ionicons name="close" size={Typography.sizes.sm} color={Colors.error} />
+                  <Ionicons
+                    name="close"
+                    size={Typography.sizes.sm}
+                    color={Colors.error}
+                  />
                   <Text style={styles.listText}>{item}</Text>
                 </View>
               ))}
@@ -158,7 +201,11 @@ export default function ParentServiceDetailPage() {
         {Array.isArray(data.images) && data.images.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Gallery</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.galleryRow}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.galleryRow}
+            >
               {data.images.slice(0, 8).map((img, idx) => (
                 <Image
                   key={`img-${idx}`}
@@ -175,9 +222,14 @@ export default function ParentServiceDetailPage() {
         <View style={styles.footerBar}>
           <View style={styles.footerInfo}>
             <Text style={styles.footerLabel}>Price</Text>
-            <Text style={styles.footerPrice}>₨{Math.round(Math.max(discountedPrice, 0))}</Text>
+            <Text style={styles.footerPrice}>
+              ₨{Math.round(Math.max(discountedPrice, 0))}
+            </Text>
           </View>
-          <TouchableOpacity style={styles.addButton} onPress={() => setQuantity(1)}>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setQuantity(1)}
+          >
             <Ionicons name="cart" size={18} color={Colors.neutral.white} />
             <Text style={styles.addButtonText}>Add</Text>
           </TouchableOpacity>
@@ -194,9 +246,16 @@ export default function ParentServiceDetailPage() {
               <Text style={styles.totalPrice}>₨{Math.round(totalAmount)}</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.checkoutButton} onPress={() => setShowCheckoutModal(true)}>
+          <TouchableOpacity
+            style={styles.checkoutButton}
+            onPress={() => setShowCheckoutModal(true)}
+          >
             <Text style={styles.checkoutButtonText}>Checkout</Text>
-            <Ionicons name="arrow-forward" size={20} color={Colors.neutral.white} />
+            <Ionicons
+              name="arrow-forward"
+              size={20}
+              color={Colors.neutral.white}
+            />
           </TouchableOpacity>
         </View>
       )}

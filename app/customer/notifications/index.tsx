@@ -1,11 +1,12 @@
 import Loader from "@/components/Loader";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
+import { useEcho, type RealtimeNotification } from "@/context/EchoProvider";
 import { NOTIFICATION_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   FlatList,
   RefreshControl,
@@ -20,10 +21,11 @@ interface Notification {
   id: number;
   title: string;
   message: string;
-  type: "order" | "promotion" | "system" | "free_installation";
+  type: string;
   order_id: number | null;
   read: boolean;
   created_at: string;
+  data?: any;
 }
 
 export default function NotificationsPage() {
@@ -31,11 +33,34 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const { onNotification, resetRealtimeUnread, connectionState } = useEcho();
+
+  // Reset the unread badge when this page is focused
   useFocusEffect(
     useCallback(() => {
       fetchNotifications();
+      resetRealtimeUnread();
     }, []),
   );
+
+  // Real-time listener
+  useEffect(() => {
+    const unsubscribe = onNotification((event) => {
+      const incoming = event.notification;
+      const mapped: Notification = {
+        id: incoming.id,
+        title: incoming.title,
+        message: incoming.message,
+        type: incoming.type,
+        order_id: (incoming.data?.work_order_id as number) ?? null,
+        read: false,
+        created_at: incoming.created_at,
+        data: incoming.data,
+      };
+      setNotifications((prev) => [mapped, ...prev]);
+    });
+    return unsubscribe;
+  }, [onNotification]);
 
   const fetchNotifications = async () => {
     try {
@@ -57,7 +82,6 @@ export default function NotificationsPage() {
   const markAsRead = async (notificationId: number) => {
     try {
       await myAxios.post(`${NOTIFICATION_URL}/${notificationId}/read`);
-      // Update local state
       setNotifications((prev) =>
         prev.map((notif) =>
           notif.id === notificationId ? { ...notif, read: true } : notif,
@@ -70,72 +94,67 @@ export default function NotificationsPage() {
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case "order":
-        return "receipt";
-      case "free_installation":
-        return "construct";
-      case "promotion":
-        return "pricetag";
-      case "system":
-        return "information-circle";
-      default:
-        return "notifications";
+      case "order":           return "receipt";
+      case "free_installation": return "construct";
+      case "promotion":       return "pricetag";
+      case "system":          return "information-circle";
+      default:                return "notifications";
     }
   };
 
   const getNotificationColor = (type: string) => {
     switch (type) {
-      case "order":
-        return Colors.themes.customer.primary;
-      case "free_installation":
-        return Colors.success;
-      case "promotion":
-        return "#10B981";
-      case "system":
-        return "#3B82F6";
-      default:
-        return Colors.text.secondary;
+      case "order":           return Colors.themes.customer.primary;
+      case "free_installation": return Colors.success;
+      case "promotion":       return "#10B981";
+      case "system":          return "#3B82F6";
+      default:                return Colors.text.secondary;
     }
   };
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffTime = now.getTime() - date.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
-    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+    const diffMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    const diffHours   = Math.floor(diffMinutes / 60);
+    const diffDays    = Math.floor(diffHours / 24);
 
     if (diffMinutes < 1) return "Just now";
     if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffHours < 24)   return `${diffHours}h ago`;
+    if (diffDays === 1)   return "Yesterday";
+    if (diffDays < 7)     return `${diffDays}d ago`;
 
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
   const handleNotificationPress = async (notification: Notification) => {
-    // Mark as read
     if (!notification.read) {
       await markAsRead(notification.id);
     }
-
-    // Navigate to order if order_id exists
     if (notification.order_id) {
-      router.push(`/customer/orders/${notification.order_id}`);
+      router.push(`/customer/orders/${notification.order_id}` as any);
     }
+  };
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const ConnectionIndicator = () => {
+    const isLive = connectionState === "connected";
+    const isConnecting = connectionState === "connecting" || connectionState === "initialized";
+    const dotColor = isLive ? Colors.success : isConnecting ? "#F59E0B" : Colors.error;
+    const label    = isLive ? "Live" : isConnecting ? "Connecting…" : "Offline";
+    return (
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+        <View style={[styles.statusDot, { backgroundColor: dotColor }]} />
+        <Text style={[styles.statusLabel, { color: dotColor }]}>{label}</Text>
+      </View>
+    );
   };
 
   const renderNotification = ({ item }: { item: Notification }) => (
     <TouchableOpacity
-      style={[
-        styles.notificationCard,
-        !item.read && styles.notificationCardUnread,
-      ]}
+      style={[styles.notificationCard, !item.read && styles.notificationCardUnread]}
       onPress={() => handleNotificationPress(item)}
       activeOpacity={0.7}
     >
@@ -154,20 +173,14 @@ export default function NotificationsPage() {
 
       <View style={styles.notificationContent}>
         <View style={styles.notificationHeader}>
-          <Text style={styles.notificationTitle}>{item.title}</Text>
-          <Text style={styles.notificationTime}>
-            {formatTime(item.created_at)}
-          </Text>
+          <Text style={styles.notificationTitle} numberOfLines={1}>{item.title}</Text>
+          <Text style={styles.notificationTime}>{formatTime(item.created_at)}</Text>
         </View>
-        <Text style={styles.notificationMessage} numberOfLines={2}>
-          {item.message}
-        </Text>
+        <Text style={styles.notificationMessage} numberOfLines={2}>{item.message}</Text>
         {!item.read && <View style={styles.unreadDot} />}
       </View>
     </TouchableOpacity>
   );
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
 
   if (loading) {
     return <Loader fullScreen />;
@@ -177,19 +190,18 @@ export default function NotificationsPage() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <View>
-          <Text style={styles.headerTitle}>Notifications</Text>
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Text style={styles.headerTitle}>Notifications</Text>
+            <ConnectionIndicator />
+          </View>
           {unreadCount > 0 && (
             <Text style={styles.headerSubtitle}>{unreadCount} unread</Text>
           )}
         </View>
-        <View style={styles.placeholder} />
       </View>
 
       {/* Notifications List */}
@@ -203,15 +215,9 @@ export default function NotificationsPage() {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons
-              name="notifications-off-outline"
-              size={64}
-              color={Colors.text.tertiary}
-            />
+            <Ionicons name="notifications-off-outline" size={64} color={Colors.text.tertiary} />
             <Text style={styles.emptyTitle}>No Notifications</Text>
-            <Text style={styles.emptyText}>
-              You&apos;re all caught up! Check back later for updates.
-            </Text>
+            <Text style={styles.emptyText}>You&apos;re all caught up!</Text>
           </View>
         }
       />
@@ -227,7 +233,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     backgroundColor: Colors.neutral.white,
@@ -249,28 +254,30 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 12,
-    color: Colors.text.secondary,
-    textAlign: "center",
-  },
-  placeholder: {
-    width: 40,
+    color: Colors.themes.customer.primary,
+    fontWeight: "600",
   },
   listContainer: {
     padding: Spacing.md,
+    gap: Spacing.sm,
   },
   notificationCard: {
     flexDirection: "row",
     backgroundColor: Colors.neutral.white,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: Spacing.md,
-    marginBottom: Spacing.sm,
     borderWidth: 1,
     borderColor: Colors.border.light,
     gap: Spacing.sm,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-    notificationCardUnread: {
-    backgroundColor: Colors.themes.customer.primary + "05",
-    borderColor: Colors.themes.customer.primary + "20",
+  notificationCardUnread: {
+    backgroundColor: Colors.themes.customer.primary + "10",
+    borderColor: Colors.themes.customer.primary + "30",
   },
   iconContainer: {
     width: 48,
@@ -286,26 +293,27 @@ const styles = StyleSheet.create({
   notificationHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     marginBottom: 4,
+    gap: 8,
   },
   notificationTitle: {
+    flex: 1,
     fontSize: 14,
     fontWeight: "700",
     color: Colors.text.primary,
-    flex: 1,
   },
   notificationTime: {
     fontSize: 11,
     color: Colors.text.tertiary,
-    marginLeft: 8,
+    flexShrink: 0,
   },
   notificationMessage: {
     fontSize: 13,
     color: Colors.text.secondary,
     lineHeight: 18,
   },
-    unreadDot: {
+  unreadDot: {
     position: "absolute",
     top: 0,
     right: 0,
@@ -331,5 +339,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.text.secondary,
     textAlign: "center",
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusLabel: {
+    fontSize: 11,
+    fontWeight: "600",
   },
 });

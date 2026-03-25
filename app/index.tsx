@@ -12,6 +12,7 @@ export default function Index() {
 
   const hasCustomer = !!session.customerToken;
   const hasVendor = !!session.vendorToken;
+  const hasVendorStaff = !!session.vendorStaffToken;
 
   let href = "/auth/role-selection";
 
@@ -19,9 +20,11 @@ export default function Index() {
     href = hasCustomer ? "/customer" : "/auth/customer/sign-in";
   } else if (session.appMode === "vendor") {
     href = hasVendor ? "/vendor" : "/auth/vendor/sign-in";
+  } else if (session.appMode === "vendor_staff") {
+    href = hasVendorStaff ? "/vendor" : "/auth/vendor/sign-in";
   } else if (hasCustomer) {
     href = "/customer";
-  } else if (hasVendor) {
+  } else if (hasVendor || hasVendorStaff) {
     href = "/vendor";
   }
 

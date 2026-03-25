@@ -3,9 +3,10 @@ import { NOTIFICATION_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { BorderRadius } from "@/constants/Styles";
+import { useEcho } from "@/context/EchoProvider";
 
 interface NotificationBellProps {
   variant?: "default" | "light";
@@ -15,14 +16,24 @@ export default function NotificationBell({
   variant = "default",
 }: NotificationBellProps) {
   const [unreadCount, setUnreadCount] = useState(0);
+  const { onNotification } = useEcho();
 
   const isLight = variant === "light";
 
+  // Fetch initial unread count on focus
   useFocusEffect(
     useCallback(() => {
       fetchUnreadCount();
     }, []),
   );
+
+  // Subscribe to real-time notifications to increment count instantly
+  useEffect(() => {
+    const unsubscribe = onNotification(() => {
+      setUnreadCount((prev) => prev + 1);
+    });
+    return unsubscribe;
+  }, [onNotification]);
 
   const fetchUnreadCount = async () => {
     try {

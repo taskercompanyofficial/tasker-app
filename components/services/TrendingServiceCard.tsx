@@ -16,25 +16,32 @@ export default function TrendingServiceCard({ item }: Props) {
   const price = item.price;
   const discount = item.discount || 0;
   const finalPrice =
-    item.discount_type === "percentage" ? price * (1 - discount / 100) : price - discount;
+    item.discount_type === "percentage"
+      ? price * (1 - discount / 100)
+      : price - discount;
   const showRating = typeof item.rating === "number";
   const isDiscounted = discount > 0;
   const discountBadgeText =
     isDiscounted && item.discount_type === "percentage"
       ? `${discount}%`
       : isDiscounted
-      ? `₨${Math.round(discount)}`
-      : null;
+        ? `₨${Math.round(discount)}`
+        : null;
   const discountEnd =
     typeof item.discount_end_date === "string" && item.discount_end_date
       ? new Date(item.discount_end_date)
       : null;
   const discountEndText = discountEnd
-    ? discountEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    ? discountEnd.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })
     : null;
   return (
     <TouchableOpacity
-      onPress={() => item.slug && router.push(`/customer/services/parent/${item.slug}`)}
+      onPress={() =>
+        item.slug && router.push(`/customer/services/parent/${item.slug}`)
+      }
       style={styles.card}
       activeOpacity={0.9}
     >
@@ -54,7 +61,11 @@ export default function TrendingServiceCard({ item }: Props) {
           </Text>
           {showRating && (
             <View style={styles.ratingBadge}>
-              <Ionicons name="star" size={Typography.sizes.xs} color={Colors.success} />
+              <Ionicons
+                name="star"
+                size={Typography.sizes.xs}
+                color={Colors.success}
+              />
               <Text style={styles.ratingText}>{item.rating?.toFixed(1)}</Text>
             </View>
           )}
@@ -67,15 +78,12 @@ export default function TrendingServiceCard({ item }: Props) {
         <View style={styles.priceSection}>
           {isDiscounted && (
             <View style={styles.discountRow}>
-              <Text style={styles.originalPrice}>₨{Math.round(price)}</Text>
-              {!!discountBadgeText && (
-                <View style={styles.discountBadge}>
-                  <Text style={styles.discountText}>{discountBadgeText}</Text>
-                </View>
-              )}
+              <Text style={styles.originalPrice}>₨ {Math.round(price)}</Text>
             </View>
           )}
-          <Text style={styles.finalPrice}>₨{Math.max(Math.round(finalPrice), 0)}</Text>
+          <Text style={styles.finalPrice}>
+            ₨{Math.max(Math.round(finalPrice), 0)}
+          </Text>
         </View>
         {isDiscounted && discountEndText && (
           <View style={styles.metaRow}>

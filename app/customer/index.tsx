@@ -2,10 +2,18 @@ import CategoriesCards from "@/components/home/categories-cards";
 import HomeHeader from "@/components/home/Header";
 import IndustrialServicesCard from "@/components/home/industrial-servies-card";
 import FreeInstallationCard from "@/components/home/free-installation-card";
+import TaskerShopCard from "@/components/home/TaskerShopCard";
 import Colors from "@/constants/Colors";
 import { Spacing, Typography } from "@/constants/Styles";
 import React, { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Image } from "react-native";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  Image,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LandingPage() {
@@ -26,13 +34,22 @@ export default function LandingPage() {
           <Text style={styles.subtitle}>Choose a service to get started</Text>
         </View>
         <CategoriesCards />
+        <TaskerShopCard />
         <FreeInstallationCard />
         <IndustrialServicesCard />
       </ScrollView>
       {showPromo && (
-        <TouchableOpacity style={styles.promoOverlay} activeOpacity={1} onPress={() => setShowPromo(false)}>
+        <TouchableOpacity
+          style={styles.promoOverlay}
+          activeOpacity={1}
+          onPress={() => setShowPromo(false)}
+        >
           <View style={styles.promoContent}>
-            <Image source={require("@/assets/images/banner-1.png")} style={styles.promoImage} resizeMode="contain" />
+            <Image
+              source={require("@/assets/images/banner-1.png")}
+              style={styles.promoImage}
+              resizeMode="contain"
+            />
           </View>
         </TouchableOpacity>
       )}

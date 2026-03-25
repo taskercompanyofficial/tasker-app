@@ -9,6 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import React, { useState } from "react";
+import { compressAndSquare } from "@/lib/image";
 import {
   Image,
   ScrollView,
@@ -64,7 +65,11 @@ export default function EditProfilePage() {
 
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
-      const uri = asset.uri;
+      let uri = asset.uri;
+
+      // Professional Compression & Squaring for Profile
+      uri = await compressAndSquare(uri, 800, 0.85);
+
       setSelectedImageUri(uri);
 
       const filename = uri.split("/").pop() || "avatar.jpg";

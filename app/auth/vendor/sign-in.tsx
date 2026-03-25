@@ -5,7 +5,12 @@ import { Spacing } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
 import useForm from "@/hooks/use-form";
 import { Ionicons } from "@expo/vector-icons";
-import { VENDOR_LOGIN_URL, VENDOR_OTP_URL, VENDOR_OTP_VERIFY_URL } from "@/lib/api-endpoints";
+import {
+  VENDOR_LOGIN_URL,
+  VENDOR_OTP_URL,
+  VENDOR_OTP_VERIFY_URL,
+  VENDOR_STAFF_LOGIN_URL,
+} from "@/lib/api-endpoints";
 import { useEffect } from "react";
 import { router } from "expo-router";
 import React from "react";
@@ -23,6 +28,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 
 type Step = "phone" | "otp" | "success";
+type LoginType = "vendor" | "staff";
+
 export default function VendorSignIn() {
   const { signIn, setAppMode } = useSession();
   const { data, setData, processing, errors, post } = useForm({
@@ -33,10 +40,12 @@ export default function VendorSignIn() {
   });
   const [step, setStep] = React.useState<Step>("phone");
   const [useOtp, setUseOtp] = React.useState<boolean>(false);
+  const [loginType, setLoginType] = React.useState<LoginType>("vendor");
 
   useEffect(() => {
     void setAppMode("vendor");
-  }, [setAppMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSendOtp = () => {
     const phoneRegex = /^\+?[0-9]{10,15}$/;
@@ -93,28 +102,56 @@ export default function VendorSignIn() {
       Toast.show({ type: "error", text1: "Enter a valid phone number" });
       return;
     }
-    if (!data.password || data.password.length < 8) {
-      Toast.show({ type: "error", text1: "Password must be at least 8 characters" });
+    if (!data.password || data.password.length < 6) {
+      Toast.show({
+        type: "error",
+        text1: "Password must be at least 6 characters",
+      });
       return;
     }
-    post(VENDOR_LOGIN_URL, {
-      onSuccess: (response: { message: string; token: string }) => {
-        Toast.show({
-          type: "success",
-          text1: response.message || "Login successful",
-        });
-        signIn(response.token, "vendor");
-        void setAppMode("vendor");
-        router.replace("/vendor/(tabs)/dashboard");
-      },
-      onError: (error) => {
-        Toast.show({
-          type: "error",
-          text1: error.message || "Login failed",
-        });
-      },
-    });
+
+    if (loginType === "staff") {
+      // Staff login
+      post(VENDOR_STAFF_LOGIN_URL, {
+        onSuccess: (response: { message: string; token: string }) => {
+          Toast.show({
+            type: "success",
+            text1: response.message || "Login successful",
+          });
+          signIn(response.token, "vendor_staff");
+          void setAppMode("vendor_staff");
+          router.replace("/vendor/(tabs)/dashboard");
+        },
+        onError: (error) => {
+          Toast.show({
+            type: "error",
+            text1: error.message || "Login failed",
+          });
+        },
+      });
+    } else {
+      // Vendor login
+      post(VENDOR_LOGIN_URL, {
+        onSuccess: (response: { message: string; token: string }) => {
+          Toast.show({
+            type: "success",
+            text1: response.message || "Login successful",
+          });
+          signIn(response.token, "vendor");
+          void setAppMode("vendor");
+          router.replace("/vendor/(tabs)/dashboard");
+        },
+        onError: (error) => {
+          Toast.show({
+            type: "error",
+            text1: error.message || "Login failed",
+          });
+        },
+      });
+    }
   };
+
+  const isStaffMode = loginType === "staff";
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -128,8 +165,10 @@ export default function VendorSignIn() {
         >
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Login Page</Text>
-        <View style={{ width: 40 }} /> {/* Spacer to center title */}
+        <Text style={styles.headerTitle}>
+          {isStaffMode ? "Staff Login" : "Vendor Login"}
+        </Text>
+        <View style={{ width: 40 }} />
       </View>
 
       <KeyboardAvoidingView
@@ -142,11 +181,63 @@ export default function VendorSignIn() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.centeredContent}>
+            {/* Login Type Toggle */}
+            <View style={styles.toggleContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  !isStaffMode && styles.toggleButtonActive,
+                ]}
+                onPress={() => setLoginType("vendor")}
+              >
+                <Ionicons
+                  name="business-outline"
+                  size={16}
+                  color={!isStaffMode ? "#FFFFFF" : Colors.themes.provider.primary}
+                />
+                <Text
+                  style={[
+                    styles.toggleText,
+                    !isStaffMode && styles.toggleTextActive,
+                  ]}
+                >
+                  Vendor
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  isStaffMode && styles.toggleButtonActive,
+                ]}
+                onPress={() => setLoginType("staff")}
+              >
+                <Ionicons
+                  name="person-outline"
+                  size={16}
+                  color={isStaffMode ? "#FFFFFF" : Colors.themes.provider.primary}
+                />
+                <Text
+                  style={[
+                    styles.toggleText,
+                    isStaffMode && styles.toggleTextActive,
+                  ]}
+                >
+                  Staff
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             {/* Header Text - Left Aligned */}
             <View style={styles.headerTextContainer}>
-              <Text style={styles.title}>Service Provider Login</Text>
+              <Text style={styles.title}>
+                {isStaffMode
+                  ? "Staff Login"
+                  : "Service Provider Login"}
+              </Text>
               <Text style={styles.subtitle}>
-                Sign in to manage your jobs and earnings
+                {isStaffMode
+                  ? "Sign in with credentials provided by your vendor"
+                  : "Sign in to manage your jobs and earnings"}
               </Text>
             </View>
 
@@ -169,13 +260,16 @@ export default function VendorSignIn() {
                 }
               />
 
-              {!useOtp && (
+              {/* Staff always uses password login */}
+              {(isStaffMode || !useOtp) && (
                 <>
                   <Input
                     label="Password"
-                    placeholder="Enter your password"
+                    placeholder={isStaffMode ? "Enter your staff password" : "Enter your password"}
                     value={data.password}
-                    onChangeText={(text) => setData({ ...data, password: text })}
+                    onChangeText={(text) =>
+                      setData({ ...data, password: text })
+                    }
                     secureTextEntry
                     error={errors.password}
                     theme="vendor"
@@ -187,9 +281,13 @@ export default function VendorSignIn() {
                       />
                     }
                   />
-                  <TouchableOpacity style={styles.forgotPassword}>
-                    <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-                  </TouchableOpacity>
+                  {!isStaffMode && (
+                    <TouchableOpacity style={styles.forgotPassword}>
+                      <Text style={styles.forgotPasswordText}>
+                        Forgot Password?
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                   <Button
                     title={processing ? "Signing In..." : "Sign In"}
                     onPress={handlePasswordLogin}
@@ -199,7 +297,7 @@ export default function VendorSignIn() {
                   />
                 </>
               )}
-              {useOtp && (
+              {!isStaffMode && useOtp && (
                 <>
                   {step === "phone" && (
                     <Button
@@ -236,32 +334,52 @@ export default function VendorSignIn() {
                         loading={processing}
                         theme="vendor"
                       />
-                      <TouchableOpacity onPress={handleSendOtp} style={styles.forgotPassword}>
-                        <Text style={styles.forgotPasswordText}>Resend OTP</Text>
+                      <TouchableOpacity
+                        onPress={handleSendOtp}
+                        style={styles.forgotPassword}
+                      >
+                        <Text style={styles.forgotPasswordText}>
+                          Resend OTP
+                        </Text>
                       </TouchableOpacity>
                     </>
                   )}
                 </>
               )}
-              <TouchableOpacity
-                onPress={() => setUseOtp(!useOtp)}
-                style={styles.footer}
-              >
-                <Text style={styles.footerText}>
-                  {useOtp ? "Use password instead" : "Use OTP instead"}
-                </Text>
-              </TouchableOpacity>
 
-              <View style={styles.footer}>
-                <Text style={styles.footerText}>
-                  Don&apos;t have an account?
-                </Text>
+              {/* OTP toggle (only for vendor, not staff) */}
+              {!isStaffMode && (
                 <TouchableOpacity
-                  onPress={() => router.push("/auth/vendor/register")}
+                  onPress={() => setUseOtp(!useOtp)}
+                  style={styles.footer}
                 >
-                  <Text style={styles.signUpText}>Register as Provider</Text>
+                  <Text style={styles.footerText}>
+                    {useOtp ? "Use password instead" : "Use OTP instead"}
+                  </Text>
                 </TouchableOpacity>
-              </View>
+              )}
+
+              {!isStaffMode && (
+                <View style={styles.footer}>
+                  <Text style={styles.footerText}>
+                    Don&apos;t have an account?
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => router.push("/auth/vendor/register")}
+                  >
+                    <Text style={styles.signUpText}>Register as Provider</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {isStaffMode && (
+                <View style={styles.staffInfoBox}>
+                  <Ionicons name="information-circle-outline" size={18} color={Colors.themes.provider.primary} />
+                  <Text style={styles.staffInfoText}>
+                    Your default password is the last 6 digits of your phone number. Contact your vendor if you need help.
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
         </ScrollView>
@@ -292,6 +410,38 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: Colors.text.primary,
+  },
+  toggleContainer: {
+    flexDirection: "row",
+    backgroundColor: Colors.neutral.gray[100],
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: Spacing.lg,
+  },
+  toggleButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 6,
+  },
+  toggleButtonActive: {
+    backgroundColor: Colors.themes.provider.primary,
+    shadowColor: Colors.themes.provider.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  toggleText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.themes.provider.primary,
+  },
+  toggleTextActive: {
+    color: "#FFFFFF",
   },
   scrollContent: {
     flexGrow: 1,
@@ -348,5 +498,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.themes.provider.primary,
     fontWeight: "600",
+  },
+  staffInfoBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: Colors.themes.provider.background,
+    borderRadius: 10,
+    padding: 12,
+    gap: 8,
+    marginTop: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.themes.provider.accent + '30',
+  },
+  staffInfoText: {
+    flex: 1,
+    fontSize: 12,
+    color: Colors.text.secondary,
+    lineHeight: 18,
   },
 });

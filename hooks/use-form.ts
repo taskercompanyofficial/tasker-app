@@ -101,7 +101,8 @@ export default function useForm<TForm extends FormDataType>(
     {}
   );
   const [processing, setProcessing] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
+  const [defaults, setDefaults] = useState<TForm>(initialValues);
+  const isDirty = JSON.stringify(data) !== JSON.stringify(defaults);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [wasSuccessful, setWasSuccessful] = useState(false);
   const [recentlySuccessful, setRecentlySuccessful] = useState(false);
@@ -114,17 +115,14 @@ export default function useForm<TForm extends FormDataType>(
   ) => {
     if (typeof keyOrUpdater === "function") {
       setData((prevData) => {
-        setIsDirty(true);
         return keyOrUpdater(prevData);
       });
     } else if (typeof keyOrUpdater === "string" && value !== undefined) {
       setData((prevData) => {
-        setIsDirty(true);
         return { ...prevData, [keyOrUpdater]: value };
       });
     } else {
       setData(() => {
-        setIsDirty(true);
         return keyOrUpdater as TForm;
       });
     }
@@ -291,9 +289,13 @@ export default function useForm<TForm extends FormDataType>(
       value?: FormDataConvertible
     ) => {
       if (typeof keyOrFields === "string" && value !== undefined) {
+        setDefaults((prev) => ({ ...prev, [keyOrFields]: value }));
         setData((prev) => ({ ...prev, [keyOrFields]: value }));
       } else if (typeof keyOrFields === "object") {
+        setDefaults((prev) => ({ ...prev, ...keyOrFields }));
         setData((prev) => ({ ...prev, ...keyOrFields }));
+      } else {
+        setDefaults(data);
       }
     },
     reset: (...fields) => {
@@ -301,14 +303,13 @@ export default function useForm<TForm extends FormDataType>(
         setData((prev) => {
           const updatedData = { ...prev };
           fields.forEach(
-            (field) => (updatedData[field] = initialValues[field])
+            (field) => (updatedData[field] = defaults[field])
           );
           return updatedData;
         });
       } else {
-        setData(initialValues);
+        setData(defaults);
       }
-      setIsDirty(false);
     },
     clearErrors: (...fields) => {
       if (fields.length > 0) {

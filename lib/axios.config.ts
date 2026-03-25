@@ -4,6 +4,7 @@ import * as SecureStore from "expo-secure-store";
 const TOKEN_KEY = "session";
 const TOKEN_CUSTOMER_KEY = "session_customer";
 const TOKEN_VENDOR_KEY = "session_vendor";
+const TOKEN_VENDOR_STAFF_KEY = "session_vendor_staff";
 const APP_MODE_KEY = "app_mode";
 
 const myAxios = axios.create({
@@ -21,11 +22,14 @@ myAxios.interceptors.request.use(
       const mode = (await SecureStore.getItemAsync(APP_MODE_KEY)) as
         | "customer"
         | "vendor"
+        | "vendor_staff"
         | null;
       const activeToken =
-        mode === "vendor"
-          ? await SecureStore.getItemAsync(TOKEN_VENDOR_KEY)
-          : await SecureStore.getItemAsync(TOKEN_CUSTOMER_KEY);
+        mode === "vendor_staff"
+          ? await SecureStore.getItemAsync(TOKEN_VENDOR_STAFF_KEY)
+          : mode === "vendor"
+            ? await SecureStore.getItemAsync(TOKEN_VENDOR_KEY)
+            : await SecureStore.getItemAsync(TOKEN_CUSTOMER_KEY);
       // Backward compatibility: fall back to legacy single token
       const token = activeToken || (await SecureStore.getItemAsync(TOKEN_KEY));
       if (token) {
