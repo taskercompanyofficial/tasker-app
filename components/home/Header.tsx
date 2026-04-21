@@ -4,8 +4,10 @@ import { useSession } from "@/context/ctx";
 import { useEcho } from "@/context/EchoProvider";
 import { ADDRESS_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
+import getImageUrl from "@/lib/utils";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   FlatList,
@@ -16,10 +18,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import NotificationBell from "../common/NotificationBell";
-import { useRouter } from "expo-router";
-import AddAddressForm from "./AddAddressForm";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import NotificationBell from "../common/NotificationBell";
+import AddAddressForm from "./AddAddressForm";
 
 interface Address {
   id: number;
@@ -59,7 +60,7 @@ export default function HomeHeader() {
       const addresses: Address[] = res.data.data || [];
 
       if (addresses.length > 0) {
-        const def = addresses.find(a => a.is_default);
+        const def = addresses.find((a) => a.is_default);
         const chosen = def ?? addresses[0];
         chosen.isActive = true;
         setSelectedAddress(chosen);
@@ -102,8 +103,13 @@ export default function HomeHeader() {
 
   const ConnectionStatus = () => {
     const isLive = isConnected;
-    const isConnecting = connectionState === "connecting" || connectionState === "initialized";
-    const dotColor = isLive ? Colors.success : isConnecting ? "#F59E0B" : Colors.error;
+    const isConnecting =
+      connectionState === "connecting" || connectionState === "initialized";
+    const dotColor = isLive
+      ? Colors.success
+      : isConnecting
+        ? "#F59E0B"
+        : Colors.error;
     const label = isLive ? "Live" : isConnecting ? "..." : "Offline";
 
     return (
@@ -176,27 +182,37 @@ export default function HomeHeader() {
       <View style={styles.container}>
         <View style={styles.leftSection}>
           {/* User Avatar */}
-          {session.user?.avatar_url ? (
-            <Image
-              source={{ uri: session.user.avatar_url }}
-              style={styles.avatarImage}
-            />
-          ) : (
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {session.user?.name
-                  ?.split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .substring(0, 2)
-                  .toUpperCase() || "U"}
-              </Text>
-            </View>
-          )}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => router.push("/customer/settings")}
+          >
+            {session.user?.avatar_url ? (
+              <Image
+                source={{ uri: getImageUrl(session.user.avatar_url) }}
+                style={styles.avatarImage}
+                contentFit="cover"
+                transition={200}
+                cachePolicy="disk"
+              />
+            ) : (
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>
+                  {session.user?.name
+                    ?.split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .substring(0, 2)
+                    .toUpperCase() || "U"}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
 
           {/* User Info */}
           <View style={styles.userInfo}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+            >
               <Text style={styles.greeting}>Hi, {firstName}! 👋</Text>
               <ConnectionStatus />
             </View>
@@ -226,11 +242,14 @@ export default function HomeHeader() {
         <View style={styles.rightSection}>
           <TouchableOpacity
             style={styles.iconButton}
-            onPress={() => router.push("/customer/gifts")}
+            onPress={() => router.push("/customer/support-chat")}
             activeOpacity={0.7}
-            accessibilityLabel="Open Gifts"
           >
-            <Ionicons name="gift-outline" size={18} color={Colors.themes.customer.primary} />
+            <Ionicons
+              name="chatbubbles-outline"
+              size={18}
+              color="#4F46E5"
+            />
           </TouchableOpacity>
           <NotificationBell />
         </View>
@@ -248,7 +267,10 @@ export default function HomeHeader() {
           onPress={() => setShowAddressSheet(false)}
         >
           <Pressable
-            style={[styles.bottomSheet, { paddingBottom: Math.max(insets.bottom, 12) }]}
+            style={[
+              styles.bottomSheet,
+              { paddingBottom: Math.max(insets.bottom, 12) },
+            ]}
             onPress={(e) => e.stopPropagation()}
           >
             {/* Handle Bar */}
@@ -270,7 +292,10 @@ export default function HomeHeader() {
               data={userAddresses}
               renderItem={renderAddressItem}
               keyExtractor={(item) => item.id.toString()}
-              contentContainerStyle={[styles.addressList, { paddingBottom: Math.max(insets.bottom, Spacing.xl) }]}
+              contentContainerStyle={[
+                styles.addressList,
+                { paddingBottom: Math.max(insets.bottom, Spacing.xl) },
+              ]}
               ListEmptyComponent={
                 <Text style={styles.emptyAddressText}>No addresses found</Text>
               }
@@ -316,7 +341,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.neutral.white,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.light,
-
   },
   leftSection: {
     flexDirection: "row",
@@ -490,10 +514,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: "#F1F5F9",
     paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: 4,
@@ -505,7 +529,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 8,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  }
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
 });

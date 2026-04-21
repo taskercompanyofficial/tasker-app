@@ -26,6 +26,7 @@ export interface Order {
   updated_at: string;
   items?: OrderItem[];
   address?: any;
+  assigned_vendor_id?: number | null;
 }
 
 export interface OrderItem {

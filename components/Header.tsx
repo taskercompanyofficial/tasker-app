@@ -1,6 +1,6 @@
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
-import { useSession } from "@/context/ctx";
+import { useAuthStore } from "@/context/auth-store";
 import { useEcho } from "@/context/EchoProvider";
 import { router } from "expo-router";
 import React from "react";
@@ -24,11 +24,11 @@ export default function Header({
   showProfile = true,
   showGreeting = false,
 }: HeaderProps) {
-  const { session } = useSession();
+  const appMode = useAuthStore((state) => state.appMode);
+  const user = useAuthStore((state) => state.user);
   const { isConnected, connectionState } = useEcho();
-  const isVendor = session.appMode === "vendor" || session.appMode === "vendor_staff";
+  const isVendor = appMode === "vendor" || appMode === "vendor_staff";
   const theme = isVendor ? Colors.themes.provider : Colors.themes.customer;
-  const user = session.user;
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -58,7 +58,12 @@ export default function Header({
       <View style={styles.content}>
         <View style={styles.leftSection}>
           {showGreeting && user ? (
-            <View>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() =>
+                router.push((isVendor ? "/vendor/settings" : "/customer/settings") as any)
+              }
+            >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={styles.greeting}>{getGreeting()}</Text>
                 <ConnectionStatus />
@@ -66,7 +71,7 @@ export default function Header({
               <Text style={styles.userName}>
                 {user.name || `${user.first_name} ${user.last_name}`}
               </Text>
-            </View>
+            </TouchableOpacity>
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Text style={styles.title}>{title}</Text>

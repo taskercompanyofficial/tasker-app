@@ -1,5 +1,5 @@
 import Colors from "@/constants/Colors";
-import { Spacing, BorderRadius, Typography } from "@/constants/Styles";
+import { Spacing, BorderRadius, Typography, Shadows } from "@/constants/Styles";
 import getImageUrl from "@/lib/utils";
 import { useFetchParentService } from "@/hooks/useFetchParentService";
 import { Ionicons } from "@expo/vector-icons";
@@ -100,6 +100,48 @@ export default function ParentServiceDetailPage() {
     (data?.discount_type || "percentage") === "percentage"
       ? price * (1 - discount / 100)
       : price - discount;
+
+  if (data?.status === "comming-soon") {
+    return (
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={Typography.sizes.base}
+              color={Colors.text.primary}
+            />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{data.name}</Text>
+          <View style={{ width: 32 }} />
+        </View>
+
+        <View style={styles.comingSoonContainer}>
+          <View style={styles.comingSoonCard}>
+            <View style={styles.iconCircle}>
+              <Ionicons name="rocket-outline" size={32} color={Colors.themes.customer.primary} />
+            </View>
+            <Text style={styles.comingSoonTitle}>Coming Soon!</Text>
+            <Text style={styles.comingSoonText}>
+              We're preparing something special for {data.name}. This service will be available in your area very soon.
+            </Text>
+            <View style={styles.divider} />
+            <TouchableOpacity 
+              style={styles.backButtonLarge}
+              onPress={() => router.back()}
+            >
+              <Ionicons name="arrow-back" size={18} color={Colors.neutral.white} />
+              <Text style={styles.backButtonText}>Explore Other Services</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.stayTuned}>Stay tuned for updates</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
@@ -554,5 +596,74 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: Typography.sizes.sm,
     color: Colors.text.secondary,
+  },
+  comingSoonContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: Spacing.lg,
+    backgroundColor: Colors.neutral.gray[50],
+  },
+  comingSoonCard: {
+    backgroundColor: Colors.neutral.white,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.xl,
+    alignItems: "center",
+    width: "100%",
+    ...Shadows.md,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+  },
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Colors.themes.customer.primary + "10",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: Spacing.md,
+  },
+  comingSoonTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
+  },
+  comingSoonText: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: Spacing.lg,
+  },
+  divider: {
+    width: "100%",
+    height: 1,
+    backgroundColor: Colors.border.light,
+    marginBottom: Spacing.lg,
+  },
+  backButtonLarge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.themes.customer.primary,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 12,
+    borderRadius: BorderRadius.sm,
+    gap: 8,
+    width: "100%",
+    justifyContent: "center",
+  },
+  backButtonText: {
+    color: Colors.neutral.white,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  stayTuned: {
+    marginTop: Spacing.xl,
+    fontSize: Typography.sizes.xs,
+    color: Colors.text.tertiary,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
 });

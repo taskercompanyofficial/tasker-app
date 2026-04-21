@@ -27,3 +27,17 @@ export type User = {
     phone?: string;
   };
 };
+
+export type VendorStaff = {
+  id: number;
+  name: string;
+  email?: string;
+  phone: string;
+  status: 'approved' | 'pending' | 'rejected';
+  vendor_id: number;
+  image?: string;
+  cnic?: string;
+  experience?: string;
+  created_at: string;
+  updated_at: string;
+};

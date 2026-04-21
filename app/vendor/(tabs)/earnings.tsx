@@ -1,4 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
@@ -16,8 +18,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/Colors";
 import { Shadows, Spacing, Typography } from "@/constants/DesignSystem";
-import { VENDOR_EARNINGS_URL } from "@/lib/api-endpoints";
+import { VENDOR_EARNINGS_URL, VENDOR_PAYOUT_SUBMIT_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
+import Modal from "@/components/Modal";
+import Button from "@/components/Button";
+import { Alert, Image } from "react-native";
 import { useSession } from "@/context/ctx";
 
 type VendorTxn = {
@@ -72,6 +77,15 @@ export default function VendorEarnings() {
   const [showDatePicker, setShowDatePicker] = React.useState(false);
   const [dateFrom, setDateFrom] = React.useState("");
   const [dateTo, setDateTo] = React.useState("");
+
+  // Payout Modal State
+  const [showPayoutModal, setShowPayoutModal] = React.useState(false);
+  const [payoutImage, setPayoutImage] = React.useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  // Picker visibility
+  const [showFromPicker, setShowFromPicker] = React.useState(false);
+  const [showToPicker, setShowToPicker] = React.useState(false);
 
   const getPresetDates = (preset: DatePreset): { from: string; to: string } => {
     const now = new Date();
@@ -141,10 +155,75 @@ export default function VendorEarnings() {
     return (
       "₨" +
       Math.abs(val).toLocaleString("en-PK", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
       })
     );
+  };
+
+  const todayStats = React.useMemo(() => {
+    const today = new Date().toISOString().split("T")[0];
+    const dailyTotal = txns
+      .filter((t) => t.type === "credit" && t.date.startsWith(today))
+      .reduce((acc, t) => acc + t.amount, 0);
+    const companyShare = dailyTotal * 0.35;
+    return { dailyTotal, companyShare };
+  }, [txns]);
+
+  const handlePickImage = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.status !== "granted") {
+      Alert.alert("Permission Required", "Gallery access is needed to upload screenshots.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.5,
+    });
+
+    if (!result.canceled) {
+      setPayoutImage(result.assets[0].uri);
+    }
+  };
+
+  const handleSubmitPayout = async () => {
+    if (!payoutImage) {
+      Alert.alert("Error", "Please select a payment screenshot first.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const formData = new FormData();
+      
+      const uriParts = payoutImage.split("/");
+      const fileName = uriParts[uriParts.length - 1];
+      const fileType = fileName.split(".").pop();
+
+      formData.append("file", {
+        uri: payoutImage,
+        name: fileName,
+        type: `image/${fileType}`,
+      } as any);
+      
+      formData.append("amount", todayStats.companyShare.toString());
+
+      await myAxios.post(VENDOR_PAYOUT_SUBMIT_URL, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      Alert.alert("Success", "Payment proof submitted successfully!");
+      setShowPayoutModal(false);
+      setPayoutImage(null);
+    } catch (error: any) {
+      console.error("Payout submission error:", error);
+      Alert.alert("Error", error.response?.data?.message || "Failed to submit payment proof.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getTxnIcon = (cat: string) => {
@@ -294,11 +373,12 @@ export default function VendorEarnings() {
           ]}
           style={styles.headerGradient}
         >
+          {/* Wrap the core info in a button to trigger payout modal */}
           <View style={styles.headerTop}>
             <View>
-              <Text style={styles.headerTitle}>Earnings</Text>
+              <Text style={styles.headerTitle}>Account</Text>
               <Text style={[styles.headerSubtitle, { opacity: 0.8 }]}>
-                Total Revenue Share
+                Overview
               </Text>
             </View>
             <TouchableOpacity
@@ -314,44 +394,55 @@ export default function VendorEarnings() {
             </TouchableOpacity>
           </View>
 
-          {/* Big balance number — positive = company owes vendor, negative = vendor owes company */}
-          <View style={styles.summaryValueContainer}>
-            <Text style={styles.currencySymbol}>₨</Text>
-            <Text style={[
-              styles.totalValue,
-              { color: summary.net_balance >= 0 ? '#fff' : '#FFB3B3' }
-            ]}>
-              {Math.abs(summary.net_balance).toLocaleString("en-PK")}
-            </Text>
-          </View>
-          <View style={styles.balanceStatusBadge}>
-            <Ionicons
-              name={summary.net_balance >= 0 ? "arrow-up-circle" : "arrow-down-circle"}
-              size={12}
-              color={summary.net_balance >= 0 ? '#A5F3A5' : '#FFB3B3'}
-            />
-            <Text style={[styles.balanceStatusText, { color: summary.net_balance >= 0 ? '#A5F3A5' : '#FFB3B3' }]}>
-              {summary.net_balance >= 0
-                ? `Company owes you ₨${Math.abs(summary.net_balance).toLocaleString('en-PK')}`
-                : `You owe company ₨${Math.abs(summary.net_balance).toLocaleString('en-PK')}`
-              }
-            </Text>
-          </View>
+          <View>
+            {/* Big balance number */}
+            <View style={styles.summaryValueContainer}>
+              <Text style={styles.currencySymbol}>₨</Text>
+              <Text style={[
+                styles.totalValue,
+                { color: summary.net_balance >= 0 ? '#fff' : '#FFB3B3' }
+              ]}>
+                {Math.abs(summary.net_balance).toLocaleString("en-PK")}
+              </Text>
+            </View>
+            <View style={[styles.balanceStatusBadge, { marginBottom: 12 }]}>
+              <Ionicons
+                name={summary.net_balance >= 0 ? "arrow-up-circle" : "arrow-down-circle"}
+                size={12}
+                color={summary.net_balance >= 0 ? '#A5F3A5' : '#FFB3B3'}
+              />
+              <Text style={[styles.balanceStatusText, { color: summary.net_balance >= 0 ? '#A5F3A5' : '#FFB3B3' }]}>
+                {summary.net_balance >= 0
+                  ? `Company owes you ₨${Math.abs(summary.net_balance).toLocaleString('en-PK')}`
+                  : `You owe ₨${Math.abs(summary.net_balance).toLocaleString('en-PK')}`
+                }
+              </Text>
+              <Ionicons name="chevron-forward" size={10} color="#fff" style={{ opacity: 0.5, marginLeft: 2 }} />
+            </View>
 
-          <View style={styles.quickStats}>
-            <View style={styles.quickStatItem}>
-              <Text style={styles.qsLabel}>Total Credited</Text>
-              <Text style={styles.qsValue}>{formatPKR(summary.total_service_revenue)}</Text>
+            <View style={styles.largeStatsRow}>
+              <View style={styles.largeStatCard}>
+                <Text style={styles.largeStatLabel}>Today</Text>
+                <Text style={styles.largeStatValue}>{formatPKR(todayStats.dailyTotal)}</Text>
+              </View>
+              <View style={styles.largeStatCard}>
+                <Text style={styles.largeStatLabel}>Share</Text>
+                <Text style={[styles.largeStatValue, { color: '#FECACA' }]}>{formatPKR(todayStats.companyShare)}</Text>
+              </View>
             </View>
-            <View style={styles.qsDivider} />
-            <View style={styles.quickStatItem}>
-              <Text style={styles.qsLabel}>Total Debited</Text>
-              <Text style={styles.qsValue}>{formatPKR(summary.total_paid)}</Text>
-            </View>
-            <View style={styles.qsDivider} />
-            <View style={styles.quickStatItem}>
-              <Text style={styles.qsLabel}>Active Jobs</Text>
-              <Text style={styles.qsValue}>{summary.active_jobs}</Text>
+
+            <View style={styles.urgencyInfo}>
+              <Text style={styles.urgencyWarning}>
+                <Text style={styles.hoursText}>Pay within 12h</Text> or the app will stop working.
+              </Text>
+              <TouchableOpacity 
+                style={styles.payNowBadge}
+                activeOpacity={0.7}
+                onPress={() => setShowPayoutModal(true)}
+              >
+                <Text style={styles.payNowText}>PAY NOW</Text>
+                <Ionicons name="arrow-forward" size={10} color={Colors.themes.provider.primary} />
+              </TouchableOpacity>
             </View>
           </View>
         </LinearGradient>
@@ -379,36 +470,65 @@ export default function VendorEarnings() {
             ListHeaderComponent={
               <View style={styles.listHeader}>
                 <ProfileStatusAlert />
+                
                 {/* Date Range Filter */}
                 <View style={styles.dateRangeRow}>
-                  <View style={styles.dateInputWrap}>
+                  <TouchableOpacity 
+                    style={styles.dateInputWrap}
+                    onPress={() => setShowFromPicker(true)}
+                  >
                     <Ionicons name="calendar-outline" size={14} color={Colors.text.tertiary} />
-                    <TextInput
-                      style={styles.dateInput}
-                      placeholder="From (YYYY-MM-DD)"
-                      placeholderTextColor={Colors.text.tertiary}
-                      value={dateFrom}
-                      onChangeText={setDateFrom}
-                      keyboardType="numeric"
-                      maxLength={10}
-                      returnKeyType="done"
-                      onEndEditing={() => { if (dateFrom || dateTo) { setRefreshing(true); setLoading(true); fetchEarnings(dateFrom, dateTo); }}}
-                    />
-                  </View>
-                  <View style={styles.dateInputWrap}>
+                    <Text style={[styles.dateText, !dateFrom && { color: Colors.text.tertiary }]}>
+                      {dateFrom || "From Date"}
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={styles.dateInputWrap}
+                    onPress={() => setShowToPicker(true)}
+                  >
                     <Ionicons name="calendar-outline" size={14} color={Colors.text.tertiary} />
-                    <TextInput
-                      style={styles.dateInput}
-                      placeholder="To (YYYY-MM-DD)"
-                      placeholderTextColor={Colors.text.tertiary}
-                      value={dateTo}
-                      onChangeText={setDateTo}
-                      keyboardType="numeric"
-                      maxLength={10}
-                      returnKeyType="done"
-                      onEndEditing={() => { if (dateFrom || dateTo) { setRefreshing(true); setLoading(true); fetchEarnings(dateFrom, dateTo); }}}
+                    <Text style={[styles.dateText, !dateTo && { color: Colors.text.tertiary }]}>
+                      {dateTo || "To Date"}
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  {showFromPicker && (
+                    <DateTimePicker
+                      value={dateFrom ? new Date(dateFrom) : new Date()}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setShowFromPicker(false);
+                        if (selectedDate) {
+                          const formatted = selectedDate.toISOString().split("T")[0];
+                          setDateFrom(formatted);
+                          setRefreshing(true);
+                          setLoading(true);
+                          fetchEarnings(formatted, dateTo);
+                        }
+                      }}
                     />
-                  </View>
+                  )}
+                  
+                  {showToPicker && (
+                    <DateTimePicker
+                      value={dateTo ? new Date(dateTo) : new Date()}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setShowToPicker(false);
+                        if (selectedDate) {
+                          const formatted = selectedDate.toISOString().split("T")[0];
+                          setDateTo(formatted);
+                          setRefreshing(true);
+                          setLoading(true);
+                          fetchEarnings(dateFrom, formatted);
+                        }
+                      }}
+                    />
+                  )}
+
                   {(dateFrom || dateTo) && (
                     <TouchableOpacity
                       style={styles.dateClearBtn}
@@ -449,6 +569,53 @@ export default function VendorEarnings() {
           />
         </View>
       )}
+
+      {/* Payout Modal */}
+      <Modal
+        visible={showPayoutModal}
+        onClose={() => setShowPayoutModal(false)}
+        title="Submit Company Share"
+        type="confirm"
+      >
+        <View style={styles.modalContent}>
+          <Text style={styles.modalAmount}>{formatPKR(todayStats.companyShare)}</Text>
+          <Text style={styles.modalHint}>Upload payout screenshot to continue.</Text>
+
+          {payoutImage ? (
+            <View style={styles.imagePreviewContainer}>
+              <Image source={{ uri: payoutImage }} style={styles.imagePreview} />
+              <TouchableOpacity style={styles.removeImageBtn} onPress={() => setPayoutImage(null)}>
+                <Ionicons name="close-circle" size={20} color={Colors.error} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.uploadBtn} onPress={handlePickImage}>
+              <Ionicons name="cloud-upload-outline" size={24} color={Colors.themes.provider.primary} />
+              <Text style={styles.uploadBtnText}>Upload Screenshot</Text>
+            </TouchableOpacity>
+          )}
+
+          <View style={{ marginTop: 12, width: '100%' }}>
+            <Button
+              title={isSubmitting ? "Submitting..." : "Submit Proof"}
+              onPress={handleSubmitPayout}
+              loading={isSubmitting}
+              disabled={!payoutImage || isSubmitting}
+              fullWidth
+              theme="vendor"
+              size="medium"
+            />
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.cancelBtn} 
+            onPress={() => setShowPayoutModal(false)}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.cancelBtnText}>Back</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -505,8 +672,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 10,
-    marginBottom: 20,
+    marginTop: 5,
+    marginBottom: 10,
   },
   headerTitle: {
     color: "#fff",
@@ -560,16 +727,64 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  quickStats: {
+  largeStatsRow: {
     flexDirection: "row",
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderRadius: 15,
-    paddingVertical: 12,
-    alignItems: "center",
+    gap: 10,
+    marginTop: 10,
   },
-  quickStatItem: {
+  largeStatCard: {
     flex: 1,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: 14,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  largeStatLabel: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    marginBottom: 5,
+    letterSpacing: 0.5,
+  },
+  largeStatValue: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  urgencyInfo: {
+    marginTop: 10,
+    backgroundColor: "rgba(0,0,0,0.15)",
+    padding: 8,
+    borderRadius: 10,
+  },
+  hoursText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  urgencyWarning: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 10,
+    fontWeight: "500",
+    textAlign: "center",
+  },
+  payNowBadge: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    flexDirection: "row",
     alignItems: "center",
+    gap: 4,
+    marginTop: 8,
+    alignSelf: "center",
+  },
+  payNowText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: Colors.themes.provider.primary,
   },
   qsLabel: {
     color: "rgba(255,255,255,0.7)",
@@ -782,12 +997,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.neutral.gray[200],
   },
-  dateInput: {
+  dateText: {
     flex: 1,
     fontSize: 12,
     color: Colors.text.primary,
     fontWeight: "500",
-    padding: 0,
   },
   dateClearBtn: {
     padding: 2,
@@ -797,6 +1011,76 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
+  },
+  cancelBtnText: {
+    color: Colors.text.tertiary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Modal Styles
+  modalContent: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  modalLabel: {
+    fontSize: 14,
+    color: Colors.text.tertiary,
+    marginBottom: 4,
+  },
+  modalAmount: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: Colors.text.primary,
+    marginBottom: 10,
+  },
+  modalHint: {
+    fontSize: 11,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: 15,
+    lineHeight: 16,
+  },
+  uploadBtn: {
+    width: '100%',
+    height: 100,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: Colors.themes.provider.primary + '30',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.themes.provider.primary + '03',
+    marginBottom: 8,
+  },
+  uploadBtnText: {
+    marginTop: 6,
+    fontSize: 12,
+    color: Colors.themes.provider.primary,
+    fontWeight: '600',
+  },
+  imagePreviewContainer: {
+    width: '100%',
+    height: 160,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+    marginBottom: 8,
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  removeImageBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+  },
+  cancelBtn: {
+    marginTop: 15,
+    paddingVertical: 10,
   },
   historyTitle: {
     fontSize: Typography.sizes.base,

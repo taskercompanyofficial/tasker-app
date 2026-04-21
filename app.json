@@ -9,7 +9,23 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "associatedDomains": [
+        "applinks:taskercompany.com",
+        "applinks:www.taskercompany.com",
+        "applinks:taskercompany.com/orders/*",
+        "applinks:www.taskercompany.com/orders/*",
+        "applinks:taskercompany.com/services/*",
+        "applinks:www.taskercompany.com/services/*",
+        "applinks:taskercompany.com/categories/*",
+        "applinks:www.taskercompany.com/categories/*",
+        "applinks:taskercompany.com/schedule",
+        "applinks:www.taskercompany.com/schedule",
+        "applinks:taskercompany.com/track",
+        "applinks:www.taskercompany.com/track",
+        "applinks:taskercompany.com/chat/*",
+        "applinks:www.taskercompany.com/chat/*"
+      ]
     },
     "android": {
       "adaptiveIcon": {
@@ -20,7 +36,80 @@
       "googleServicesFile": "./google-services.json",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.taskercompany.company"
+      "package": "com.taskercompany.company",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "taskercompany.com",
+              "pathPrefix": "/orders"
+            },
+            {
+              "scheme": "https",
+              "host": "www.taskercompany.com",
+              "pathPrefix": "/orders"
+            },
+            {
+              "scheme": "https",
+              "host": "taskercompany.com",
+              "pathPrefix": "/services"
+            },
+            {
+              "scheme": "https",
+              "host": "www.taskercompany.com",
+              "pathPrefix": "/services"
+            },
+            {
+              "scheme": "https",
+              "host": "taskercompany.com",
+              "pathPrefix": "/categories"
+            },
+            {
+              "scheme": "https",
+              "host": "www.taskercompany.com",
+              "pathPrefix": "/categories"
+            },
+            {
+              "scheme": "https",
+              "host": "taskercompany.com",
+              "pathPrefix": "/schedule"
+            },
+            {
+              "scheme": "https",
+              "host": "www.taskercompany.com",
+              "pathPrefix": "/schedule"
+            },
+            {
+              "scheme": "https",
+              "host": "taskercompany.com",
+              "pathPrefix": "/track"
+            },
+            {
+              "scheme": "https",
+              "host": "www.taskercompany.com",
+              "pathPrefix": "/track"
+            },
+            {
+              "scheme": "https",
+              "host": "taskercompany.com",
+              "pathPattern": "/chat/*"
+            },
+            {
+              "scheme": "https",
+              "host": "www.taskercompany.com",
+              "pathPattern": "/chat/*"
+            },
+            {
+              "scheme": "tasker-company",
+              "host": "*"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "output": "static",
@@ -39,7 +128,8 @@
       ],
       "expo-secure-store",
       "expo-maps",
-      "expo-video"
+      "expo-video",
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true,

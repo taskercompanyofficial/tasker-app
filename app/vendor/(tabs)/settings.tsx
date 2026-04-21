@@ -1,7 +1,7 @@
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing, Typography } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   ScrollView,
   StatusBar,
@@ -15,12 +15,80 @@ import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import myAxios from "@/lib/axios.config";
 import { VENDOR_SIGN_OUT_URL, VENDOR_STAFF_SIGN_OUT_URL } from "@/lib/api-endpoints";
+import {
+  VENDOR_QUICK_LOGIN_REVOKE_URL,
+  VENDOR_STAFF_QUICK_LOGIN_REVOKE_URL,
+} from "@/lib/api-endpoints";
 import { router } from "expo-router";
+import CustomSwitch from "@/components/common/CustomSwitch";
+import AlertModal from "@/components/common/AlertModal";
+import * as SystemUI from "expo-system-ui";
+import { useFocusEffect } from "@react-navigation/native";
+import { useBiometric } from "@/hooks/use-biometric";
+import * as SecureStore from "expo-secure-store";
+
+const BIOMETRIC_VENDOR_CREDENTIAL_KEY = "@biometric_vendor_quick_login";
+
+interface BiometricSettingItemProps {
+  isAvailable: boolean;
+  isEnabled: boolean;
+  biometryType: string | null;
+  isLoading: boolean;
+  onToggle: () => void;
+}
+
+function BiometricSettingItem({ isAvailable, isEnabled, biometryType, isLoading, onToggle }: BiometricSettingItemProps) {
+  const getIcon = () => {
+    if (biometryType === "FINGERPRINT") return "finger-print-outline";
+    if (biometryType === "FACIAL_RECOGNITION") return "scan-outline";
+    return "finger-print-outline";
+  };
+
+  const getLabel = () => {
+    if (biometryType === "FINGERPRINT") return "Fingerprint Login";
+    if (biometryType === "FACIAL_RECOGNITION") return "Face ID Login";
+    return "Biometric Login";
+  };
+
+  const getSubtitle = () => {
+    if (isLoading) return "Verifying...";
+    if (!isAvailable) return "Not available on this device";
+    return isEnabled ? "Enabled - Tap to disable" : "Disabled - Tap to enable";
+  };
+
+  return (
+    <TouchableOpacity
+      style={[styles.settingItem, styles.firstItem]}
+      onPress={onToggle}
+      disabled={isLoading}
+      activeOpacity={0.7}
+    >
+      <View style={[styles.iconBox, { backgroundColor: isEnabled ? Colors.success + "15" : Colors.neutral.gray[100] }]}>
+        <Ionicons
+          name={getIcon() as any}
+          size={20}
+          color={isEnabled ? Colors.success : isAvailable ? Colors.text.tertiary : Colors.neutral.gray[400]}
+        />
+      </View>
+      <View style={styles.settingContent}>
+        <Text style={styles.settingTitle}>{getLabel()}</Text>
+        <Text style={styles.settingSubtitle}>{getSubtitle()}</Text>
+      </View>
+      <CustomSwitch value={isEnabled} onValueChange={onToggle} disabled={isLoading} />
+    </TouchableOpacity>
+  );
+}
 
 export default function VendorSettings() {
   const { session, setAppMode, signOutMode } = useSession();
+  const [showSwitchConfirm, setShowSwitchConfirm] = React.useState(false);
+  const [pendingCustomer, setPendingCustomer] = React.useState<boolean | null>(null);
+  
+  const { isAvailable, biometryType, isEnabled, enableBiometric, disableBiometric } = useBiometric();
+  const [biometricLoading, setBiometricLoading] = useState(false);
+
   const isVendor = useMemo(
-    () => session.appMode === "vendor",
+    () => session.appMode === "vendor" || session.appMode === "vendor_staff",
     [session.appMode],
   );
   const isStaff = useMemo(
@@ -28,8 +96,87 @@ export default function VendorSettings() {
     [session.appMode, session.user],
   );
 
+  useFocusEffect(
+    React.useCallback(() => {
+      // #region agent log
+      fetch("http://127.0.0.1:7789/ingest/e7df05fe-e28b-4c90-971d-c6d804cac73a", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "54d0b8",
+        },
+        body: JSON.stringify({
+          sessionId: "54d0b8",
+          runId: "initial",
+          hypothesisId: "H7_settings_focus_churn",
+          location: "app/vendor/(tabs)/settings.tsx:101",
+          message: "Settings focus effect entered",
+          data: {
+            appMode: session.appMode,
+            userType: session.user?.user_type ?? null,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+      SystemUI.setBackgroundColorAsync(Colors.neutral.white);
+      return () => {
+        // #region agent log
+        fetch("http://127.0.0.1:7789/ingest/e7df05fe-e28b-4c90-971d-c6d804cac73a", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Debug-Session-Id": "54d0b8",
+          },
+          body: JSON.stringify({
+            sessionId: "54d0b8",
+            runId: "initial",
+            hypothesisId: "H7_settings_focus_churn",
+            location: "app/vendor/(tabs)/settings.tsx:117",
+            message: "Settings focus effect cleanup",
+            data: {
+              appMode: session.appMode,
+              userType: session.user?.user_type ?? null,
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
+        SystemUI.setBackgroundColorAsync(Colors.neutral.white);
+      };
+    }, []),
+  );
+
   const vendorName = session.user?.name || (isStaff ? "Staff Member" : "Service Provider");
   const vendorEmail = session.user?.email || (isStaff ? session.user?.phone : "provider@tasker.com");
+
+  useEffect(() => {
+    // #region agent log
+    fetch("http://127.0.0.1:7789/ingest/e7df05fe-e28b-4c90-971d-c6d804cac73a", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "54d0b8",
+      },
+      body: JSON.stringify({
+        sessionId: "54d0b8",
+        runId: "initial",
+        hypothesisId: "H4_settings_profile_shape",
+        location: "app/vendor/(tabs)/settings.tsx:111",
+        message: "Derived vendor/staff profile values",
+        data: {
+          appMode: session.appMode,
+          isStaff,
+          rawName: session.user?.name ?? null,
+          rawPhone: session.user?.phone ?? null,
+          vendorName,
+          vendorEmail,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, [isStaff, session.appMode, session.user, vendorEmail, vendorName]);
 
   const onSignOut = async () => {
     try {
@@ -128,6 +275,44 @@ export default function VendorSettings() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.sectionCard}>
+          <View style={styles.tileHeaderRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.tileTitle}>Switch your account</Text>
+              <Text style={styles.tileSubtitle}>
+                Toggle between Customer and Vendor modes
+              </Text>
+            </View>
+            <View style={styles.tileRight}>
+              <View
+                style={[
+                  styles.modeTag,
+                  isVendor ? styles.modeTagVendor : styles.modeTagCustomer,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.modeTagText,
+                    isVendor
+                      ? styles.modeTagTextVendor
+                      : styles.modeTagTextCustomer,
+                  ]}
+                >
+                  {isVendor ? "Vendor" : "Customer"}
+                </Text>
+              </View>
+              <CustomSwitch
+                value={isVendor}
+                onValueChange={(next) => {
+                  if (!next) {
+                    setPendingCustomer(true);
+                    setShowSwitchConfirm(true);
+                  }
+                }}
+              />
+            </View>
+          </View>
+        </View>
         {!isStaff && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Business Management</Text>
@@ -159,13 +344,41 @@ export default function VendorSettings() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account Settings</Text>
           <View style={styles.itemsGate}>
-            <SettingItem
-              icon="sync-outline"
-              title="Switch to Customer Mode"
-              subtitle="Access Tasker customer features"
-              onPress={() => setAppMode("customer")}
-              color={Colors.warning}
-              isFirst
+            <BiometricSettingItem
+              isAvailable={isAvailable}
+              isEnabled={isEnabled}
+              biometryType={biometryType}
+              isLoading={biometricLoading}
+              onToggle={async () => {
+                if (!isAvailable) {
+                  Toast.show({
+                    type: "info",
+                    text1: "Biometric unavailable",
+                    text2: "Enable fingerprint/Face ID in your phone settings first",
+                  });
+                  return;
+                }
+
+                setBiometricLoading(true);
+                if (isEnabled) {
+                  await disableBiometric();
+                  try {
+                    const revokeUrl =
+                      isStaff
+                        ? VENDOR_STAFF_QUICK_LOGIN_REVOKE_URL
+                        : VENDOR_QUICK_LOGIN_REVOKE_URL;
+                    await myAxios.delete(revokeUrl);
+                  } catch {}
+                  await SecureStore.deleteItemAsync(BIOMETRIC_VENDOR_CREDENTIAL_KEY);
+                  Toast.show({ type: "success", text1: "Biometric login disabled" });
+                } else {
+                  const success = await enableBiometric();
+                  if (success) {
+                    Toast.show({ type: "success", text1: "Biometric login enabled" });
+                  }
+                }
+                setBiometricLoading(false);
+              }}
             />
             <SettingItem
               icon="notifications-outline"
@@ -214,6 +427,34 @@ export default function VendorSettings() {
 
         <Text style={styles.versionText}>Tasker Company v1.2.4</Text>
       </ScrollView>
+
+      <AlertModal
+        visible={showSwitchConfirm}
+        type="success"
+        title="Switch to Customer"
+        message="Switch to Customer account?"
+        onClose={() => setShowSwitchConfirm(false)}
+        primaryButton={{
+          text: "Continue",
+          onPress: async () => {
+            setShowSwitchConfirm(false);
+            setPendingCustomer(null);
+            await setAppMode("customer");
+            if (session.customerToken) {
+              router.replace("/customer/(tabs)");
+            } else {
+              router.replace("/auth/customer/sign-in");
+            }
+          },
+        }}
+        secondaryButton={{
+          text: "Cancel",
+          onPress: () => {
+            setShowSwitchConfirm(false);
+            setPendingCustomer(null);
+          },
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -381,5 +622,50 @@ const styles = StyleSheet.create({
     color: Colors.text.quaternary,
     marginTop: Spacing.lg,
     fontWeight: Typography.weights.medium,
+  },
+  sectionCard: {
+    backgroundColor: Colors.neutral.white,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    padding: Spacing.sm,
+    marginBottom: Spacing.sm,
+    ...Shadows.sm,
+  },
+  tileHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  tileTitle: { fontSize: 13, fontWeight: "700", color: Colors.text.primary },
+  tileSubtitle: { fontSize: 10, color: Colors.text.secondary, marginTop: 2 },
+  tileRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  modeTag: {
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  modeTagVendor: {
+    backgroundColor: Colors.themes.provider.primary + "10",
+    borderColor: Colors.themes.provider.primary,
+  },
+  modeTagCustomer: {
+    backgroundColor: Colors.neutral.gray[50],
+    borderColor: Colors.border.light,
+  },
+  modeTagText: {
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  modeTagTextVendor: {
+    color: Colors.themes.provider.primary,
+  },
+  modeTagTextCustomer: {
+    color: Colors.text.secondary,
   },
 });

@@ -50,9 +50,8 @@ export default function CategoriesCards() {
     return (
       <TouchableOpacity
         key={item.id}
-        style={[styles.card, { width: cardWidth }, isComingSoon && styles.cardDisabled]}
-        activeOpacity={isComingSoon ? 1 : 0.8}
-        disabled={isComingSoon}
+        style={[styles.card, { width: cardWidth }]}
+        activeOpacity={0.8}
         onPress={() => router.push(`/customer/(tabs)/${item.slug}` as any)}
       >
         {/* Image */}
@@ -76,15 +75,6 @@ export default function CategoriesCards() {
                 color={Colors.text.tertiary}
               />
             </View>
-          )}
-          {isComingSoon && (
-            <>
-              <View style={styles.comingSoonOverlay} />
-              <View style={styles.comingSoonTag}>
-                <Ionicons name="hourglass" size={12} color={Colors.text.primary} />
-                <Text style={styles.comingSoonTagText}>Coming soon</Text>
-              </View>
-            </>
           )}
         </View>
 

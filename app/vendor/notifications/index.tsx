@@ -1,11 +1,11 @@
 import Loader from "@/components/Loader";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
-import { useEcho, type RealtimeNotification } from "@/context/EchoProvider";
+import { useEcho } from "@/context/EchoProvider";
 import {
-  VENDOR_NOTIFICATIONS_URL,
   VENDOR_NOTIFICATIONS_MARK_ALL_READ_URL,
   VENDOR_NOTIFICATIONS_MARK_READ_URL,
+  VENDOR_NOTIFICATIONS_URL,
 } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
 import { Ionicons } from "@expo/vector-icons";
@@ -107,40 +107,60 @@ export default function VendorNotificationsPage() {
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case "order":           return "receipt";
-      case "free_installation": return "construct";
-      case "promotion":       return "pricetag";
-      case "ledger_update":   return "cash";
-      case "billing_update":  return "card";
-      case "work_order":      return "briefcase";
-      default:                return "notifications";
+      case "order":
+        return "receipt";
+      case "free_installation":
+        return "construct";
+      case "promotion":
+        return "pricetag";
+      case "ledger_update":
+        return "cash";
+      case "billing_update":
+        return "card";
+      case "work_order":
+        return "briefcase";
+      case "assignment":
+        return "person-add";
+      default:
+        return "notifications";
     }
   };
 
   const getNotificationColor = (type: string) => {
     switch (type) {
-      case "order":           return Colors.themes.provider.primary;
-      case "free_installation": return Colors.success;
-      case "promotion":       return "#10B981";
-      case "ledger_update":   return "#8B5CF6";
-      case "billing_update":  return "#F59E0B";
-      case "work_order":      return Colors.themes.provider.primary;
-      default:                return Colors.text.secondary;
+      case "order":
+        return Colors.themes.provider.primary;
+      case "free_installation":
+        return Colors.success;
+      case "promotion":
+        return "#10B981";
+      case "ledger_update":
+        return "#8B5CF6";
+      case "billing_update":
+        return "#F59E0B";
+      case "work_order":
+        return Colors.themes.provider.primary;
+      case "assignment":
+        return "#10B981";
+      default:
+        return Colors.text.secondary;
     }
   };
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-    const diffHours   = Math.floor(diffMinutes / 60);
-    const diffDays    = Math.floor(diffHours / 24);
+    const diffMinutes = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60),
+    );
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
 
-    if (diffMinutes < 1)  return "Just now";
+    if (diffMinutes < 1) return "Just now";
     if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    if (diffHours < 24)   return `${diffHours}h ago`;
-    if (diffDays === 1)   return "Yesterday";
-    if (diffDays < 7)     return `${diffDays}d ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays < 7) return `${diffDays}d ago`;
 
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
@@ -149,12 +169,33 @@ export default function VendorNotificationsPage() {
     if (!notification.read) {
       await markAsRead(notification.id);
     }
-    let woId = notification.order_id;
-    if (!woId && notification.data?.work_order_id) {
-      woId = notification.data.work_order_id;
+
+    const data = notification.data || {};
+
+    // 1. Chat Notifications
+    if (notification.type === "chat" || data.type === "chat") {
+      if (data.chat_type === "support") {
+        router.push("/vendor/support-chat");
+      } else if (data.chat_type === "work_order" && data.work_order_id) {
+        router.push(`/vendor/work-order-chat/${data.work_order_id}` as any);
+      }
+      return;
     }
+
+    // 2. Work Order Notifications
+    let woId = notification.order_id || data.work_order_id || data.order_id;
     if (woId) {
-      router.push(`/vendor/work-orders/${woId}` as any);
+      router.push(`/vendor/work-order-details/${woId}`);
+      return;
+    }
+
+    // 3. Ledger/Billing Notifications
+    if (
+      notification.type === "ledger_update" ||
+      notification.type === "billing_update"
+    ) {
+      // Navigate to ledger tab if it exists, or just dashboard
+      router.push("/vendor/(tabs)/dashboard");
     }
   };
 
@@ -163,9 +204,14 @@ export default function VendorNotificationsPage() {
   /** Small dot + label showing WebSocket live status */
   const ConnectionIndicator = () => {
     const isLive = connectionState === "connected";
-    const isConnecting = connectionState === "connecting" || connectionState === "initialized";
-    const dotColor = isLive ? Colors.success : isConnecting ? "#F59E0B" : Colors.error;
-    const label    = isLive ? "Live" : isConnecting ? "Connecting…" : "Offline";
+    const isConnecting =
+      connectionState === "connecting" || connectionState === "initialized";
+    const dotColor = isLive
+      ? Colors.success
+      : isConnecting
+        ? "#F59E0B"
+        : Colors.error;
+    const label = isLive ? "Live" : isConnecting ? "Connecting…" : "Offline";
     return (
       <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
         <View style={[styles.statusDot, { backgroundColor: dotColor }]} />
@@ -176,7 +222,10 @@ export default function VendorNotificationsPage() {
 
   const renderNotification = ({ item }: { item: Notification }) => (
     <TouchableOpacity
-      style={[styles.notificationCard, !item.read && styles.notificationCardUnread]}
+      style={[
+        styles.notificationCard,
+        !item.read && styles.notificationCardUnread,
+      ]}
       onPress={() => handleNotificationPress(item)}
       activeOpacity={0.7}
     >
@@ -195,10 +244,16 @@ export default function VendorNotificationsPage() {
 
       <View style={styles.notificationContent}>
         <View style={styles.notificationHeader}>
-          <Text style={styles.notificationTitle} numberOfLines={1}>{item.title}</Text>
-          <Text style={styles.notificationTime}>{formatTime(item.created_at)}</Text>
+          <Text style={styles.notificationTitle} numberOfLines={1}>
+            {item.title}
+          </Text>
+          <Text style={styles.notificationTime}>
+            {formatTime(item.created_at)}
+          </Text>
         </View>
-        <Text style={styles.notificationMessage} numberOfLines={2}>{item.message}</Text>
+        <Text style={styles.notificationMessage} numberOfLines={2}>
+          {item.message}
+        </Text>
         {!item.read && <View style={styles.unreadDot} />}
       </View>
     </TouchableOpacity>
@@ -212,7 +267,10 @@ export default function VendorNotificationsPage() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 12 }}>
@@ -246,7 +304,11 @@ export default function VendorNotificationsPage() {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="notifications-off-outline" size={64} color={Colors.text.tertiary} />
+            <Ionicons
+              name="notifications-off-outline"
+              size={64}
+              color={Colors.text.tertiary}
+            />
             <Text style={styles.emptyTitle}>No Notifications</Text>
             <Text style={styles.emptyText}>You&apos;re all caught up!</Text>
           </View>

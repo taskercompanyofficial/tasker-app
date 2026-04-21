@@ -1,44 +1,52 @@
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Redirect, Stack } from "expo-router";
 import { useSession } from "@/context/ctx";
 import React, { useEffect } from "react";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
+import axios from "@/lib/axios.config";
+import { API_URL } from "@/lib/api-endpoints";
 
 export default function VendorLayout() {
   const { session } = useSession();
-  const router = useRouter();
-  const segments = useSegments();
+
+  const { expoPushToken } = usePushNotifications();
 
   useEffect(() => {
-    if (session.isLoading) return;
+    const registerToken = async () => {
+      // Vendors and Staff share this layout, but we need correct endpoint mapping.
+      if (session.isAuthenticated && expoPushToken) {
+        try {
+          const endpoint =
+            session.appMode === "vendor_staff"
+              ? `${API_URL}/vendor-staff/notifications/register-token`
+              : `${API_URL}/vendor/notifications/register-token`;
 
-    const user = session.vendorUser;
-    const isVendor = session.appMode === "vendor" && !!session.vendorToken;
-    const currentPath = segments.join("/");
-
-    if (isVendor && user) {
-      const isIncomplete =
-        !user.cnic || !user.cnic_front_image || !user.cnic_back_image;
-      const isPending = user.status === "pending";
-
-      // Allow access to complete-profile even if pending
-      if (isIncomplete && !currentPath.includes("complete-profile")) {
-        router.replace("/vendor/complete-profile");
-      } else if (
-        !isIncomplete &&
-        isPending &&
-        !currentPath.includes("pending-approval")
-      ) {
-        router.replace("/vendor/pending-approval");
-      } else if (
-        !isIncomplete &&
-        !isPending &&
-        (currentPath.includes("complete-profile") ||
-          currentPath.includes("pending-approval"))
-      ) {
-        // If approved and complete, but on a restricted page, go to dashboard
-        router.replace("/vendor/(tabs)/dashboard");
+          await axios.post(
+            endpoint,
+            { token: expoPushToken },
+            { headers: { Authorization: `Bearer ${session.token}` } },
+          );
+          console.log(`[Push] Vendor Layout registered token to ${endpoint}`);
+        } catch (error: any) {
+          console.error(
+            "[Push] Failed to register push token in Vendor Layout:",
+            error?.response?.data || error.message,
+          );
+        }
       }
-    }
-  }, [session.vendorUser, session.isLoading, segments]);
+    };
+    registerToken();
+  }, [session.isAuthenticated, expoPushToken, session.appMode, session.token]);
+
+  if (session.isLoading) {
+    return null;
+  }
+
+  if (
+    !session.isAuthenticated ||
+    (session.appMode !== "vendor" && session.appMode !== "vendor_staff")
+  ) {
+    return <Redirect href="/" />;
+  }
 
   return (
     <Stack
@@ -52,6 +60,11 @@ export default function VendorLayout() {
       <Stack.Screen name="staff/index" />
       <Stack.Screen name="staff/add" />
       <Stack.Screen name="staff/[id]" />
+      <Stack.Screen
+        name="support-chat"
+        options={{ animation: "slide_from_bottom" }}
+      />
+      <Stack.Screen name="work-order-chat/[id]" />
     </Stack>
   );
 }

@@ -9,6 +9,7 @@ import { getInfoAsync } from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { compressImage as professionalCompress } from "@/lib/image";
+import Toast from "react-native-toast-message";
 
 interface UploadData {
   fileTypeId: number;
@@ -103,7 +104,12 @@ const compressImage = async (uri: string) => {
       const response = await axios.get(VENDOR_FILE_TYPES_URL);
       setFileTypes(response.data.data);
     } catch (error) {
-      // Handle error quietly
+      console.error("Failed to fetch file types:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to load file types. Please try again.",
+      });
     }
   };
 

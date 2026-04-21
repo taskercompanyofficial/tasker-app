@@ -1,24 +1,30 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from "react-native";
-import React, { useState, useCallback } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { useSession } from "@/context/ctx";
+import AlertModal from "@/components/common/AlertModal";
+import CustomSwitch from "@/components/common/CustomSwitch";
+import NotificationBell from "@/components/common/NotificationBell";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
-import { router } from "expo-router";
-import NotificationBell from "@/components/common/NotificationBell";
-import AlertModal from "@/components/common/AlertModal";
+import { useSession } from "@/context/ctx";
+import { useBiometric } from "@/hooks/use-biometric";
+import getImageUrl from "@/lib/utils";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
+import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
-import { useFocusEffect } from "@react-navigation/native";
-import CustomSwitch from "@/components/common/CustomSwitch";
+import React, { useCallback, useState } from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Toast from "react-native-toast-message";
+
+const BIOMETRIC_PASSWORD_KEY = "@biometric_password";
 
 export default function Settings() {
   const { signOutMode, session, setAppMode } = useSession();
@@ -28,6 +34,10 @@ export default function Settings() {
   const [showSwitchConfirm, setShowSwitchConfirm] = useState(false);
   const [isVendor, setIsVendor] = useState(session.appMode === "vendor");
   const [pendingVendor, setPendingVendor] = useState<boolean | null>(null);
+  const [biometricLoading, setBiometricLoading] = useState(false);
+
+  const { isAvailable, biometryType, isEnabled, enableBiometric, disableBiometric } =
+    useBiometric();
 
   const handleSignOut = async () => {
     try {
@@ -74,7 +84,9 @@ export default function Settings() {
           <View style={styles.topRow}>
             <View>
               <Text style={styles.headerTitle}>Settings</Text>
-              <Text style={styles.headerSubHeading}>Manage Your Account Detials Here</Text>
+              <Text style={styles.headerSubHeading}>
+                Manage Your Account Detials Here
+              </Text>
             </View>
             <NotificationBell variant="default" />
           </View>
@@ -85,8 +97,11 @@ export default function Settings() {
               <View style={styles.avatarContainer}>
                 {session.user?.avatar_url ? (
                   <Image
-                    source={{ uri: session.user.avatar_url }}
+                    source={{ uri: getImageUrl(session.user.avatar_url) }}
                     style={styles.avatar}
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="disk"
                   />
                 ) : (
                   <View style={styles.avatarPlaceholder}>
@@ -233,7 +248,11 @@ export default function Settings() {
               </View>
               <Text style={styles.listItemText}>Notifications</Text>
             </View>
-            <CustomSwitch value={notifications} onValueChange={setNotifications} size="sm" />
+            <CustomSwitch
+              value={notifications}
+              onValueChange={setNotifications}
+              size="sm"
+            />
           </View>
 
           <View style={styles.listItem}>
@@ -252,7 +271,84 @@ export default function Settings() {
               </View>
               <Text style={styles.listItemText}>Location Services</Text>
             </View>
-            <CustomSwitch value={locationServices} onValueChange={setLocationServices} size="sm" />
+            <CustomSwitch
+              value={locationServices}
+              onValueChange={setLocationServices}
+              size="sm"
+            />
+          </View>
+
+          <View style={styles.listItem}>
+            <View style={styles.listItemLeft}>
+              <View
+                style={[
+                  styles.iconContainer,
+                  {
+                    backgroundColor: isEnabled
+                      ? Colors.success + "15"
+                      : Colors.neutral.gray[100],
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={
+                    biometryType === "FACIAL_RECOGNITION"
+                      ? "scan-outline"
+                      : "finger-print-outline"
+                  }
+                  size={18}
+                  color={
+                    isEnabled
+                      ? Colors.success
+                      : isAvailable
+                        ? Colors.text.tertiary
+                        : Colors.neutral.gray[400]
+                  }
+                />
+              </View>
+              <View>
+                <Text style={styles.listItemText}>
+                  {biometryType === "FACIAL_RECOGNITION"
+                    ? "Face ID Login"
+                    : "Fingerprint Login"}
+                </Text>
+                <Text style={styles.listItemHint}>
+                  {!isAvailable
+                    ? "Not available on this device"
+                    : isEnabled
+                      ? "Enabled"
+                      : "Disabled"}
+                </Text>
+              </View>
+            </View>
+            <CustomSwitch
+              value={isEnabled}
+              onValueChange={async () => {
+                if (!isAvailable) {
+                  Toast.show({
+                    type: "info",
+                    text1: "Biometric unavailable",
+                    text2: "Enable fingerprint/Face ID in your phone settings first",
+                  });
+                  return;
+                }
+
+                setBiometricLoading(true);
+                if (isEnabled) {
+                  await disableBiometric();
+                  await AsyncStorage.removeItem(BIOMETRIC_PASSWORD_KEY);
+                  Toast.show({ type: "success", text1: "Biometric login disabled" });
+                } else {
+                  const success = await enableBiometric();
+                  if (success) {
+                    Toast.show({ type: "success", text1: "Biometric login enabled" });
+                  }
+                }
+                setBiometricLoading(false);
+              }}
+              size="sm"
+              disabled={biometricLoading}
+            />
           </View>
 
           {/* Support */}
@@ -291,9 +387,16 @@ export default function Settings() {
           >
             <View style={styles.listItemLeft}>
               <View
-                style={[styles.iconContainer, { backgroundColor: Colors.error + "15" }]}
+                style={[
+                  styles.iconContainer,
+                  { backgroundColor: Colors.error + "15" },
+                ]}
               >
-                <Ionicons name="log-out-outline" size={18} color={Colors.error} />
+                <Ionicons
+                  name="log-out-outline"
+                  size={18}
+                  color={Colors.error}
+                />
               </View>
               <Text style={[styles.listItemText, styles.signOutText]}>
                 Sign Out
@@ -320,7 +423,7 @@ export default function Settings() {
         }}
         secondaryButton={{
           text: "Cancel",
-          onPress: () => { },
+          onPress: () => {},
         }}
       />
       <AlertModal
@@ -343,10 +446,18 @@ export default function Settings() {
             await setAppMode(nextIsVendor ? "vendor" : "customer");
             const hasVendor = !!session.vendorToken;
             const hasCustomer = !!session.customerToken;
-            if (nextIsVendor && !hasVendor) {
-              router.replace("/auth/vendor/sign-in");
-            } else if (!nextIsVendor && !hasCustomer) {
-              router.replace("/auth/customer/sign-in");
+            if (nextIsVendor) {
+              if (hasVendor) {
+                router.replace("/vendor/(tabs)/dashboard");
+              } else {
+                router.replace("/auth/vendor/sign-in");
+              }
+            } else {
+              if (hasCustomer) {
+                router.replace("/customer");
+              } else {
+                router.replace("/auth/customer/sign-in");
+              }
             }
           },
         }}
@@ -585,6 +696,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     color: Colors.text.primary,
+  },
+  listItemHint: {
+    fontSize: 11,
+    color: Colors.text.secondary,
+    marginTop: 2,
   },
   switch: {
     transform: [{ scale: 0.85 }],

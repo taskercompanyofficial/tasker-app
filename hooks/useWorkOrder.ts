@@ -7,9 +7,13 @@ import {
   VENDOR_STAFF_URL,
   VENDOR_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL,
   VENDOR_WORK_ORDER_DETAILS_URL,
+  VENDOR_STAFF_WORK_ORDER_DETAILS_URL,
+  VENDOR_STAFF_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL,
 } from "@/lib/api-endpoints";
 import axios from "@/lib/axios.config";
+import { useAuthStore } from "@/context/auth-store";
 import { WorkOrder } from "@/types/work-order";
+import { VendorStaff } from "@/types/user";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -25,8 +29,8 @@ interface UseWorkOrderReturn {
   workOrder: WorkOrder | null;
   loading: boolean;
   refreshing: boolean;
-  approvedStaff: any[];
-  
+  approvedStaff: VendorStaff[];
+
   // Processing states
   accepting: boolean;
   rejecting: boolean;
@@ -59,11 +63,14 @@ interface UseWorkOrderReturn {
 }
 
 export function useWorkOrder(id: string): UseWorkOrderReturn {
+  const appMode = useAuthStore((state) => state.appMode);
+  const isVendorStaff = appMode === "vendor_staff";
+
   // Data states
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [approvedStaff, setApprovedStaff] = useState<any[]>([]);
+  const [approvedStaff, setApprovedStaff] = useState<VendorStaff[]>([]);
   
   // Processing states
   const [accepting, setAccepting] = useState(false);
@@ -82,11 +89,14 @@ export function useWorkOrder(id: string): UseWorkOrderReturn {
   const currentStatusSlug = workOrder?.status?.slug;
   const currentSubStatusSlug = workOrder?.sub_status?.slug;
 
-  // Fetch work order details
+  // Fetch work order details — use correct endpoint per role
   const fetchWorkOrderDetails = useCallback(async () => {
     try {
       if (!refreshing) setLoading(true);
-      const response = await axios.get(VENDOR_WORK_ORDER_DETAILS_URL(Number(id)));
+      const url = isVendorStaff
+        ? VENDOR_STAFF_WORK_ORDER_DETAILS_URL(Number(id))
+        : VENDOR_WORK_ORDER_DETAILS_URL(Number(id));
+      const response = await axios.get(url);
       setWorkOrder(response.data.data);
     } catch (error) {
       setModalMessage("Failed to load job details");
@@ -95,25 +105,26 @@ export function useWorkOrder(id: string): UseWorkOrderReturn {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [id, refreshing]);
+  }, [id, refreshing, isVendorStaff]);
 
   const fetchApprovedStaff = useCallback(async () => {
+    // Vendor-staff cannot manage staff — skip this fetch entirely
+    if (isVendorStaff) return;
     try {
       const response = await axios.get(VENDOR_STAFF_URL);
-      // Filter approved staff only
-      const approved = response.data.data.filter((s: any) => s.status === "approved");
+      const approved = response.data.data.filter((s: VendorStaff) => s.status === "approved");
       setApprovedStaff(approved);
     } catch (error) {
       console.error("Failed to fetch staff:", error);
     }
-  }, []);
+  }, [isVendorStaff]);
 
   useEffect(() => {
     if (id) {
       fetchWorkOrderDetails();
       fetchApprovedStaff();
     }
-  }, [id, fetchApprovedStaff]);
+  }, [id, fetchWorkOrderDetails, fetchApprovedStaff]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -263,7 +274,10 @@ export function useWorkOrder(id: string): UseWorkOrderReturn {
       setUpdatingStatus(true);
       const locationData = await getCurrentLocation();
 
-      await axios.post(VENDOR_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL(Number(id)), {
+      const statusUrl = isVendorStaff
+        ? VENDOR_STAFF_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL(Number(id))
+        : VENDOR_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL(Number(id));
+      await axios.post(statusUrl, {
         status_slug: pendingStatusUpdate.statusSlug,
         sub_status_slug: pendingStatusUpdate.subStatusSlug,
         remarks,

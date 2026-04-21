@@ -22,10 +22,16 @@ interface Notification {
   title: string;
   message: string;
   type: string;
-  order_id: number | null;
+  order_id?: number | null;
   read: boolean;
   created_at: string;
-  data?: any;
+  read_at?: string | null;
+  link?: string | null;
+  data?: {
+    work_order_id?: number;
+    work_order_number?: string;
+    [key: string]: any;
+  };
 }
 
 export default function NotificationsPage() {
@@ -55,7 +61,7 @@ export default function NotificationsPage() {
         order_id: (incoming.data?.work_order_id as number) ?? null,
         read: false,
         created_at: incoming.created_at,
-        data: incoming.data,
+        data: incoming.data || {},
       };
       setNotifications((prev) => [mapped, ...prev]);
     });
@@ -81,7 +87,7 @@ export default function NotificationsPage() {
 
   const markAsRead = async (notificationId: number) => {
     try {
-      await myAxios.post(`${NOTIFICATION_URL}/${notificationId}/read`);
+      await myAxios.put(`${NOTIFICATION_URL}/${notificationId}/read`);
       setNotifications((prev) =>
         prev.map((notif) =>
           notif.id === notificationId ? { ...notif, read: true } : notif,
@@ -129,11 +135,33 @@ export default function NotificationsPage() {
   };
 
   const handleNotificationPress = async (notification: Notification) => {
+   
     if (!notification.read) {
       await markAsRead(notification.id);
     }
-    if (notification.order_id) {
-      router.push(`/customer/orders/${notification.order_id}` as any);
+
+    const data = notification.data || {};
+
+    // 1. Chat Notifications
+    if (notification.type === 'chat' || data.type === 'chat') {
+      if (data.chat_type === 'support') {
+        router.push('/customer/support-chat');
+      } else if (data.chat_type === 'order' && data.work_order_id) {
+        router.push(`/customer/order-chat/${data.work_order_id}`);
+      }
+      return;
+    }
+
+    // 2. Order/Work Order Notifications
+    const orderRef = data.work_order_id || notification.data?.work_order_id;
+    if (orderRef) {
+      router.push(`/customer/orders/${orderRef}`);
+      return;
+    }
+
+    // 3. System/Promotion Notifications
+    if (notification.type === 'promotion') {
+      router.push('/customer/(tabs)/services');
     }
   };
 

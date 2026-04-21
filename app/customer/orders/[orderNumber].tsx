@@ -1,12 +1,14 @@
 import Loader from "@/components/Loader";
+import { FloatingChatButton } from "@/components/Chat/FloatingChatButton";
 import CancelOrderModal from "@/components/orders/CancelOrderModal";
 import ContactSupportModal from "@/components/orders/ContactSupportModal";
+import ReviewModal from "@/components/orders/ReviewModal";
 import Colors from "@/constants/Colors";
-import { Spacing } from "@/constants/Styles";
+import { Spacing, BorderRadius, Shadows, Typography } from "@/constants/Styles";
 import { WORK_ORDER_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
 import { Order, OrderItem } from "@/types/order";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, FontAwesome } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -28,6 +30,8 @@ export default function OrderDetailsPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewPrompted, setReviewPrompted] = useState(false);
 
   useEffect(() => {
     if (orderNumber) {
@@ -38,7 +42,12 @@ export default function OrderDetailsPage() {
   const fetchOrderDetails = async () => {
     try {
       const res = await myAxios.get(`${WORK_ORDER_URL}/${orderNumber}`);
-      setOrder(res.data.data);
+      const data = res.data.data;
+      setOrder(data);
+      if (data.status === "completed" && !data.has_review && !reviewPrompted) {
+        setReviewPrompted(true);
+        setTimeout(() => setShowReviewModal(true), 500);
+      }
     } catch (error) {
       console.error("Failed to fetch order details:", error);
     } finally {
@@ -60,12 +69,25 @@ export default function OrderDetailsPage() {
         return "#3B82F6";
       case "pending":
         return "#F59E0B";
-      case "scheduled":
-        return "#8B5CF6";
       case "cancelled":
         return Colors.error;
       default:
         return Colors.text.secondary;
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "Allocated";
+      case "in_progress":
+        return "In Progress";
+      case "completed":
+        return "Completed";
+      case "cancelled":
+        return "Cancelled";
+      default:
+        return status.replace("_", " ");
     }
   };
 
@@ -93,7 +115,6 @@ export default function OrderDetailsPage() {
         `${WORK_ORDER_URL}/${orderNumber}/cancel`,
         { reason },
       );
-
       if (response.data.status === "success") {
         Alert.alert(
           "Order Cancelled",
@@ -112,13 +133,14 @@ export default function OrderDetailsPage() {
     } catch (error: any) {
       Alert.alert(
         "Error",
-        error.response?.data?.message ||
-          "Failed to cancel order. Please try again.",
+        error.response?.data?.message || "Failed to cancel order.",
       );
     } finally {
       setCancelling(false);
     }
   };
+
+  const isAssigned = order && order.assigned_vendor_id;
 
   const canCancelOrder = () => {
     return (
@@ -126,13 +148,10 @@ export default function OrderDetailsPage() {
     );
   };
 
-  if (loading || refreshing) {
-    return <Loader fullScreen />;
-  }
-
+  if (loading || refreshing) return <Loader fullScreen />;
   if (!order) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Order not found</Text>
         </View>
@@ -141,8 +160,7 @@ export default function OrderDetailsPage() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* Header */}
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -151,7 +169,12 @@ export default function OrderDetailsPage() {
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Order Details</Text>
-        <View style={styles.placeholder} />
+        <TouchableOpacity
+          onPress={() => router.push(`/customer/order-chat/${order.id}`)}
+          style={styles.headerChatButton}
+        >
+          <FontAwesome name="whatsapp" size={24} color="#25D366" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -160,7 +183,6 @@ export default function OrderDetailsPage() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Order Status Card */}
         <View style={styles.statusCard}>
           <View style={styles.statusHeader}>
             <View>
@@ -179,7 +201,7 @@ export default function OrderDetailsPage() {
                   { color: getStatusColor(order.status) },
                 ]}
               >
-                {order.status.replace("_", " ")}
+                {getStatusLabel(order.status)}
               </Text>
             </View>
           </View>
@@ -195,12 +217,11 @@ export default function OrderDetailsPage() {
           </View>
         </View>
 
-        {/* Service Items */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
             Services ({order.items?.length || 0})
           </Text>
-          {order.items?.map((item: OrderItem, index: number) => (
+          {order.items?.map((item: OrderItem) => (
             <View key={item.id} style={styles.serviceCard}>
               <View style={styles.serviceHeader}>
                 <View style={styles.serviceInfo}>
@@ -223,11 +244,10 @@ export default function OrderDetailsPage() {
                       { color: getStatusColor(item.status) },
                     ]}
                   >
-                    {item.status}
+                    {getStatusLabel(item.status)}
                   </Text>
                 </View>
               </View>
-
               <View style={styles.scheduleRow}>
                 <Ionicons
                   name="time-outline"
@@ -239,73 +259,16 @@ export default function OrderDetailsPage() {
                   {formatTime(item.scheduled_time)}
                 </Text>
               </View>
-
               <View style={styles.priceRow}>
                 <Text style={styles.priceLabel}>Subtotal</Text>
                 <Text style={styles.priceValue}>
                   ₨{Math.round(item.subtotal)}
                 </Text>
               </View>
-              <View style={styles.stepperRowSmall}>
-                {["pending", "assigned", "in_progress", "completed", "closed"].map((s, idx, arr) => {
-                  const currentIdx =
-                    item.status === "assigned"
-                      ? 1
-                      : item.status === "in_progress"
-                      ? 2
-                      : item.status === "completed"
-                      ? 3
-                      : item.status === "cancelled"
-                      ? 4
-                      : 0;
-                  const isDone = idx <= currentIdx;
-                  return (
-                    <React.Fragment key={s}>
-                      <View
-                        style={[
-                          styles.stepCircleSmall,
-                          isDone && { backgroundColor: Colors.themes.customer.primary },
-                        ]}
-                      />
-                      {idx < arr.length - 1 && (
-                        <View
-                          style={[
-                            styles.stepConnectorSmall,
-                            isDone && { backgroundColor: Colors.themes.customer.primary },
-                          ]}
-                        />
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </View>
-              <TouchableOpacity
-                style={styles.viewServiceBtn}
-                onPress={() =>
-                  router.push({
-                    pathname: "/customer/orders/service/[serviceId]",
-                    params: { serviceId: String(item.id), orderNumber: String(order.order_number) },
-                  })
-                }
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name="eye-outline"
-                  size={16}
-                  color={Colors.themes.customer.primary}
-                />
-                <Text style={styles.viewServiceBtnText}>View Service</Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={16}
-                  color={Colors.themes.customer.primary}
-                />
-              </TouchableOpacity>
             </View>
           ))}
         </View>
 
-        {/* Address */}
         {order.address && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Service Address</Text>
@@ -319,8 +282,7 @@ export default function OrderDetailsPage() {
                   color={Colors.themes.customer.primary}
                 />
                 <Text style={styles.addressType}>
-                  {order.address.address_type.charAt(0).toUpperCase() +
-                    order.address.address_type.slice(1)}
+                  {order.address.address_type.toUpperCase()}
                 </Text>
               </View>
               <Text style={styles.addressText}>
@@ -334,31 +296,27 @@ export default function OrderDetailsPage() {
           </View>
         )}
 
-        {/* Payment Details */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Payment Details</Text>
           <View style={styles.paymentCard}>
             <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>Payment Method</Text>
-              <Text style={styles.paymentValue}>
-                {order.payment_method.charAt(0).toUpperCase() +
-                  order.payment_method.slice(1)}
-              </Text>
+              <Text style={styles.paymentLabel}>Method</Text>
+              <Text style={styles.paymentValue}>{order.payment_method}</Text>
             </View>
             <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>Payment Status</Text>
+              <Text style={styles.paymentLabel}>Status</Text>
               <Text
                 style={[
                   styles.paymentValue,
                   { color: getStatusColor(order.payment_status) },
                 ]}
               >
-                {order.payment_status.replace("_", " ")}
+                {order.payment_status}
               </Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.paymentRow}>
-              <Text style={styles.totalLabel}>Total Amount</Text>
+              <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalValue}>
                 ₨{Math.round(order.total_amount)}
               </Text>
@@ -366,21 +324,10 @@ export default function OrderDetailsPage() {
           </View>
         </View>
 
-        {/* Notes */}
-        {order.notes && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Notes</Text>
-            <View style={styles.notesCard}>
-              <Text style={styles.notesText}>{order.notes}</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Action Buttons */}
-        {canCancelOrder() && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Actions</Text>
-            <View style={styles.actionsContainer}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Actions</Text>
+          <View style={styles.actionsContainer}>
+            {canCancelOrder() && (
               <TouchableOpacity
                 style={styles.cancelOrderButton}
                 onPress={() => setShowCancelModal(true)}
@@ -392,46 +339,47 @@ export default function OrderDetailsPage() {
                 />
                 <Text style={styles.cancelOrderButtonText}>Cancel Order</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.supportButton}
-                onPress={() => setShowContactModal(true)}
-              >
-                <Ionicons
-                  name="chatbubble-outline"
-                  size={20}
-                  color={Colors.themes.customer.primary}
-                />
-                <Text style={styles.supportButtonText}>Contact Support</Text>
-              </TouchableOpacity>
-            </View>
+            )}
+            <TouchableOpacity
+              style={styles.whatsappButton}
+              onPress={() => router.push(`/customer/order-chat/${order.id}`)}
+            >
+              <FontAwesome
+                name="whatsapp"
+                size={20}
+                color="#FFFFFF"
+              />
+              <Text style={styles.whatsappButtonText}>Chat on WhatsApp</Text>
+            </TouchableOpacity>
           </View>
-        )}
-
-        <View style={{ height: 20 }} />
+        </View>
+        <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* Cancel Order Modal */}
       <CancelOrderModal
         visible={showCancelModal}
         onClose={() => setShowCancelModal(false)}
         onConfirm={handleCancelOrder}
         loading={cancelling}
       />
-
-      {/* Contact Support Modal */}
       <ContactSupportModal
         visible={showContactModal}
         onClose={() => setShowContactModal(false)}
       />
+      <ReviewModal
+        visible={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+        onSuccess={fetchOrderDetails}
+        orderNumber={orderNumber}
+      />
+
+      {isAssigned && <FloatingChatButton workOrderId={order.id} />}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.neutral.gray[50],
-  },
+  container: { flex: 1, backgroundColor: Colors.neutral.gray[50] },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -450,17 +398,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: Colors.text.primary,
-  },
-  placeholder: {
-    width: 40,
-  },
-  scrollView: {
-    flex: 1,
-  },
+  headerTitle: { fontSize: 16, fontWeight: "700", color: Colors.text.primary },
+  headerChatButton: { width: 40, alignItems: "flex-end" },
+  scrollView: { flex: 1 },
   statusCard: {
     backgroundColor: Colors.neutral.white,
     padding: Spacing.md,
@@ -479,30 +419,11 @@ const styles = StyleSheet.create({
     color: Colors.text.tertiary,
     marginBottom: 4,
   },
-  orderNumber: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: Colors.text.primary,
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: "600",
-    textTransform: "capitalize",
-  },
-  dateRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  dateText: {
-    fontSize: 11,
-    color: Colors.text.secondary,
-  },
+  orderNumber: { fontSize: 12, fontWeight: "700", color: Colors.text.primary },
+  statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  statusText: { fontSize: 10, fontWeight: "600", textTransform: "capitalize" },
+  dateRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  dateText: { fontSize: 11, color: Colors.text.secondary },
   section: {
     backgroundColor: Colors.neutral.white,
     padding: Spacing.md,
@@ -528,19 +449,14 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: Spacing.xs,
   },
-  serviceInfo: {
-    flex: 1,
-  },
+  serviceInfo: { flex: 1 },
   serviceName: {
     fontSize: 12,
     fontWeight: "600",
     color: Colors.text.primary,
     marginBottom: 2,
   },
-  serviceQuantity: {
-    fontSize: 11,
-    color: Colors.text.secondary,
-  },
+  serviceQuantity: { fontSize: 11, color: Colors.text.secondary },
   itemStatusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -557,10 +473,7 @@ const styles = StyleSheet.create({
     gap: 4,
     marginBottom: Spacing.xs,
   },
-  scheduleText: {
-    fontSize: 11,
-    color: Colors.text.secondary,
-  },
+  scheduleText: { fontSize: 11, color: Colors.text.secondary },
   priceRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -569,52 +482,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.border.light,
   },
-  priceLabel: {
-    fontSize: 10,
-    color: Colors.text.tertiary,
-  },
-  priceValue: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: Colors.text.primary,
-  },
-  viewServiceBtn: {
-    marginTop: Spacing.xs,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.xs,
-    paddingVertical: 8,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.border.light,
-    backgroundColor: Colors.neutral.white,
-    alignSelf: "flex-start",
-  },
-  viewServiceBtnText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: Colors.themes.customer.primary,
-  },
-  stepperRowSmall: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 6,
-    marginBottom: 4,
-  },
-  stepCircleSmall: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.border.light,
-  },
-  stepConnectorSmall: {
-    width: 12,
-    height: 2,
-    backgroundColor: Colors.border.light,
-    marginHorizontal: 2,
-  },
+  priceLabel: { fontSize: 10, color: Colors.text.tertiary },
+  priceValue: { fontSize: 12, fontWeight: "700", color: Colors.text.primary },
   addressCard: {
     backgroundColor: Colors.neutral.gray[50],
     borderRadius: 10,
@@ -628,16 +497,8 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: Spacing.xs,
   },
-  addressType: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: Colors.text.primary,
-  },
-  addressText: {
-    fontSize: 11,
-    color: Colors.text.secondary,
-    lineHeight: 18,
-  },
+  addressType: { fontSize: 12, fontWeight: "600", color: Colors.text.primary },
+  addressText: { fontSize: 11, color: Colors.text.secondary, lineHeight: 18 },
   paymentCard: {
     backgroundColor: Colors.neutral.gray[50],
     borderRadius: 10,
@@ -651,10 +512,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: Spacing.xs,
   },
-  paymentLabel: {
-    fontSize: 11,
-    color: Colors.text.secondary,
-  },
+  paymentLabel: { fontSize: 11, color: Colors.text.secondary },
   paymentValue: {
     fontSize: 11,
     fontWeight: "600",
@@ -666,31 +524,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.border.light,
     marginVertical: Spacing.xs,
   },
-  totalLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: Colors.text.primary,
-  },
+  totalLabel: { fontSize: 12, fontWeight: "700", color: Colors.text.primary },
   totalValue: {
     fontSize: 14,
     fontWeight: "800",
     color: Colors.themes.customer.primary,
   },
-  notesCard: {
-    backgroundColor: Colors.neutral.gray[50],
-    borderRadius: 10,
-    padding: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.border.light,
-  },
-  notesText: {
-    fontSize: 11,
-    color: Colors.text.secondary,
-    lineHeight: 18,
-  },
-  actionsContainer: {
-    gap: Spacing.sm,
-  },
+  actionsContainer: { gap: Spacing.sm },
   cancelOrderButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -707,29 +547,25 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.error,
   },
-  supportButton: {
+  whatsappButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: Colors.neutral.gray[50],
+    backgroundColor: "#25D366",
     paddingVertical: 13,
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.border.light,
+    shadowColor: "#25D366",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  supportButtonText: {
+  whatsappButtonText: {
     fontSize: 12,
     fontWeight: "700",
-    color: Colors.themes.customer.primary,
+    color: "#FFFFFF",
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  errorText: {
-    fontSize: 12,
-    color: Colors.text.secondary,
-  },
+  errorContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  errorText: { fontSize: 12, color: Colors.text.secondary },
 });

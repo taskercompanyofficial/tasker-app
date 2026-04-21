@@ -1,4 +1,5 @@
 import FileGallery from "@/components/FileGallery";
+import { FloatingChatButton } from "@/components/Chat/FloatingChatButton";
 import Modal from "@/components/Modal";
 import {
   ActionButtons,
@@ -31,7 +32,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function VendorWorkOrderDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  // Modal visibility states (kept in component for UI control)
+  // Modal visibility states
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -39,7 +40,7 @@ export default function VendorWorkOrderDetailsScreen() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showStaffModal, setShowStaffModal] = useState(false);
 
-  // Use the custom hook for all work order logic
+  // Custom hook for logic
   const {
     workOrder,
     loading,
@@ -74,7 +75,6 @@ export default function VendorWorkOrderDetailsScreen() {
     await handleAssignStaff(staffId);
   };
 
-  // Wrapper functions for modals
   const onAccept = async () => {
     setShowAcceptModal(false);
     await handleAccept();
@@ -113,10 +113,9 @@ export default function VendorWorkOrderDetailsScreen() {
     setShowStatusModal(true);
   };
 
-  // Loading state
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator
             size="large"
@@ -128,10 +127,9 @@ export default function VendorWorkOrderDetailsScreen() {
     );
   }
 
-  // Error state
   if (!workOrder) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <View style={styles.errorContainer}>
           <Ionicons
             name="alert-circle-outline"
@@ -146,9 +144,8 @@ export default function VendorWorkOrderDetailsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* Header */}
-      <WorkOrderHeader statusName={workOrder.status.name} />
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <WorkOrderHeader statusName={workOrder.status.name} workOrderId={id} />
 
       <ScrollView
         style={styles.content}
@@ -162,7 +159,6 @@ export default function VendorWorkOrderDetailsScreen() {
           />
         }
       >
-        {/* Service Header Card */}
         <ServiceHeaderCard
           serviceName={workOrder.service?.name || "Service"}
           parentServiceName={workOrder.parent_service?.name}
@@ -176,14 +172,12 @@ export default function VendorWorkOrderDetailsScreen() {
           brandComplaintNo={workOrder.brand_complaint_no}
         />
 
-        {/* Customer Info */}
         <CustomerInfoSection
           customer={workOrder.customer}
           address={workOrder.address}
           extraNumber={workOrder.extra_number}
         />
 
-        {/* Service Info */}
         <ServiceInfoSection
           product={workOrder.product}
           category={workOrder.category}
@@ -200,7 +194,6 @@ export default function VendorWorkOrderDetailsScreen() {
           assignmentMessage={workOrder.notes}
         />
 
-        {/* Product Info */}
         <ProductInfoSection
           brand={workOrder.brand}
           product={workOrder.product}
@@ -215,12 +208,10 @@ export default function VendorWorkOrderDetailsScreen() {
           extraNumber={workOrder.extra_number}
         />
 
-        {/* Uploaded Files Section */}
         <View style={styles.section}>
           <FileGallery files={workOrder.files || []} title="Photos/Documents" />
         </View>
 
-        {/* Team Assignment Section */}
         {workOrder.accepted_at && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -264,7 +255,7 @@ export default function VendorWorkOrderDetailsScreen() {
               ) : (
                 <View style={styles.emptyStaffState}>
                   <Text style={styles.emptyStaffText}>
-                    No staff assigned to this job yet.
+                    No staff assigned yet.
                   </Text>
                 </View>
               )}
@@ -272,7 +263,6 @@ export default function VendorWorkOrderDetailsScreen() {
           </View>
         )}
 
-        {/* Action Buttons */}
         <ActionButtons
           workOrderId={Number(id)}
           isPendingAcceptance={isPendingAcceptance}
@@ -290,7 +280,6 @@ export default function VendorWorkOrderDetailsScreen() {
         />
       </ScrollView>
 
-      {/* Accept Modal */}
       <Modal
         visible={showAcceptModal}
         type="confirm"
@@ -307,7 +296,6 @@ export default function VendorWorkOrderDetailsScreen() {
         onClose={() => setShowAcceptModal(false)}
       />
 
-      {/* Reject Modal */}
       <ReasonModal
         visible={showRejectModal}
         title="Reject Job"
@@ -319,20 +307,17 @@ export default function VendorWorkOrderDetailsScreen() {
         onCancel={() => setShowRejectModal(false)}
       />
 
-      {/* Cancel Modal */}
       <ReasonModal
         visible={showCancelModal}
         title="Cancel Job"
         message="Please provide a reason for cancellation:"
         placeholder="Enter cancellation reason..."
         confirmText="Cancel Job"
-        cancelText="Back"
         loading={rejecting}
         onConfirm={onCancelOrder}
         onCancel={() => setShowCancelModal(false)}
       />
 
-      {/* Schedule Modal */}
       <ScheduleModal
         visible={showScheduleModal}
         loading={updatingStatus}
@@ -340,7 +325,6 @@ export default function VendorWorkOrderDetailsScreen() {
         onCancel={() => setShowScheduleModal(false)}
       />
 
-      {/* Status Update Modal */}
       <ReasonModal
         visible={showStatusModal}
         title="Update Status"
@@ -355,7 +339,6 @@ export default function VendorWorkOrderDetailsScreen() {
         }}
       />
 
-      {/* Success Modal */}
       <Modal
         visible={showSuccessModal}
         type="success"
@@ -363,8 +346,6 @@ export default function VendorWorkOrderDetailsScreen() {
         message={modalMessage}
         onClose={() => setShowSuccessModal(false)}
       />
-
-      {/* Error Modal */}
       <Modal
         visible={showErrorModal}
         type="error"
@@ -373,7 +354,6 @@ export default function VendorWorkOrderDetailsScreen() {
         onClose={() => setShowErrorModal(false)}
       />
 
-      {/* Staff Selection Modal */}
       <StaffSelectionModal
         visible={showStaffModal}
         staff={approvedStaff}
@@ -381,33 +361,23 @@ export default function VendorWorkOrderDetailsScreen() {
         onClose={() => setShowStaffModal(false)}
         loading={updatingStatus}
       />
+
+      {isAccepted && <FloatingChatButton workOrderId={id} />}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F3F4F6",
-  },
-  content: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 12,
-    paddingBottom: 100,
-    gap: 10,
-  },
+  container: { flex: 1, backgroundColor: "#F3F4F6" },
+  content: { flex: 1 },
+  scrollContent: { padding: 12, paddingBottom: 100, gap: 10 },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     gap: Spacing.md,
   },
-  loadingText: {
-    fontSize: 13,
-    color: Colors.text.secondary,
-  },
+  loadingText: { fontSize: 13, color: Colors.text.secondary },
   errorContainer: {
     flex: 1,
     justifyContent: "center",
@@ -415,11 +385,7 @@ const styles = StyleSheet.create({
     padding: Spacing.xl,
     gap: Spacing.sm,
   },
-  errorTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: Colors.text.primary,
-  },
+  errorTitle: { fontSize: 16, fontWeight: "700", color: Colors.text.primary },
   errorText: {
     fontSize: 13,
     color: Colors.text.secondary,
@@ -442,20 +408,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.light,
   },
-  sectionTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
+  sectionTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   sectionTitle: {
     fontSize: Typography.sizes.sm,
     fontWeight: Typography.weights.bold,
     color: Colors.text.primary,
     textTransform: "uppercase",
   },
-  sectionContent: {
-    padding: Spacing.md,
-  },
+  sectionContent: { padding: Spacing.md },
   assignButton: {
     backgroundColor: Colors.themes.provider.primary + "10",
     paddingHorizontal: 10,
@@ -490,9 +450,7 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.bold,
     color: Colors.neutral.white,
   },
-  staffDetails: {
-    flex: 1,
-  },
+  staffDetails: { flex: 1 },
   staffNameText: {
     fontSize: Typography.sizes.sm,
     fontWeight: Typography.weights.bold,
@@ -514,9 +472,7 @@ const styles = StyleSheet.create({
     color: Colors.success,
     textTransform: "uppercase",
   },
-  emptyStaffState: {
-    paddingVertical: Spacing.xs,
-  },
+  emptyStaffState: { paddingVertical: Spacing.xs },
   emptyStaffText: {
     fontSize: Typography.sizes.xs,
     color: Colors.text.tertiary,

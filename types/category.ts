@@ -9,7 +9,7 @@ export type Category = {
   image?: string;
   images?: string[];
   tags?: string[];
-  status: "active" | "inactive" | "draft";
+  status: "active" | "inactive" | "draft" | "comming-soon";
   created_at?: Date;
   updated_at?: Date;
   created_by?: User;

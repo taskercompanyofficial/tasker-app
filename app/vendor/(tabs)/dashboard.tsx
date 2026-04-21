@@ -1,9 +1,11 @@
 import Header from "@/components/Header";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing, Typography } from "@/constants/Styles";
+import { useSession } from "@/context/ctx";
+import { useEcho } from "@/context/EchoProvider";
 import {
-  VENDOR_WORK_ORDER_SUMMARY_URL,
   VENDOR_EARNINGS_URL,
+  VENDOR_WORK_ORDER_SUMMARY_URL,
 } from "@/lib/api-endpoints";
 import axios from "@/lib/axios.config";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,8 +21,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useSession } from "@/context/ctx";
-import { useEcho } from "@/context/EchoProvider";
 
 interface WorkOrderStats {
   total: number;
@@ -33,16 +33,44 @@ interface WorkOrderStats {
 export default function VendorDashboard() {
   const { session } = useSession();
   const { isConnected, onWorkOrderUpdate } = useEcho();
-  
+
   const isStaff =
     session.appMode === "vendor_staff" ||
     (session.user as any)?.user_type === "vendor_staff";
-  
+
   const [stats, setStats] = useState<WorkOrderStats | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [balance, setBalance] = useState(0);
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [thisMonthEarnings, setThisMonthEarnings] = useState(0);
+  const [todayEarnings, setTodayEarnings] = useState(0);
+  const [companyShare, setCompanyShare] = useState(0);
+
+  useEffect(() => {
+    // #region agent log
+    fetch("http://127.0.0.1:7789/ingest/e7df05fe-e28b-4c90-971d-c6d804cac73a", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "54d0b8",
+      },
+      body: JSON.stringify({
+        sessionId: "54d0b8",
+        runId: "initial",
+        hypothesisId: "H3_dashboard_staff_detection",
+        location: "app/vendor/(tabs)/dashboard.tsx:52",
+        message: "Dashboard mounted with session role context",
+        data: {
+          appMode: session.appMode,
+          userType: (session.user as any)?.user_type ?? null,
+          isStaff,
+          hasUser: !!session.user,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, [isStaff, session.appMode, session.user]);
 
   useEffect(() => {
     fetchData();
@@ -57,7 +85,10 @@ export default function VendorDashboard() {
   // Real-time auto-refresh when a work order is updated anywhere in the system
   useEffect(() => {
     const unsubscribe = onWorkOrderUpdate((event) => {
-      console.log("[Dashboard] 📦 WorkOrder updated, refreshing stats...", event.workOrder.id);
+      console.log(
+        "[Dashboard] 📦 WorkOrder updated, refreshing stats...",
+        event.workOrder.id,
+      );
       fetchData();
     });
     return unsubscribe;
@@ -125,6 +156,33 @@ export default function VendorDashboard() {
           setBalance(credit - debit);
           setTotalEarnings(totalEarned);
           setThisMonthEarnings(0);
+
+          // Calculate today's earnings from txns
+          const today = new Date().toISOString().split("T")[0];
+          const todayCredits = txns
+            .filter((t: any) => t.type === "credit" && t.date.startsWith(today))
+            .reduce(
+              (acc: number, t: any) => acc + Math.abs(Number(t.amount)),
+              0,
+            );
+
+          setTodayEarnings(todayCredits);
+          setCompanyShare(todayCredits * 0.35);
+        }
+
+        // If summary exists, also try to find today's from transactions if provided
+        if (earningsData?.transactions) {
+          const txns = earningsData.transactions;
+          const today = new Date().toISOString().split("T")[0];
+          const todayCredits = txns
+            .filter((t: any) => t.type === "credit" && t.date.startsWith(today))
+            .reduce(
+              (acc: number, t: any) => acc + Math.abs(Number(t.amount)),
+              0,
+            );
+
+          setTodayEarnings(todayCredits);
+          setCompanyShare(todayCredits * 0.35);
         }
       }
     } catch (error) {
@@ -168,12 +226,35 @@ export default function VendorDashboard() {
               <View style={styles.earningMiniRow}>
                 <View style={styles.earningMiniItem}>
                   <Ionicons
+                    name="today-outline"
+                    size={10}
+                    color={Colors.neutral.white}
+                  />
+                  <Text style={styles.earningMiniText}>
+                    Today: PKR {todayEarnings.toLocaleString()}
+                  </Text>
+                </View>
+                <View style={[styles.earningMiniItem, { marginLeft: 12 }]}>
+                  <Ionicons
+                    name="business-outline"
+                    size={10}
+                    color={Colors.neutral.white}
+                  />
+                  <Text style={styles.earningMiniText}>
+                    Co. Share: PKR {companyShare.toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+
+              {/* <View style={[styles.earningMiniRow, { marginTop: 4, opacity: 0.7 }]}>
+                <View style={styles.earningMiniItem}>
+                  <Ionicons
                     name="calendar-outline"
                     size={10}
                     color={Colors.neutral.white}
                   />
                   <Text style={styles.earningMiniText}>
-                    This Month: PKR {thisMonthEarnings.toLocaleString()}
+                    Month: PKR {thisMonthEarnings.toLocaleString()}
                   </Text>
                 </View>
                 <View style={[styles.earningMiniItem, { marginLeft: 12 }]}>
@@ -186,7 +267,7 @@ export default function VendorDashboard() {
                     Total: PKR {totalEarnings.toLocaleString()}
                   </Text>
                 </View>
-              </View>
+              </View> */}
             </View>
 
             <View
@@ -196,7 +277,11 @@ export default function VendorDashboard() {
               ]}
             >
               <View style={styles.statusInner}>
-                <Ionicons name={isConnected ? "wifi" : "wifi-outline"} size={22} color={Colors.neutral.white} />
+                <Ionicons
+                  name={isConnected ? "wifi" : "wifi-outline"}
+                  size={22}
+                  color={Colors.neutral.white}
+                />
                 <Text style={styles.statusIndicatorText}>
                   {isConnected ? "LIVE" : "OFFLINE"}
                 </Text>
@@ -239,7 +324,7 @@ export default function VendorDashboard() {
             </View>
           </View>
           <View style={styles.statsGrid}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.statBox}
               activeOpacity={0.7}
               onPress={() => router.push("/vendor/jobs?status=active" as any)}
@@ -260,7 +345,7 @@ export default function VendorDashboard() {
               <Text style={styles.statLabel}>Active</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.statBox}
               activeOpacity={0.7}
               onPress={() => router.push("/vendor/jobs?status=pending" as any)}
@@ -273,16 +358,24 @@ export default function VendorDashboard() {
               >
                 <Ionicons name="time" size={16} color={Colors.warning} />
               </View>
-              <Text style={stats?.pending_acceptance ? [styles.statValue, { color: Colors.warning }] : styles.statValue}>
+              <Text
+                style={
+                  stats?.pending_acceptance
+                    ? [styles.statValue, { color: Colors.warning }]
+                    : styles.statValue
+                }
+              >
                 {stats?.pending_acceptance || 0}
               </Text>
               <Text style={styles.statLabel}>Pending</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.statBox}
               activeOpacity={0.7}
-              onPress={() => router.push("/vendor/jobs?period=this_month" as any)}
+              onPress={() =>
+                router.push("/vendor/jobs?period=this_month" as any)
+              }
             >
               <View
                 style={[
@@ -302,10 +395,12 @@ export default function VendorDashboard() {
               <Text style={styles.statLabel}>This Month</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.statBox}
               activeOpacity={0.7}
-              onPress={() => router.push("/vendor/jobs?status=completed" as any)}
+              onPress={() =>
+                router.push("/vendor/jobs?status=completed" as any)
+              }
             >
               <View
                 style={[
@@ -354,6 +449,33 @@ export default function VendorDashboard() {
                 />
               </View>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionCard, { marginTop: Spacing.sm }]}
+              activeOpacity={0.8}
+              onPress={() => router.push("/vendor/support-chat" as any)}
+            >
+              <View style={[styles.actionIconBg, { backgroundColor: Colors.success + "15" }]}>
+                <Ionicons
+                  name="headset"
+                  size={20}
+                  color={Colors.success}
+                />
+              </View>
+              <View style={styles.actionTextContainer}>
+                <Text style={styles.actionTitle}>Chat Support</Text>
+                <Text style={styles.actionSubtitle}>
+                  Real-time support for your queries
+                </Text>
+              </View>
+              <View style={[styles.actionChevron, { backgroundColor: Colors.success + "10" }]}>
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={Colors.success}
+                />
+              </View>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -365,7 +487,8 @@ export default function VendorDashboard() {
             color={Colors.themes.provider.primary}
           />
           <Text style={styles.infoText}>
-            Regularly update your job statuses for faster payments. Jobs update in real-time as they are assigned or changed.
+            Regularly update your job statuses for faster payments. Jobs update
+            in real-time as they are assigned or changed.
           </Text>
         </View>
       </ScrollView>
@@ -406,7 +529,7 @@ const styles = StyleSheet.create({
   },
   balanceText: {
     color: Colors.neutral.white,
-    fontSize: Typography.sizes.xl,
+    fontSize: Typography.sizes.xxl,
     fontWeight: Typography.weights.extrabold,
     marginVertical: 2,
   },
@@ -418,7 +541,7 @@ const styles = StyleSheet.create({
   },
   earningMiniText: {
     color: Colors.neutral.white,
-    fontSize: 9,
+    fontSize: 10,
     opacity: 0.9,
     fontWeight: Typography.weights.medium,
   },
@@ -436,7 +559,7 @@ const styles = StyleSheet.create({
     ...Shadows.sm,
   },
   statusInner: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: 2,
   },
   statusIndicatorText: {
@@ -449,7 +572,7 @@ const styles = StyleSheet.create({
     fontSize: 8,
     opacity: 0.8,
     marginTop: 2,
-    textAlign: 'center',
+    textAlign: "center",
   },
   bgSuccess: {
     backgroundColor: Colors.success,

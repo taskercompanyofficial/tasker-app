@@ -16,15 +16,33 @@ global.Pusher = Pusher;
  *     a new one to avoid duplicate subscriptions.
  */
 export const createEcho = (token: string): Echo<"reverb"> => {
-  const scheme = process.env.EXPO_PUBLIC_REVERB_SCHEME ?? "https";
-  const port = process.env.EXPO_PUBLIC_REVERB_PORT
-    ? parseInt(process.env.EXPO_PUBLIC_REVERB_PORT, 10)
-    : 443;
+  const apiHost = new URL(API_URL).hostname;
+  const envScheme =
+    process.env.EXPO_PUBLIC_REVERB_SCHEME ||
+    process.env.NEXT_PUBLIC_REVERB_SCHEME;
+  const envHost =
+    process.env.EXPO_PUBLIC_REVERB_HOST ||
+    process.env.NEXT_PUBLIC_REVERB_HOST;
+  const envKey =
+    process.env.EXPO_PUBLIC_REVERB_KEY ||
+    process.env.EXPO_PUBLIC_REVERB_APP_KEY ||
+    process.env.NEXT_PUBLIC_REVERB_KEY ||
+    process.env.NEXT_PUBLIC_REVERB_APP_KEY;
+  const envPort =
+    process.env.EXPO_PUBLIC_REVERB_PORT ||
+    process.env.NEXT_PUBLIC_REVERB_PORT;
+
+  const scheme = (envScheme || "https").toLowerCase() === "http" ? "http" : "https";
+  const host = envHost || apiHost;
+  const key = envKey || "nt9ptaliv3xdfx63werd";
+  const fallbackPort = scheme === "https" ? 443 : 80;
+  const parsedPort = envPort ? Number(envPort) : NaN;
+  const port = Number.isFinite(parsedPort) && parsedPort > 0 ? parsedPort : fallbackPort;
 
   return new Echo({
     broadcaster: "reverb",
-    key: process.env.EXPO_PUBLIC_REVERB_APP_KEY || "nt9ptaliv3xdfx63werd",
-    wsHost: process.env.EXPO_PUBLIC_REVERB_HOST || "api.taskercompany.cloud",
+    key,
+    wsHost: host,
     wsPort: port,
     wssPort: port,
     forceTLS: scheme === "https",

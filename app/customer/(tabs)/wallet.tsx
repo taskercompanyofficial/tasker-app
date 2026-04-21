@@ -14,6 +14,31 @@ import Button from "@/components/Button";
 
 export default function Wallet() {
   const insets = useSafeAreaInsets();
+
+  // Temporarily disable wallet — show Coming Soon
+  const COMING_SOON = true;
+
+  if (COMING_SOON) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.comingSoonContainer}>
+          <View style={styles.comingSoonIconCircle}>
+            <Ionicons name="wallet-outline" size={52} color={Colors.themes.customer.primary} />
+          </View>
+          <Text style={styles.comingSoonTitle}>Wallet</Text>
+          <Text style={styles.comingSoonSubtitle}>Coming Soon</Text>
+          <Text style={styles.comingSoonDesc}>
+            We're working on an amazing wallet experience for you.{"\n"}Stay tuned!
+          </Text>
+          <View style={styles.comingSoonBadge}>
+            <Ionicons name="construct-outline" size={14} color={Colors.themes.customer.primary} />
+            <Text style={styles.comingSoonBadgeText}>Under Development</Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const [balance, setBalance] = React.useState<number>(0);
   const [showRecharge, setShowRecharge] = React.useState<boolean>(false);
   const [showRefund, setShowRefund] = React.useState<boolean>(false);
@@ -273,5 +298,55 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     fontWeight: "600",
     fontSize: 12,
+  },
+  comingSoonContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: Spacing.lg,
+  },
+  comingSoonIconCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: Colors.themes.customer.primary + "12",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: Spacing.md,
+  },
+  comingSoonTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  comingSoonSubtitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.themes.customer.primary,
+    marginBottom: Spacing.sm,
+  },
+  comingSoonDesc: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: Spacing.lg,
+  },
+  comingSoonBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: Colors.themes.customer.primary + "12",
+    borderWidth: 1,
+    borderColor: Colors.themes.customer.primary + "30",
+  },
+  comingSoonBadgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.themes.customer.primary,
   },
 });

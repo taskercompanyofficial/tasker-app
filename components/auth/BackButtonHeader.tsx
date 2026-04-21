@@ -78,8 +78,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.light,
   },
   safeHeader: {
     paddingHorizontal: Spacing.sm,

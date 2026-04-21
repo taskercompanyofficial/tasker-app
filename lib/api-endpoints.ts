@@ -1,11 +1,11 @@
-const BACKEND_URL_ENV =
-  process.env.EXPO_PUBLIC_BACKEND_URL ?? "https://api.taskercompany.cloud";
+const BACKEND_URL_ENV = "https://api.taskercompany.cloud";
 if (!BACKEND_URL_ENV) {
   throw new Error("EXPO_PUBLIC_BACKEND_URL is not set");
 }
 export const BACKEND_URL = BACKEND_URL_ENV;
 export const API_URL = `${BACKEND_URL}/api`;
 export const APP_URL = `${API_URL}/tasker-app`;
+export const APP_LOGS_INGEST_URL = `${API_URL}/logs`;
 
 // Auth URLs
 export const LOGIN_URL = `${APP_URL}/auth/sign-in`;
@@ -18,6 +18,7 @@ export const UPDATE_PROFILE_URL = `${APP_URL}/auth/update-profile`;
 
 // Website URLs
 export const GET_CATEGORIES_URL = `${APP_URL}/categories`;
+export const PROMOTIONS_URL = `${APP_URL}/promotions`;
 export const GET_SERVICES_URL = `${APP_URL}/services`;
 export const GET_AUTHORIZED_BRANDS_URL = `${APP_URL}/authorized-brands`;
 export const ADDRESS_URL = `${APP_URL}/address`;
@@ -30,6 +31,7 @@ export const COMMERCIAL_QUOTE_URL = `${APP_URL}/commercial-quotes`;
 export const WALLET_URL = `${APP_URL}/wallet`;
 export const GIFTS_URL = `${APP_URL}/gifts`;
 export const FREE_INSTALLATION_URL = `${APP_URL}/free-installations`;
+export const CITIES_URL = `${APP_URL}/cities`;
 export const VENDOR_LOGIN_URL = `${API_URL}/vendor/login`;
 export const VENDOR_REGISTER_URL = `${API_URL}/vendor/register`;
 export const VENDOR_ME_URL = `${API_URL}/vendor/me`;
@@ -38,7 +40,11 @@ export const VENDOR_UPDATE_PROFILE_URL = `${API_URL}/vendor/update-profile`;
 export const VENDOR_CHANGE_PASSWORD_URL = `${API_URL}/vendor/change-password`;
 export const VENDOR_OTP_URL = `${API_URL}/vendor/auth/check-credentials`;
 export const VENDOR_OTP_VERIFY_URL = `${API_URL}/vendor/auth/verify-otp`;
+export const VENDOR_QUICK_LOGIN_URL = `${API_URL}/vendor/auth/quick-login`;
+export const VENDOR_QUICK_LOGIN_REGISTER_URL = `${API_URL}/vendor/auth/quick-login/register`;
+export const VENDOR_QUICK_LOGIN_REVOKE_URL = `${API_URL}/vendor/auth/quick-login/revoke`;
 export const VENDOR_EARNINGS_URL = `${API_URL}/vendor/earnings`;
+export const VENDOR_PAYOUT_SUBMIT_URL = `${VENDOR_EARNINGS_URL}/payout`;
 export const VENDOR_NOTIFICATIONS_URL = `${API_URL}/vendor/notifications`;
 export const VENDOR_NOTIFICATIONS_UNREAD_COUNT_URL = `${VENDOR_NOTIFICATIONS_URL}/unread-count`;
 export const VENDOR_NOTIFICATIONS_MARK_READ_URL = (id: number | string) =>
@@ -100,3 +106,56 @@ export const VENDOR_STAFF_SIGN_OUT_URL = `${API_URL}/vendor-staff/sign-out`;
 export const VENDOR_STAFF_CHANGE_PASSWORD_URL = `${API_URL}/vendor-staff/change-password`;
 export const VENDOR_STAFF_WORK_ORDERS_URL = `${API_URL}/vendor-staff/work-orders`;
 export const VENDOR_STAFF_WORK_ORDER_SUMMARY_URL = `${API_URL}/vendor-staff/work-orders/summary`;
+export const VENDOR_STAFF_WORK_ORDER_DETAILS_URL = (id: number) =>
+  `${API_URL}/vendor-staff/work-orders/${id}`;
+export const VENDOR_STAFF_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL = (id: number) =>
+  `${API_URL}/vendor-staff/work-orders/${id}/update-status-by-slug`;
+export const VENDOR_STAFF_OTP_URL = `${API_URL}/vendor-staff/auth/check-credentials`;
+export const VENDOR_STAFF_OTP_VERIFY_URL = `${API_URL}/vendor-staff/auth/verify-otp`;
+export const VENDOR_STAFF_QUICK_LOGIN_URL = `${API_URL}/vendor-staff/auth/quick-login`;
+export const VENDOR_STAFF_QUICK_LOGIN_REGISTER_URL = `${API_URL}/vendor-staff/auth/quick-login/register`;
+export const VENDOR_STAFF_QUICK_LOGIN_REVOKE_URL = `${API_URL}/vendor-staff/auth/quick-login/revoke`;
+
+// Location Tracking
+export const VENDOR_LOCATION_PING_URL = `${API_URL}/vendor/location/ping`;
+export const VENDOR_STAFF_LOCATION_PING_URL = `${API_URL}/vendor-staff/location/ping`;
+
+// App Chat Endpoints
+export const CHAT_INITIATE_ORDER_URL = (
+  mode: "customer" | "vendor" | "vendor-staff",
+  workOrderId: number | string,
+) => {
+  const prefix =
+    mode === "vendor"
+      ? "vendor"
+      : mode === "vendor-staff"
+        ? "vendor-staff"
+        : "tasker-app";
+  return `${API_URL}/${prefix}/chat/initiate-order-chat/${workOrderId}`;
+};
+
+export const CHAT_MESSAGES_URL = (
+  mode: "customer" | "vendor" | "vendor-staff",
+  conversationId: number | string,
+) => {
+  const prefix =
+    mode === "vendor"
+      ? "vendor"
+      : mode === "vendor-staff"
+        ? "vendor-staff"
+        : "tasker-app";
+  return `${API_URL}/${prefix}/chat/conversations/${conversationId}/messages`;
+};
+
+export const CHAT_SEND_MESSAGE_URL = (
+  mode: "customer" | "vendor" | "vendor-staff",
+  conversationId: number | string,
+) => {
+  const prefix =
+    mode === "vendor"
+      ? "vendor"
+      : mode === "vendor-staff"
+        ? "vendor-staff"
+        : "tasker-app";
+  return `${API_URL}/${prefix}/chat/conversations/${conversationId}/send`;
+};

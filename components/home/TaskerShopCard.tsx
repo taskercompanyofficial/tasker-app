@@ -8,10 +8,8 @@ import { LinearGradient } from "expo-linear-gradient";
 
 export default function TaskerShopCard() {
   return (
-    <TouchableOpacity
+    <View
       style={styles.container}
-      onPress={() => router.push("/customer/shop" as any)}
-      activeOpacity={0.9}
     >
       <LinearGradient
         colors={[Colors.neutral.white, "#F9FAFB"]}
@@ -22,7 +20,7 @@ export default function TaskerShopCard() {
             <Ionicons
               name="cart-outline"
               size={26}
-              color={Colors.themes.customer.primary}
+              color={Colors.text.tertiary}
             />
           </View>
         </View>
@@ -30,26 +28,26 @@ export default function TaskerShopCard() {
         <View style={styles.bodySection}>
           <View style={styles.header}>
             <Text style={styles.title}>Tasker Shop</Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>Exclusive</Text>
+            <View style={styles.comingSoonBadge}>
+              <Text style={styles.comingSoonText}>Coming Soon</Text>
             </View>
           </View>
           <Text style={styles.subtitle} numberOfLines={2}>
-            Shop premium ACs, washing machines, and home appliances.
+            Our premium appliance store is launching soon. Stay tuned!
           </Text>
         </View>
 
         <View style={styles.rightSection}>
-          <View style={styles.arrowCircle}>
+          <View style={[styles.arrowCircle, { backgroundColor: Colors.neutral.gray[300] }]}>
             <Ionicons
-              name="arrow-forward"
-              size={16}
+              name="lock-closed"
+              size={14}
               color={Colors.neutral.white}
             />
           </View>
         </View>
       </LinearGradient>
-    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -63,6 +61,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border.light,
     ...Shadows.sm,
     elevation: 3,
+    opacity: 0.8,
   },
   cardContent: {
     flexDirection: "row",
@@ -76,11 +75,11 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: BorderRadius.sm,
-    backgroundColor: Colors.themes.customer.primary + "15",
+    backgroundColor: Colors.neutral.gray[100],
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: Colors.themes.customer.primary + "20",
+    borderColor: Colors.border.light,
   },
   bodySection: {
     flex: 1,
@@ -95,23 +94,25 @@ const styles = StyleSheet.create({
   title: {
     fontSize: Typography.sizes.base,
     fontWeight: Typography.weights.bold,
-    color: Colors.text.primary,
+    color: Colors.text.secondary,
   },
-  badge: {
-    backgroundColor: Colors.themes.customer.primary + "12",
+  comingSoonBadge: {
+    backgroundColor: Colors.warning + "15",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: BorderRadius.sm,
+    borderWidth: 0.5,
+    borderColor: Colors.warning + "30",
   },
-  badgeText: {
-    fontSize: Typography.sizes.xs - 2,
+  comingSoonText: {
+    fontSize: 8,
     fontWeight: Typography.weights.bold,
-    color: Colors.themes.customer.primary,
+    color: Colors.warning,
     textTransform: "uppercase",
   },
   subtitle: {
     fontSize: Typography.sizes.xs,
-    color: Colors.text.secondary,
+    color: Colors.text.tertiary,
     lineHeight: 16,
   },
   rightSection: {

@@ -1,11 +1,8 @@
 import axios from "axios";
-import * as SecureStore from "expo-secure-store";
-
-const TOKEN_KEY = "session";
-const TOKEN_CUSTOMER_KEY = "session_customer";
-const TOKEN_VENDOR_KEY = "session_vendor";
-const TOKEN_VENDOR_STAFF_KEY = "session_vendor_staff";
-const APP_MODE_KEY = "app_mode";
+import { useAuthStore } from "@/context/auth-store";
+import { router } from "expo-router";
+import Toast from "react-native-toast-message";
+import { APP_LOGS_INGEST_URL } from "@/lib/api-endpoints";
 
 const myAxios = axios.create({
   headers: {
@@ -15,23 +12,12 @@ const myAxios = axios.create({
   withCredentials: false,
 });
 
-// Add request interceptor to inject token
+// Add request interceptor to inject token from auth store
 myAxios.interceptors.request.use(
-  async (config) => {
+  (config) => {
     try {
-      const mode = (await SecureStore.getItemAsync(APP_MODE_KEY)) as
-        | "customer"
-        | "vendor"
-        | "vendor_staff"
-        | null;
-      const activeToken =
-        mode === "vendor_staff"
-          ? await SecureStore.getItemAsync(TOKEN_VENDOR_STAFF_KEY)
-          : mode === "vendor"
-            ? await SecureStore.getItemAsync(TOKEN_VENDOR_KEY)
-            : await SecureStore.getItemAsync(TOKEN_CUSTOMER_KEY);
-      // Backward compatibility: fall back to legacy single token
-      const token = activeToken || (await SecureStore.getItemAsync(TOKEN_KEY));
+      // getState() is synchronous — no race conditions, no async needed
+      const token = useAuthStore.getState().token;
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
         config.headers.Accept = "application/json";
@@ -52,13 +38,66 @@ myAxios.interceptors.request.use(
   }
 );
 
+// Track if we're already handling an auth error to prevent multiple redirects
+let isHandlingAuthError = false;
+
 // Add response interceptor for error handling
 myAxios.interceptors.response.use(
   (response) => response,
-  (error) => {
-    console.error("Response error:", error.response?.data || error.message);
+  async (error) => {
+    const requestUrl = error?.config?.url as string | undefined;
+    if (requestUrl && requestUrl.includes(APP_LOGS_INGEST_URL)) {
+      return Promise.reject(error);
+    }
+
+    const status = error.response?.status;
+    const message = error.response?.data?.message || error.message;
+
+    // Handle 401 Unauthorized or 403 Forbidden (token expired or invalid)
+    if ((status === 401 || status === 403) && !isHandlingAuthError) {
+      isHandlingAuthError = true;
+
+      const authState = useAuthStore.getState();
+      const currentMode = authState.appMode;
+      const { signOutMode, signOut } = authState;
+
+      if (authState.token) {
+        console.warn(`Auth error ${status} on mode=${currentMode}. Signing out current mode only.`);
+
+        Toast.show({
+          type: "error",
+          text1: "Session Expired",
+          text2: "Please sign in again",
+        });
+
+        if (currentMode) {
+          // Only sign out the current mode — preserve other mode sessions
+          await signOutMode(currentMode);
+
+          // After signing out this mode, check if another session is available
+          const next = useAuthStore.getState();
+          if (next.appMode === "vendor" || next.appMode === "vendor_staff") {
+            router.replace("/vendor/(tabs)/dashboard");
+          } else if (next.appMode === "customer") {
+            router.replace("/customer/(tabs)");
+          } else {
+            router.replace("/auth/role-selection");
+          }
+        } else {
+          await signOut();
+          router.replace("/auth/role-selection");
+        }
+      }
+
+      setTimeout(() => {
+        isHandlingAuthError = false;
+      }, 1000);
+    }
+
+    console.error("Response error:", message);
     return Promise.reject(error);
   }
 );
 
 export default myAxios;
+

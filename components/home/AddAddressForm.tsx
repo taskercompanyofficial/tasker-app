@@ -3,10 +3,11 @@ import Input from '@/components/Input'
 import Colors from '@/constants/Colors'
 import { Spacing } from '@/constants/Styles'
 import useForm from '@/hooks/use-form'
-import { ADDRESS_URL } from '@/lib/api-endpoints'
+import { ADDRESS_URL, CITIES_URL } from '@/lib/api-endpoints'
+import myAxios from '@/lib/axios.config'
 import { Ionicons } from '@expo/vector-icons'
-import React, { useState } from 'react'
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import React, { useCallback, useEffect, useState } from 'react'
+import { ActivityIndicator, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import Toast from 'react-native-toast-message'
 import MapPicker from './MapPicker'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -70,6 +71,42 @@ export default function AddAddressForm({ visible, onClose, onSave, customer_id }
     )
     const [showMapPicker, setShowMapPicker] = useState(false)
     const insets = useSafeAreaInsets()
+
+    // City selection state
+    const [cities, setCities] = useState<{ id: number; name: string }[]>([])
+    const [citySearch, setCitySearch] = useState('')
+    const [showCityDropdown, setShowCityDropdown] = useState(false)
+    const [loadingCities, setLoadingCities] = useState(false)
+
+    // Fetch cities from API with debounce
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (citySearch.length >= 1) {
+                fetchCities(citySearch)
+            } else {
+                setCities([])
+            }
+        }, 300)
+        return () => clearTimeout(timer)
+    }, [citySearch])
+
+    const fetchCities = async (search: string) => {
+        setLoadingCities(true)
+        try {
+            const res = await myAxios.get(`${CITIES_URL}?search=${search}`)
+            setCities(res.data.data || [])
+        } catch (err) {
+            setCities([])
+        } finally {
+            setLoadingCities(false)
+        }
+    }
+
+    const handleCitySelect = (city: { id: number; name: string }) => {
+        setData(prev => ({ ...prev, city: city.name }))
+        setCitySearch(city.name)
+        setShowCityDropdown(false)
+    }
 
     const updateField = (field: keyof Addressdata, value: string) => {
         setData(prev => ({ ...prev, [field]: value }))
@@ -236,14 +273,67 @@ export default function AddAddressForm({ visible, onClose, onSave, customer_id }
 
                         {/* City & State */}
                         <View style={styles.row}>
-                            <Input
-                                label="City *"
-                                placeholder="City"
-                                value={data.city}
-                                onChangeText={(text) => updateField('city', text)}
-                                containerStyle={styles.halfWidth}
-                                error={errors.city}
-                            />
+                            <View style={styles.halfWidth}>
+                                <Text style={styles.label}>City *</Text>
+                                <View style={styles.cityInputContainer}>
+                                    <Ionicons name="search-outline" size={16} color={Colors.text.tertiary} style={{ marginRight: 6 }} />
+                                    <TextInput
+                                        style={styles.cityInput}
+                                        placeholder="Search city..."
+                                        placeholderTextColor={Colors.text.tertiary}
+                                        value={citySearch || data.city}
+                                        onFocus={() => {
+                                            setCitySearch(data.city || '')
+                                            setShowCityDropdown(true)
+                                        }}
+                                        onChangeText={(text) => {
+                                            setCitySearch(text)
+                                            setShowCityDropdown(true)
+                                            if (!text) {
+                                                setData(prev => ({ ...prev, city: '' }))
+                                            }
+                                        }}
+                                    />
+                                    {data.city ? (
+                                        <TouchableOpacity onPress={() => {
+                                            setData(prev => ({ ...prev, city: '' }))
+                                            setCitySearch('')
+                                            setShowCityDropdown(false)
+                                        }}>
+                                            <Ionicons name="close-circle" size={16} color={Colors.text.tertiary} />
+                                        </TouchableOpacity>
+                                    ) : null}
+                                </View>
+                                {showCityDropdown && (citySearch.length >= 1) && (
+                                    <View style={styles.cityDropdown}>
+                                        {loadingCities ? (
+                                            <View style={styles.cityDropdownLoading}>
+                                                <ActivityIndicator size="small" color={Colors.themes.customer.primary} />
+                                            </View>
+                                        ) : cities.length > 0 ? (
+                                            <FlatList
+                                                data={cities.slice(0, 8)}
+                                                keyExtractor={(item) => item.id.toString()}
+                                                keyboardShouldPersistTaps="handled"
+                                                renderItem={({ item }) => (
+                                                    <TouchableOpacity
+                                                        style={styles.cityDropdownItem}
+                                                        onPress={() => handleCitySelect(item)}
+                                                    >
+                                                        <Ionicons name="location-outline" size={14} color={Colors.text.secondary} />
+                                                        <Text style={styles.cityDropdownText}>{item.name}</Text>
+                                                    </TouchableOpacity>
+                                                )}
+                                            />
+                                        ) : (
+                                            <View style={styles.cityDropdownEmpty}>
+                                                <Text style={styles.cityDropdownEmptyText}>No cities found</Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                )}
+                                {errors.city ? <Text style={styles.error}>{errors.city}</Text> : null}
+                            </View>
                             <Input
                                 label="State *"
                                 placeholder="State"
@@ -406,5 +496,59 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '500',
         color: Colors.error,
+    },
+    cityInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: Colors.border.light,
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 10,
+        backgroundColor: Colors.neutral.gray[50],
+    },
+    cityInput: {
+        flex: 1,
+        fontSize: 13,
+        color: Colors.text.primary,
+        padding: 0,
+    },
+    cityDropdown: {
+        borderWidth: 1,
+        borderColor: Colors.border.light,
+        borderRadius: 8,
+        backgroundColor: Colors.neutral.white,
+        marginTop: 4,
+        maxHeight: 180,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 4,
+    },
+    cityDropdownLoading: {
+        padding: 16,
+        alignItems: 'center',
+    },
+    cityDropdownItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.border.light,
+    },
+    cityDropdownText: {
+        fontSize: 13,
+        color: Colors.text.primary,
+    },
+    cityDropdownEmpty: {
+        padding: 16,
+        alignItems: 'center',
+    },
+    cityDropdownEmptyText: {
+        fontSize: 12,
+        color: Colors.text.tertiary,
     },
 })

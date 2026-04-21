@@ -14,20 +14,22 @@
  *  customer     → private-App.Models.User.{id}
  *  public       → work-orders
  */
-import { useSession } from "@/context/ctx";
+import { useAuthStore } from "@/context/auth-store";
 import { createEcho } from "@/lib/echo";
+import { router } from "expo-router";
 import type Echo from "laravel-echo";
-import Toast from "react-native-toast-message";
 import {
   createContext,
   type PropsWithChildren,
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import { Platform } from "react-native";
+import Toast from "react-native-toast-message";
 
 // Dynamic loading for OS notifications to prevent crashes in Expo Go SDK 53+
 let Notifications: any = null;
@@ -94,6 +96,7 @@ interface EchoContextType {
   readonly connectionState: ConnectionState;
   readonly onNotification: (cb: NotificationCallback) => () => void;
   readonly onWorkOrderUpdate: (cb: WorkOrderUpdateCallback) => () => void;
+  readonly onChatMessage: (cb: (event: any) => void) => () => void;
   readonly realtimeUnreadCount: number;
   readonly resetRealtimeUnread: () => void;
 }
@@ -103,6 +106,7 @@ const EchoContext = createContext<EchoContextType>({
   connectionState: "initialized",
   onNotification: () => () => {},
   onWorkOrderUpdate: () => () => {},
+  onChatMessage: () => () => {},
   realtimeUnreadCount: 0,
   resetRealtimeUnread: () => {},
 });
@@ -114,7 +118,16 @@ export function useEcho(): EchoContextType {
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function EchoProvider({ children }: PropsWithChildren) {
-  const { session } = useSession();
+  const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
+  const appMode = useAuthStore((state) => state.appMode);
+  const realtimeMode =
+    process.env.EXPO_PUBLIC_ENABLE_REALTIME ??
+    process.env.NEXT_PUBLIC_ENABLE_REALTIME;
+  const isRealtimeEnabled =
+    realtimeMode != null
+      ? realtimeMode === "true"
+      : __DEV__;
 
   const [isConnected, setIsConnected] = useState(false);
   const [connectionState, setConnectionState] =
@@ -122,8 +135,46 @@ export function EchoProvider({ children }: PropsWithChildren) {
   const [realtimeUnreadCount, setRealtimeUnreadCount] = useState(0);
 
   const echoRef = useRef<Echo<"reverb"> | null>(null);
+  const lastConnectionStateRef = useRef<ConnectionState>("initialized");
+  const pendingOfflineTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const notificationCallbacksRef = useRef<Set<NotificationCallback>>(new Set());
   const workOrderCallbacksRef = useRef<Set<WorkOrderUpdateCallback>>(new Set());
+  const chatCallbacksRef = useRef<Set<(event: any) => void>>(new Set());
+
+  const applyConnectionState = useCallback((nextState: ConnectionState) => {
+    if (nextState === "connecting") {
+      if (lastConnectionStateRef.current === "connected") return;
+      if (lastConnectionStateRef.current === "connecting") return;
+    }
+
+    if (nextState === lastConnectionStateRef.current) return;
+
+    if (nextState === "connected" && pendingOfflineTimerRef.current) {
+      clearTimeout(pendingOfflineTimerRef.current);
+      pendingOfflineTimerRef.current = null;
+    }
+
+    if (
+      (nextState === "disconnected" ||
+        nextState === "failed" ||
+        nextState === "unavailable") &&
+      pendingOfflineTimerRef.current === null
+    ) {
+      pendingOfflineTimerRef.current = setTimeout(() => {
+        lastConnectionStateRef.current = nextState;
+        setConnectionState(nextState);
+        setIsConnected(false);
+        pendingOfflineTimerRef.current = null;
+      }, 1200);
+      return;
+    }
+
+    lastConnectionStateRef.current = nextState;
+    setConnectionState(nextState);
+    setIsConnected(nextState === "connected");
+  }, []);
 
   // ── Callbacks ─────────────────────────────────────────────────────────────
   const onNotification = useCallback(
@@ -141,6 +192,16 @@ export function EchoProvider({ children }: PropsWithChildren) {
       workOrderCallbacksRef.current.add(cb);
       return () => {
         workOrderCallbacksRef.current.delete(cb);
+      };
+    },
+    [],
+  );
+
+  const onChatMessage = useCallback(
+    (cb: (event: any) => void): (() => void) => {
+      chatCallbacksRef.current.add(cb);
+      return () => {
+        chatCallbacksRef.current.delete(cb);
       };
     },
     [],
@@ -173,20 +234,40 @@ export function EchoProvider({ children }: PropsWithChildren) {
     requestPermissions();
   }, []);
 
+
+
   // ── Echo lifecycle ────────────────────────────────────────────────────────
   useEffect(() => {
-    const token = session.token;
-    const userId = session.user?.id;
-    const appMode = session.appMode;
+    if (!isRealtimeEnabled) {
+      if (pendingOfflineTimerRef.current) {
+        clearTimeout(pendingOfflineTimerRef.current);
+        pendingOfflineTimerRef.current = null;
+      }
+      if (echoRef.current) {
+        echoRef.current.disconnect();
+        echoRef.current = null;
+      }
+      lastConnectionStateRef.current = "disconnected";
+      setIsConnected(false);
+      setConnectionState("disconnected");
+      return;
+    }
+
+    const userId = user?.id;
 
     if (!token || !userId) {
+      if (pendingOfflineTimerRef.current) {
+        clearTimeout(pendingOfflineTimerRef.current);
+        pendingOfflineTimerRef.current = null;
+      }
       if (echoRef.current) {
         console.log("[Echo] Disconnecting");
         echoRef.current.disconnect();
         echoRef.current = null;
-        setIsConnected(false);
-        setConnectionState("disconnected");
       }
+      lastConnectionStateRef.current = "disconnected";
+      setIsConnected(false);
+      setConnectionState("disconnected");
       return;
     }
 
@@ -200,13 +281,13 @@ export function EchoProvider({ children }: PropsWithChildren) {
           : `customer.${userId}`;
 
     console.log(`[Echo] Connecting to ${privateChannelName}...`);
-    setConnectionState("connecting");
+    applyConnectionState("connecting");
 
     const echo = createEcho(token);
     echoRef.current = echo;
 
     // @ts-ignore - for debugging
-    if (global.Pusher) global.Pusher.logToConsole = true;
+    if (global.Pusher) global.Pusher.logToConsole = __DEV__;
 
     const pusher = (echo as any).connector?.pusher;
     if (pusher?.connection) {
@@ -217,8 +298,7 @@ export function EchoProvider({ children }: PropsWithChildren) {
           console.log(
             `[Echo] State change: ${states.previous} -> ${states.current}`,
           );
-          setConnectionState(state);
-          setIsConnected(state === "connected");
+          applyConnectionState(state);
         },
       );
 
@@ -258,12 +338,43 @@ export function EchoProvider({ children }: PropsWithChildren) {
           text1: event.notification.title,
           text2: event.notification.message,
           onPress: () => {
-            // Possible navigation logic here
+            const data = event.notification.data || {};
+            const type = event.notification.type || data.type;
+
+            // Navigate based on app mode and notification type
+            if (appMode === 'customer') {
+              if (type === 'chat') {
+                if (data.chat_type === 'support') router.push('/customer/support-chat');
+                else if (data.order_id) router.push(`/customer/order-chat/${data.order_id}`);
+              } else {
+                const orderRef = data.order_number || data.order_id || data.work_order_id;
+                if (orderRef) {
+                  router.push(`/customer/orders/${orderRef}`);
+                } else {
+                  router.push('/customer/notifications');
+                }
+              }
+            } else {
+              // Vendor / Staff App
+              if (type === 'chat') {
+                if (data.chat_type === 'support') router.push('/vendor/support-chat');
+                else if (data.work_order_id) router.push(`/vendor/work-order-chat/${data.work_order_id}`);
+              } else if (data.work_order_id || data.order_id) {
+                const id = data.work_order_id || data.order_id;
+                router.push(`/vendor/work-order-details/${id}`);
+              } else {
+                router.push('/vendor/notifications');
+              }
+            }
           },
         });
 
         // Dispatch to local page listeners
         notificationCallbacksRef.current.forEach((cb) => cb(event));
+      })
+      .listen(".message.created", (event: any) => {
+        console.log(`[Echo] 💬 Message: ${event.message?.text}`);
+        chatCallbacksRef.current.forEach((cb) => cb(event));
       });
 
     // Sub to Public Channel (Work Orders)
@@ -285,26 +396,43 @@ export function EchoProvider({ children }: PropsWithChildren) {
 
     return () => {
       console.log("[Echo] Cleanup on logout/unmount");
+      if (pendingOfflineTimerRef.current) {
+        clearTimeout(pendingOfflineTimerRef.current);
+        pendingOfflineTimerRef.current = null;
+      }
       echo.leave(privateChannelName);
       echo.leave("work-orders");
       echo.disconnect();
       echoRef.current = null;
+      lastConnectionStateRef.current = "disconnected";
       setIsConnected(false);
       setConnectionState("disconnected");
     };
-  }, [session.token, session.user?.id, session.appMode]);
+  }, [token, user?.id, appMode, applyConnectionState, isRealtimeEnabled]);
+
+  const contextValue = useMemo(
+    () => ({
+      isConnected,
+      connectionState,
+      onNotification,
+      onWorkOrderUpdate,
+      onChatMessage,
+      realtimeUnreadCount,
+      resetRealtimeUnread,
+    }),
+    [
+      isConnected,
+      connectionState,
+      onNotification,
+      onWorkOrderUpdate,
+      onChatMessage,
+      realtimeUnreadCount,
+      resetRealtimeUnread,
+    ],
+  );
 
   return (
-    <EchoContext.Provider
-      value={{
-        isConnected,
-        connectionState,
-        onNotification,
-        onWorkOrderUpdate,
-        realtimeUnreadCount,
-        resetRealtimeUnread,
-      }}
-    >
+    <EchoContext.Provider value={contextValue}>
       {children}
     </EchoContext.Provider>
   );

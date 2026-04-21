@@ -3,7 +3,7 @@ import ParentServiceCard from '@/components/services/ParentServiceCard'
 import CheckoutModal from '@/components/checkout/CheckoutModal'
 import AlertModal from '@/components/common/AlertModal'
 import Colors from '@/constants/Colors'
-import { Spacing, BorderRadius, Typography } from '@/constants/Styles'
+import { Spacing, BorderRadius, Typography, Shadows } from '@/constants/Styles'
 import { GET_SERVICES_URL } from '@/lib/api-endpoints'
 import myAxios from '@/lib/axios.config'
 import { ParentService } from '@/types/parent-service'
@@ -258,9 +258,17 @@ export default function ServiceDetail() {
                 onClose={() => setShowInfoModal(false)}
                 primaryButton={{
                     text: 'Close',
-                    onPress: () => {},
+                    onPress: () => setShowInfoModal(false),
                 }}
             />
+            {/* Floating Support Button */}
+            <TouchableOpacity 
+                style={styles.floatingButton}
+                onPress={() => router.push('/customer/support-chat')}
+            >
+                <Ionicons name="chatbubbles" size={24} color={Colors.neutral.white} />
+                <View style={styles.unreadDot} />
+            </TouchableOpacity>
         </SafeAreaView>
     )
 }
@@ -451,5 +459,29 @@ const styles = StyleSheet.create({
         color: Colors.text.secondary,
         textAlign: 'center',
         marginTop: Spacing.xl,
+    },
+    floatingButton: {
+        position: 'absolute',
+        bottom: 100, // Above the checkout bar if visible
+        right: 24,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: '#4F46E5',
+        justifyContent: 'center',
+        alignItems: 'center',
+        ...Shadows.md,
+        elevation: 5,
+    },
+    unreadDot: {
+        position: 'absolute',
+        top: 2,
+        right: 2,
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: Colors.error,
+        borderWidth: 2,
+        borderColor: Colors.neutral.white,
     },
 })

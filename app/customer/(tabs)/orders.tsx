@@ -21,8 +21,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const STATUS_FILTERS = [
   { id: "all", label: "All", icon: "list" },
-  { id: "pending", label: "Pending", icon: "hourglass" },
-  { id: "in_progress", label: "Active", icon: "time" },
+  { id: "pending", label: "Allocated", icon: "hourglass" },
+  { id: "in_progress", label: "In Progress", icon: "time" },
   { id: "completed", label: "Completed", icon: "checkmark-circle" },
   { id: "cancelled", label: "Cancelled", icon: "close-circle" },
 ];
@@ -57,6 +57,7 @@ export default function OrdersPage() {
       }
 
       const res = await myAxios.get(`${ORDER_URL}?page=${page}`);
+      console.log(JSON.stringify(res.data, null, 2));
       const paginationData = res.data.data;
       const fetchedOrders = paginationData.data || [];
 
@@ -113,16 +114,10 @@ export default function OrdersPage() {
         return "#10B981";
       case "in_progress":
         return "#3B82F6";
-      case "scheduled":
-        return "#8B5CF6";
-      case "confirmed":
-        return "#06B6D4";
       case "pending":
         return "#F59E0B";
       case "cancelled":
         return Colors.error;
-      case "refunded":
-        return "#6B7280";
       default:
         return Colors.text.secondary;
     }
@@ -134,18 +129,27 @@ export default function OrdersPage() {
         return "checkmark-circle";
       case "in_progress":
         return "time";
-      case "scheduled":
-        return "calendar";
-      case "confirmed":
-        return "checkmark-done";
       case "pending":
         return "hourglass";
       case "cancelled":
         return "close-circle";
-      case "refunded":
-        return "arrow-undo";
       default:
         return "ellipse";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "Allocated";
+      case "in_progress":
+        return "In Progress";
+      case "completed":
+        return "Completed";
+      case "cancelled":
+        return "Cancelled";
+      default:
+        return status.replace("_", " ");
     }
   };
 
@@ -205,7 +209,7 @@ export default function OrdersPage() {
           <Text
             style={[styles.statusText, { color: getStatusColor(item.status) }]}
           >
-            {item.status.replace("_", " ")}
+            {getStatusLabel(item.status)}
           </Text>
         </View>
       </View>
@@ -265,7 +269,6 @@ export default function OrdersPage() {
   }
 
   const stats = getOrderStats();
-
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
@@ -280,7 +283,11 @@ export default function OrdersPage() {
             style={styles.contactButton}
             onPress={() => setShowContactModal(true)}
           >
-            <Ionicons name="call" size={20} color={Colors.themes.customer.primary} />
+            <Ionicons
+              name="call"
+              size={20}
+              color={Colors.themes.customer.primary}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -542,7 +549,6 @@ const styles = StyleSheet.create({
   ordersList: {
     flex: 1,
     paddingHorizontal: Spacing.xs,
-
   },
   orderCard: {
     backgroundColor: Colors.neutral.white,

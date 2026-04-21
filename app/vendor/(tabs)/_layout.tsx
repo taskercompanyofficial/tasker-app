@@ -1,32 +1,11 @@
-import { Tabs } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { Typography } from "@/constants/Styles";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "@/context/ctx";
-import { useEcho } from "@/context/EchoProvider";
-import { View, Text, StyleSheet } from "react-native";
-
-/** Bell icon with a live unread badge */
-function NotificationBell({ color, focused }: { color: string; focused: boolean }) {
-  const { realtimeUnreadCount } = useEcho();
-  return (
-    <View style={bellStyles.wrap}>
-      <Ionicons
-        name={focused ? "notifications" : "notifications-outline"}
-        size={22}
-        color={color}
-      />
-      {realtimeUnreadCount > 0 && (
-        <View style={bellStyles.badge}>
-          <Text style={bellStyles.badgeText}>
-            {realtimeUnreadCount > 9 ? "9+" : realtimeUnreadCount}
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-}
+import { Ionicons } from "@expo/vector-icons";
+import { Redirect, Tabs } from "expo-router";
+import React, { useRef } from "react";
+import { StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const bellStyles = StyleSheet.create({
   wrap: {
@@ -57,6 +36,59 @@ const bellStyles = StyleSheet.create({
 export default function VendorTabsLayout() {
   const insets = useSafeAreaInsets();
   const { session } = useSession();
+  const renderCountRef = useRef(0);
+  renderCountRef.current += 1;
+  if (renderCountRef.current <= 20) {
+    // #region agent log
+    fetch("http://127.0.0.1:7789/ingest/e7df05fe-e28b-4c90-971d-c6d804cac73a", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "54d0b8",
+      },
+      body: JSON.stringify({
+        sessionId: "54d0b8",
+        runId: "initial",
+        hypothesisId: "H6_vendor_tabs_rerender_loop",
+        location: "app/vendor/(tabs)/_layout.tsx:43",
+        message: "Vendor tabs layout render count",
+        data: {
+          renderCount: renderCountRef.current,
+          appMode: session.appMode,
+          isAuthenticated: session.isAuthenticated,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }
+  // #region agent log
+  fetch("http://127.0.0.1:7789/ingest/e7df05fe-e28b-4c90-971d-c6d804cac73a", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "54d0b8",
+    },
+    body: JSON.stringify({
+      sessionId: "54d0b8",
+      runId: "initial",
+      hypothesisId: "H2_tab_guard_rejects_session",
+      location: "app/vendor/(tabs)/_layout.tsx:40",
+      message: "Vendor tabs guard input state",
+      data: {
+        isAuthenticated: session.isAuthenticated,
+        appMode: session.appMode,
+        userType: (session.user as any)?.user_type ?? null,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+
+  if (!session.isAuthenticated || (session.appMode !== "vendor" && session.appMode !== "vendor_staff")) {
+    return <Redirect href="/" />;
+  }
+
   const isStaff = session.appMode === "vendor_staff" || (session.user as any)?.user_type === "vendor_staff";
 
   return (
@@ -111,6 +143,21 @@ export default function VendorTabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="chat"
+        options={{
+          title: "Chat",
+          tabBarIcon: ({ color, focused }) => (
+            <View style={{ position: 'relative' }}>
+              <Ionicons
+                name={focused ? "chatbubbles" : "chatbubbles-outline"}
+                size={20}
+                color={color}
+              />
+            </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="ledger"
         options={{
           title: "Rates",
@@ -127,7 +174,7 @@ export default function VendorTabsLayout() {
       <Tabs.Screen
         name="earnings"
         options={{
-          title: "Earnings",
+          title: "Account",
           href: isStaff ? null : undefined,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? "wallet" : "wallet-outline"} size={20} color={color} />

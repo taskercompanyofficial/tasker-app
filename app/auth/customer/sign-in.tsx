@@ -1,41 +1,50 @@
 import Button from "@/components/Button";
 import Input from "@/components/Input";
+import BackButtonHeader from "@/components/auth/BackButtonHeader";
+import LoginHeader from "@/components/auth/LoginHeader";
 import Colors from "@/constants/Colors";
-import { Spacing } from "@/constants/Styles";
+import { Spacing, Shadows } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
 import useForm from "@/hooks/use-form";
 import { OTP_URL, OTP_VERIFY_URL } from "@/lib/api-endpoints";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Animated,
-  Image,
   KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
+
 type Step = "phone" | "otp" | "success";
 
 export default function Signin() {
-  const { signIn, setAppMode } = useSession();
+  const { signIn } = useSession();
   const router = useRouter();
   const [step, setStep] = useState<Step>("phone");
+
   const { data, setData, processing, errors, post } = useForm({
     phone: "",
     source: "tasker-app",
     otp: "",
+    intent: "login",
   });
-  const isValidPhone = /^03\d{9}$/.test(data.phone);
-  useEffect(() => {
-    void setAppMode("customer");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+  // Phone stored in 0302 format in database - send as-is
+  const formattedPhone = data.phone.replace(/\D/g, "");
+  const isValidPhone = /^03\d{9}$/.test(data.phone) || /^\+92[0-9]{10}$/.test(data.phone);
+  const isValidOtp = /^\d{6}$/.test(data.otp);
+
   const handleSendOtp = () => {
+    // Send phone as-is (0302 format stored in database)
+    const phoneToSend = data.phone.replace(/\D/g, "");
+    setData((prev) => ({ ...prev, phone: phoneToSend }));
     post(OTP_URL, {
       onSuccess: (response) => {
         setStep("otp");
@@ -47,212 +56,224 @@ export default function Signin() {
       onError: (error) => {
         Toast.show({
           type: "error",
-          text1: error.message,
+          text1: error.message || "Failed to send OTP",
         });
       },
     });
   };
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
-  }, [step]);
   const handleVerifyOtp = async () => {
     post(OTP_VERIFY_URL, {
-      onSuccess: (response: {
+      onSuccess: async (response: {
         message: string;
         token: string;
         isNew: boolean;
       }) => {
         setStep("success");
-        signIn(response.token, "customer");
-        void setAppMode("customer");
+        await signIn(response.token, "customer");
         router.replace("/customer");
       },
       onError: (error) => {
+        // Clear OTP to prevent auto-submit useEffect from re-triggering
+        setData((prev) => ({ ...prev, otp: "" }));
         Toast.show({
           type: "error",
-          text1: error?.message || "Something went wrong",
+          text1: error?.message || "Invalid OTP",
         });
       },
     });
   };
-  const isValidOtp = /^\d{6}$/.test(data.otp);
 
-  const handleGoogleSignIn = () => {
-    console.log("Google sign in");
-  };
-
-  const autoVerifyRef = useRef(false);
-  const clipboardIntervalRef = useRef<number | null>(null);
-
+  // Auto-submit OTP when 6 digits entered
   useEffect(() => {
-    autoVerifyRef.current = false;
-    if (clipboardIntervalRef.current) {
-      clearInterval(clipboardIntervalRef.current);
-      clipboardIntervalRef.current = null;
-    }
-    if (step !== "otp") {
-      return;
-    }
-    const checkClipboard = async () => {
-      try {
-        const Clipboard = await import("expo-clipboard");
-        const text = await Clipboard.getStringAsync();
-        if (text && /^\d{6}$/.test(text)) {
-          if (data.otp !== text) {
-            setData({ ...data, otp: text });
-          }
-        }
-      } catch {}
-    };
-    void checkClipboard();
-    const id = setInterval(() => {
-      void checkClipboard();
-    }, 1500) as unknown as number;
-    clipboardIntervalRef.current = id;
-    return () => {
-      if (clipboardIntervalRef.current) {
-        clearInterval(clipboardIntervalRef.current);
-        clipboardIntervalRef.current = null;
-      }
-    };
-  }, [step, data, setData]);
-
-  useEffect(() => {
-    if (step === "otp" && isValidOtp && !processing && !autoVerifyRef.current) {
-      autoVerifyRef.current = true;
+    if (step === "otp" && isValidOtp && !processing && data.otp) {
       void handleVerifyOtp();
     }
-  }, [step, isValidOtp, processing]);
+  }, [step, isValidOtp, processing, data.otp]);
+
+  const handleBackPress = () => {
+    if (step === "otp") {
+      setStep("phone");
+      setData((prev) => ({ ...prev, otp: "" }));
+    } else {
+      router.replace("/auth/role-selection");
+    }
+  };
+
+  const getTitle = () => {
+    if (step === "phone") return "Welcome Back!";
+    if (step === "otp") return "Verify OTP";
+    return "Success";
+  };
+
+  const getSubtitle = () => {
+    if (step === "phone") return "Enter your WhatsApp number to continue";
+    if (step === "otp") return `We sent a 6-digit code to ${data.phone}`;
+    return "Redirecting to your dashboard...";
+  };
 
   return (
-    <KeyboardAvoidingView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      {/* Background Accent */}
+      <View style={styles.backgroundAccent} />
+
+      {/* Header - Transparent */}
+      <BackButtonHeader
+        title="Customer Login"
+        onBackPress={handleBackPress}
+        backgroundColor="transparent"
+      />
+
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={styles.content}>
-          <View style={styles.logoContainer}>
-            <Image
-              source={require("@/assets/images/signin-illustration.png")}
-              style={styles.illustration}
-              resizeMode="contain"
-            />
-          </View>
-          <Text style={styles.title}>Welcome to Tasker</Text>
-          <Text style={styles.subtitle}>
-            {step === "phone" && "Enter your WhatsApp number to continue"}
-            {step === "otp" && "Enter the verification code"}
-            {step === "success" && "Welcome back!"}
-          </Text>
-        </View>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Login Header - No Icon */}
+          <LoginHeader
+            title={getTitle()}
+            subtitle={getSubtitle()}
+            theme="customer"
+            hideIcon
+          />
 
-        <Animated.View style={[styles.formContainer, { opacity: fadeAnim }]}>
-          {step === "phone" && (
-            <View style={styles.stepContainer}>
-              <Input
-                label="WhatsApp Number"
-                placeholder="03XXXXXXXXX"
-                value={data.phone}
-                onChangeText={(text) => {
-                  setData({ ...data, phone: text });
-                }}
-                keyboardType="phone-pad"
-                error={errors.phone}
-                leftIcon={
-                  <Ionicons
-                    name="logo-whatsapp"
-                    size={18}
-                    color={Colors.themes.customer.primary}
-                  />
-                }
-              />
-
-              <Button
-                title={processing ? "Sending OTP..." : "Continue"}
-                onPress={handleSendOtp}
-                fullWidth
-                loading={processing}
-                disabled={!isValidPhone}
-              />
-            </View>
-          )}
-
-          {step === "otp" && (
-            <View style={styles.stepContainer}>
-              <Text style={styles.otpInfo}>
-                We&apos;ve sent a 6-digit code to your WhatsApp.{" "}
-                <Text
-                  style={styles.changeNumber}
-                  onPress={() => setStep("phone")}
-                >
-                  Change number
-                </Text>
-              </Text>
-
-              <Input
-                label="Enter OTP"
-                placeholder="000000"
-                value={data.otp}
-                onChangeText={(text) => {
-                  setData({ ...data, otp: text });
-                }}
-                keyboardType="number-pad"
-                maxLength={6}
-                error={errors.otp}
-                textContentType="oneTimeCode"
-                autoComplete="one-time-code"
-                leftIcon={
-                  <Ionicons
-                    name="lock-closed-outline"
-                    size={18}
-                    color={Colors.themes.customer.primary}
-                  />
-                }
-              />
-
-              <Button
-                title={processing ? "Verifying..." : "Verify OTP"}
-                onPress={handleVerifyOtp}
-                fullWidth
-                loading={processing}
-                disabled={!isValidOtp}
-              />
-
-              <TouchableOpacity
-                onPress={handleSendOtp}
-                style={styles.resendButton}
-              >
-                <Text style={styles.resendText}>Resend OTP</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {step === "success" && (
-            <View style={styles.successContainer}>
-              <View style={styles.successIcon}>
-                <Ionicons
-                  name="checkmark-circle"
-                  size={80}
-                  color={Colors.success}
+          {/* Form */}
+          <View style={styles.formContainer}>
+            {step === "phone" && (
+              <>
+                <Input
+                  label="WhatsApp Number"
+                  placeholder="03XXXXXXXXX"
+                  value={data.phone}
+                  onChangeText={(text) =>
+                    setData((prev) => ({ ...prev, phone: text }))
+                  }
+                  keyboardType="phone-pad"
+                  error={errors.phone}
+                  leftIcon={
+                    <Ionicons
+                      name="logo-whatsapp"
+                      size={20}
+                      color={Colors.themes.customer.primary}
+                    />
+                  }
                 />
+
+                <Button
+                  title={processing ? "Sending OTP..." : "Continue with WhatsApp"}
+                  onPress={handleSendOtp}
+                  fullWidth
+                  loading={processing}
+                  disabled={!isValidPhone}
+                  theme="customer"
+                />
+
+                {/* Divider */}
+                <View style={styles.dividerContainer}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>OR</Text>
+                  <View style={styles.dividerLine} />
+                </View>
+
+                {/* Social Login Buttons - Row Layout */}
+                <View style={styles.socialRow}>
+                  <TouchableOpacity
+                    style={styles.socialButtonRow}
+                    onPress={() => console.log("Google sign in")}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.socialIcon, { backgroundColor: "#EA4335" }]}>
+                      <Ionicons name="logo-google" size={22} color="#FFFFFF" />
+                    </View>
+                    <Text style={styles.socialTextRow}>Google</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.socialButtonRow}
+                    onPress={() => console.log("Facebook sign in")}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.socialIcon, { backgroundColor: "#1877F2" }]}>
+                      <Ionicons name="logo-facebook" size={22} color="#FFFFFF" />
+                    </View>
+                    <Text style={styles.socialTextRow}>Facebook</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {step === "otp" && (
+              <>
+                {/* WhatsApp Icon */}
+                <View style={styles.whatsappIconContainer}>
+                  <Ionicons name="logo-whatsapp" size={48} color="#25D366" />
+                </View>
+
+                <Input
+                  label="Enter 6-Digit Code"
+                  placeholder="000000"
+                  value={data.otp}
+                  onChangeText={(text) =>
+                    setData((prev) => ({ ...prev, otp: text }))
+                  }
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  error={errors.otp}
+                  textContentType="oneTimeCode"
+                  autoComplete="sms-otp"
+                  style={styles.otpInput}
+                />
+
+                <Button
+                  title={processing ? "Verifying..." : "Verify & Continue"}
+                  onPress={handleVerifyOtp}
+                  fullWidth
+                  loading={processing}
+                  disabled={!isValidOtp}
+                />
+
+                <TouchableOpacity
+                  onPress={handleSendOtp}
+                  style={styles.resendButton}
+                >
+                  <Text style={styles.resendText}>Resend Code</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    setStep("phone");
+                    setData((prev) => ({ ...prev, otp: "" }));
+                  }}
+                  style={styles.changeNumberButton}
+                >
+                  <Text style={styles.changeNumberText}>Change number</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {step === "success" && (
+              <View style={styles.successContainer}>
+                <View style={styles.successIcon}>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={80}
+                    color={Colors.success}
+                  />
+                </View>
+                <Text style={styles.successTitle}>Welcome Back!</Text>
+                <Text style={styles.successText}>
+                  Redirecting to your dashboard...
+                </Text>
               </View>
-              <Text style={styles.successTitle}>Welcome Back!</Text>
-              <Text style={styles.successText}>
-                Redirecting to your dashboard...
-              </Text>
-            </View>
-          )}
-        </Animated.View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -261,59 +282,91 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.neutral.white,
   },
+  backgroundAccent: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 200,
+    backgroundColor: Colors.themes.customer.primary + "10",
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: Spacing.lg,
-    paddingTop: 80, // Increased to account for header
+    paddingTop: 80, // Space for header
     paddingBottom: Spacing.xl,
-  },
-  content: {
-    alignItems: "center",
-    marginBottom: Spacing.xl,
-  },
-  logoContainer: {
-    marginBottom: Spacing.md,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "600",
-    color: Colors.text.primary,
-    marginBottom: Spacing.xs,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-    textAlign: "center",
+    gap: Spacing.lg,
   },
   formContainer: {
-    flex: 1,
-  },
-  stepContainer: {
     gap: Spacing.md,
+    width: "100%",
+  },
+  otpInput: {
+    textAlign: "center",
+    fontSize: 24,
+    letterSpacing: 8,
+  },
+  whatsappIconContainer: {
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  socialRow: {
+    flexDirection: "row",
+    gap: Spacing.md,
+    justifyContent: "center",
+  },
+  socialButtonRow: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: Spacing.sm,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    backgroundColor: Colors.neutral.white,
+    gap: Spacing.sm,
+    ...Shadows.sm,
+  },
+  socialIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  socialTextRow: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.text.primary,
   },
   dividerContainer: {
     flexDirection: "row",
     alignItems: "center",
     marginVertical: Spacing.sm,
+    gap: Spacing.md,
   },
-  divider: {
+  dividerLine: {
     flex: 1,
     height: 1,
     backgroundColor: Colors.border.light,
   },
   dividerText: {
-    marginHorizontal: Spacing.md,
-    color: Colors.text.tertiary,
     fontSize: 12,
+    fontWeight: "600",
+    color: Colors.text.tertiary,
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
-  otpInfo: {
-    fontSize: 13,
-    color: Colors.text.secondary,
-    lineHeight: 20,
-    marginBottom: Spacing.sm,
+  changeNumberButton: {
+    alignSelf: "center",
+    paddingVertical: Spacing.sm,
   },
-  changeNumber: {
+  changeNumberText: {
     color: Colors.themes.customer.primary,
+    fontSize: 14,
     fontWeight: "500",
   },
   resendButton: {
@@ -344,9 +397,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
     maxWidth: 280,
-  },
-  illustration: {
-    width: 200,
-    height: 200,
   },
 });

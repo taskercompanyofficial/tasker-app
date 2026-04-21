@@ -3,9 +3,17 @@ import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { Typography } from "@/constants/Styles";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSession } from "@/context/ctx";
+import { Redirect } from "expo-router";
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const { session } = useSession();
+
+  if (!session.isAuthenticated || session.appMode !== "customer") {
+    return <Redirect href="/" />;
+  }
+
   return (
     <Tabs
       screenOptions={{
@@ -59,6 +67,19 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="chat"
+        options={{
+          title: "Support",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "chatbubbles" : "chatbubbles-outline"}
+              size={20}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="services"
         options={{
           title: "Services",
@@ -71,7 +92,7 @@ export default function TabsLayout() {
           ),
         }}
       />
-      
+
       <Tabs.Screen
         name="wallet"
         options={{
