@@ -13,6 +13,7 @@ import { useFocusEffect } from "expo-router";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -196,6 +197,8 @@ export default function VendorDashboard() {
     setRefreshing(true);
     fetchData();
   };
+
+  const vendorUser = session.vendorUser || (session.user as any);
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
@@ -724,5 +727,68 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.xs,
     color: Colors.text.secondary,
     lineHeight: 18,
+  },
+  profileInProgressCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    gap: 12,
+    borderWidth: 1.5,
+    borderColor: "#2563EB25",
+    ...Shadows.sm,
+  },
+  profileInProgressAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1.5,
+    borderColor: Colors.themes.provider.primary,
+  },
+  inProgressBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 2,
+  },
+  inProgressPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: BorderRadius.full,
+  },
+  inProgressDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#D97706",
+  },
+  inProgressPillText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#B45309",
+    textTransform: "uppercase",
+  },
+  inProgressTimeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#6B7280",
+  },
+  inProgressTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: Colors.text.primary,
+  },
+  inProgressSub: {
+    fontSize: 11,
+    color: Colors.text.secondary,
+    marginTop: 1,
+    lineHeight: 15,
   },
 });

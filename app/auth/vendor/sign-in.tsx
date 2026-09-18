@@ -83,18 +83,10 @@ export default function VendorSignIn() {
         });
       },
       onError: (error) => {
-        if (error.message?.includes("No account found")) {
-          Toast.show({
-            type: "error",
-            text1: "No vendor account found",
-            text2: "Please check your phone number or contact support",
-          });
-        } else {
-          Toast.show({
-            type: "error",
-            text1: error.message || "Failed to send OTP",
-          });
-        }
+        Toast.show({
+          type: "error",
+          text1: error.message || "Failed to send OTP",
+        });
       },
     });
   };
@@ -105,6 +97,9 @@ export default function VendorSignIn() {
         token?: string;
         message?: string;
         user_type?: string;
+        user?: any;
+        is_profile_complete?: boolean;
+        isNew?: boolean;
       }) => {
         if (response.token) {
           const userType = (response.user_type || "vendor") as
@@ -117,7 +112,23 @@ export default function VendorSignIn() {
             text1: response.message || "Login successful",
           });
           await signIn(response.token, userType);
-          router.replace("/vendor/(tabs)/dashboard");
+          
+          const vendorUser = response.user;
+          const isVendor = userType === "vendor";
+          const isProfileIncomplete =
+            isVendor &&
+            (!vendorUser?.cnic ||
+              !vendorUser?.handled_categories ||
+              (Array.isArray(vendorUser?.handled_categories) &&
+                vendorUser.handled_categories.length === 0) ||
+              !vendorUser?.experience ||
+              (vendorUser?.name && vendorUser.name.startsWith("Partner ")));
+
+          if (isProfileIncomplete) {
+            router.replace("/vendor/complete-profile");
+          } else {
+            router.replace("/vendor/(tabs)/dashboard");
+          }
         } else {
           setData((prev) => ({ ...prev, otp: "" }));
           Toast.show({ type: "error", text1: "Invalid OTP" });
@@ -135,7 +146,7 @@ export default function VendorSignIn() {
 
   // Countdown timer for resend OTP (90 seconds)
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
     if (step === "otp" && resendTimer > 0) {
       interval = setInterval(() => {
         setResendTimer((prev) => (prev > 0 ? prev - 1 : 0));

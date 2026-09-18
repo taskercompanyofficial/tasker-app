@@ -129,7 +129,7 @@ myAxios.interceptors.response.use(
     const status = error.response?.status;
     const message = error.response?.data?.message || error.message;
 
-    if ((status === 401 || status === 403) && !isHandlingAuthError) {
+    if (status === 401 && !isHandlingAuthError) {
       isHandlingAuthError = true;
 
       const authState = useAuthStore.getState();

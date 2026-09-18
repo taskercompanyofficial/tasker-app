@@ -16,6 +16,8 @@ import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
+import { useQuickActionCallback } from "expo-quick-actions/hooks";
+import { handleQuickAction, setupQuickActions } from "@/lib/quickActions";
 
 
 // Configure EAS Observe safely
@@ -63,6 +65,13 @@ function RootLayout() {
       });
     }
   }, []);
+
+  // Quick Actions (App icon long-press shortcuts on iOS & Android)
+  useQuickActionCallback(handleQuickAction);
+
+  useEffect(() => {
+    setupQuickActions(appMode);
+  }, [appMode]);
 
   // Mark app interactive once auth initialization completes
   useEffect(() => {

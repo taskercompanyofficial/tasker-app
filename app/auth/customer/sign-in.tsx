@@ -113,7 +113,7 @@ export default function Signin() {
 
   // Countdown timer for resend OTP (90 seconds)
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
     if (step === "otp" && resendTimer > 0) {
       interval = setInterval(() => {
         setResendTimer((prev) => (prev > 0 ? prev - 1 : 0));

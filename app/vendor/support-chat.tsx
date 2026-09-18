@@ -23,7 +23,7 @@ export default function VendorSupportChatScreen() {
 
       {/* Real-time Chat Room */}
       <View style={{ flex: 1 }}>
-        <ChatRoom conversationId="vendor-support" hideHeader={true} />
+        <ChatRoom hideHeader={true} />
       </View>
     </SafeAreaView>
   );

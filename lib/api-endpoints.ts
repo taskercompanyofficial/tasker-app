@@ -1,4 +1,4 @@
-const BACKEND_URL_ENV = "https://glpcdycei3.sharedwithexpose.com";
+const BACKEND_URL_ENV = "https://lwuhfkkudt.sharedwithexpose.com";
 if (!BACKEND_URL_ENV) {
   throw new Error("EXPO_PUBLIC_BACKEND_URL is not set");
 }
@@ -38,6 +38,8 @@ export const VENDOR_REGISTER_URL = `${API_URL}/vendor/register`;
 export const VENDOR_ME_URL = `${API_URL}/vendor/me`;
 export const VENDOR_SIGN_OUT_URL = `${API_URL}/vendor/sign-out`;
 export const VENDOR_UPDATE_PROFILE_URL = `${API_URL}/vendor/update-profile`;
+export const VENDOR_EXTRACT_CNIC_URL = `${API_URL}/vendor/extract-cnic`;
+export const VENDOR_VERIFY_SELFIE_URL = `${API_URL}/vendor/verify-selfie`;
 export const VENDOR_CHANGE_PASSWORD_URL = `${API_URL}/vendor/change-password`;
 export const VENDOR_OTP_URL = `${API_URL}/vendor/auth/check-credentials`;
 export const VENDOR_OTP_VERIFY_URL = `${API_URL}/vendor/auth/verify-otp`;

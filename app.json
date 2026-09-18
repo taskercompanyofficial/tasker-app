@@ -30,7 +30,19 @@
         "applinks:www.taskercompany.com/chat/*"
       ],
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Tasker requires camera access to scan your CNIC identity documents and capture biometric selfie photos for verification.",
+        "NSPhotoLibraryUsageDescription": "Tasker requires photo library access so you can upload your CNIC card photos and portfolio images.",
+        "NSPhotoLibraryAddUsageDescription": "Tasker requires permission to save receipts and scanned documents.",
+        "NSLocationWhenInUseUsageDescription": "Tasker requires access to your location to find nearby customer service requests and provide turn-by-turn navigation.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Tasker requires background location access to share live real-time location updates with customers while you are on the way to a job.",
+        "NSLocationAlwaysUsageDescription": "Tasker requires background location access to update customers on your arrival status even when the app is in background.",
+        "UIBackgroundModes": [
+          "location",
+          "fetch",
+          "remote-notification",
+          "processing"
+        ]
       }
     },
     "android": {
@@ -158,6 +170,7 @@
         }
       ],
       "permissions": [
+        "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.ACCESS_FINE_LOCATION",
@@ -165,7 +178,13 @@
         "android.permission.ACCESS_BACKGROUND_LOCATION",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_LOCATION",
-        "android.permission.SYSTEM_ALERT_WINDOW"
+        "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.WAKE_LOCK",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+        "android.permission.VIBRATE"
       ]
     },
     "web": {
@@ -178,6 +197,12 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow Tasker Vendor to track live location in the background for active customer work order navigation.",
           "isAndroidBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Tasker to use the camera to scan CNIC documents and capture verification photos."
         }
       ],
       "expo-router",
@@ -200,7 +225,8 @@
       "expo-status-bar",
       "expo-web-browser",
       "expo-asset",
-      "expo-sharing"
+      "expo-sharing",
+      "react-native-document-scanner-plugin"
     ],
     "experiments": {
       "typedRoutes": true,

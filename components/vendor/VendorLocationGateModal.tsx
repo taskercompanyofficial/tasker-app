@@ -1,6 +1,7 @@
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing, Typography } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
+import Constants, { ExecutionEnvironment } from "expo-constants";
 import * as Location from "expo-location";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -17,6 +18,11 @@ interface VendorLocationGateModalProps {
   onPermissionGranted?: () => void;
 }
 
+const isDevOrExpoGo =
+  __DEV__ ||
+  Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
+  (Constants as any).appOwnership === "expo";
+
 export default function VendorLocationGateModal({
   onPermissionGranted,
 }: VendorLocationGateModalProps) {
@@ -25,6 +31,10 @@ export default function VendorLocationGateModal({
   const [loading, setLoading] = useState(false);
 
   const checkPermissions = useCallback(async () => {
+    // In dev / Expo Go, background location and draw over other apps are not supported
+    if (isDevOrExpoGo) {
+      return;
+    }
     try {
       const fg = await Location.getForegroundPermissionsAsync();
       const bg = await Location.getBackgroundPermissionsAsync();
@@ -71,7 +81,7 @@ export default function VendorLocationGateModal({
 
   const isGranted = fgGranted === true && bgGranted === true;
 
-  if (fgGranted === null || bgGranted === null || isGranted) {
+  if (isDevOrExpoGo || fgGranted === null || bgGranted === null || isGranted) {
     return null;
   }
 

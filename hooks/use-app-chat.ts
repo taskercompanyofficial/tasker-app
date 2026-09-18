@@ -65,7 +65,15 @@ export function useAppChat({ workOrderId, conversationId: initialConversationId 
       setLoading(true);
       setError(null);
       try {
-        let convId = initialConversationId;
+        const isNumericId =
+          initialConversationId !== undefined &&
+          initialConversationId !== null &&
+          !isNaN(Number(initialConversationId)) &&
+          String(initialConversationId).trim() !== "";
+
+        let convId: number | string | undefined = isNumericId
+          ? initialConversationId
+          : undefined;
 
         // If workOrderId is provided, initiate order chat
         if (!convId && workOrderId) {
@@ -75,7 +83,7 @@ export function useAppChat({ workOrderId, conversationId: initialConversationId 
             convId = data.conversation.id;
           }
         } 
-        // If neither conversationId nor workOrderId is provided, initiate Support Chat
+        // If neither valid conversationId nor workOrderId is provided, initiate Support Chat
         else if (!convId) {
           const { data } = await myAxios.post(CHAT_INITIATE_SUPPORT_URL(mode));
           if (isMounted && data.conversation) {
