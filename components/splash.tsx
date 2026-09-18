@@ -1,204 +1,223 @@
-import React, { useEffect, useRef } from 'react'
-import { View, Text, StyleSheet, Animated, Image, Dimensions } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
-import Colors from '@/constants/Colors'
+import React, { useEffect, useRef } from "react";
+import {
+  Animated,
+  Dimensions,
+  Easing,
+  Image,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
-const { width, height } = Dimensions.get('window')
+const { width } = Dimensions.get("window");
+const LOGO_WIDTH = width * 0.82;
+const LOGO_HEIGHT = 150;
 
 export default function Splash() {
-    const fadeAnim = useRef(new Animated.Value(0)).current
-    const scaleAnim = useRef(new Animated.Value(0.8)).current
+  // Left-to-right reveal scale: 0 to 1
+  const revealScale = useRef(new Animated.Value(0)).current;
 
-    useEffect(() => {
-        Animated.parallel([
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 1000,
-                useNativeDriver: true,
+  // Glassy sheen sweep animation: -100 to LOGO_WIDTH + 100
+  const shineTranslateX = useRef(new Animated.Value(-100)).current;
+
+  // Glass reflection flare scale: 1 to 1.02
+  const glassScale = useRef(new Animated.Value(1)).current;
+
+  // Bottom text animation: 0 to 1
+  const textOpacity = useRef(new Animated.Value(0)).current;
+  const textTranslateY = useRef(new Animated.Value(12)).current;
+
+  useEffect(() => {
+    // 1. Left-to-right reveal scale animation
+    Animated.timing(revealScale, {
+      toValue: 1,
+      duration: 1100,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start(() => {
+      // 2. Text entrance
+      Animated.parallel([
+        Animated.timing(textOpacity, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(textTranslateY, {
+          toValue: 0,
+          duration: 500,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // 3. Continuous glassy light sweep & micro glass flare pulse
+      Animated.loop(
+        Animated.sequence([
+          Animated.parallel([
+            Animated.timing(shineTranslateX, {
+              toValue: LOGO_WIDTH + 100,
+              duration: 1300,
+              easing: Easing.inOut(Easing.quad),
+              useNativeDriver: true,
             }),
-            Animated.spring(scaleAnim, {
+            Animated.sequence([
+              Animated.timing(glassScale, {
+                toValue: 1.02,
+                duration: 650,
+                easing: Easing.out(Easing.quad),
+                useNativeDriver: false,
+              }),
+              Animated.timing(glassScale, {
                 toValue: 1,
-                friction: 4,
-                tension: 40,
-                useNativeDriver: true,
-            }),
-        ]).start()
-    }, [])
+                duration: 650,
+                easing: Easing.in(Easing.quad),
+                useNativeDriver: false,
+              }),
+            ]),
+          ]),
+          Animated.delay(1400),
+          Animated.timing(shineTranslateX, {
+            toValue: -100,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    });
+  }, []);
 
-    return (
-        <View style={styles.container}>
-            {/* Background Decoration */}
-            <View style={styles.decorativeCircle1} />
-            <View style={styles.decorativeCircle2} />
-            <View style={styles.decorativeCircle3} />
+  const animatedWidth = revealScale.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, LOGO_WIDTH],
+  });
 
-            <Animated.View
-                style={[
-                    styles.content,
-                    {
-                        opacity: fadeAnim,
-                        transform: [{ scale: scaleAnim }],
-                    },
-                ]}
-            >
-                {/* Logo Icon - HVAC Theme */}
-                <View style={styles.logoContainer}>
-                    <View style={styles.logoCircle}>
-                        {/* AC/Snowflake icon representing cooling services */}
-                        <Ionicons name="snow" size={64} color={Colors.neutral.white} />
-                        <View style={styles.toolIcon}>
-                            {/* Water drop for appliances like washing machine, geyser */}
-                            <Ionicons name="water" size={28} color={Colors.neutral.white} />
-                        </View>
-                    </View>
-                </View>
+  return (
+    <View style={styles.container}>
+      {/* Centered Glassy Container */}
+      <View style={styles.glassCardContainer}>
+        {/* Animated Left-to-Right Reveal Mask */}
+        <Animated.View
+          style={[
+            styles.revealMask,
+            {
+              width: animatedWidth,
+              transform: [{ scale: glassScale }],
+            },
+          ]}
+        >
+          <Image
+            source={require("@/assets/icons/tasker-logo.png")}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
 
-                {/* App Name */}
-                <Text style={styles.appName}>Tasker Company</Text>
-                <Text style={styles.tagline}>HVAC & Home Appliance Experts</Text>
+          {/* Dual-Layer Glass Prism Light Beam */}
+          <Animated.View
+            style={[
+              styles.glassBeamContainer,
+              {
+                transform: [
+                  { translateX: shineTranslateX },
+                  { rotate: "22deg" },
+                ],
+              },
+            ]}
+          >
+            {/* Diffuse Outer Glass Glow */}
+            <View style={styles.glassOuterGlow} />
+            {/* Sharp Inner Glass Glare Core */}
+            <View style={styles.glassInnerCore} />
+          </Animated.View>
+        </Animated.View>
+      </View>
 
-                {/* Loading Indicator */}
-                <View style={styles.loadingContainer}>
-                    <Animated.View
-                        style={[
-                            styles.loadingDot,
-                            {
-                                opacity: fadeAnim,
-                            },
-                        ]}
-                    />
-                    <Animated.View
-                        style={[
-                            styles.loadingDot,
-                            {
-                                opacity: fadeAnim,
-                            },
-                        ]}
-                    />
-                    <Animated.View
-                        style={[
-                            styles.loadingDot,
-                            {
-                                opacity: fadeAnim,
-                            },
-                        ]}
-                    />
-                </View>
-            </Animated.View>
-
-            {/* Footer */}
-            <View style={styles.footer}>
-                <Text style={styles.footerText}>Powered by Tasker Company</Text>
-                <Text style={styles.version}>Version 1.0.0</Text>
-            </View>
-        </View>
-    )
+      {/* Bottom Text */}
+      <Animated.View
+        style={[
+          styles.footer,
+          {
+            opacity: textOpacity,
+            transform: [{ translateY: textTranslateY }],
+          },
+        ]}
+      >
+        <Text style={styles.footerTagline}>
+          Complete Home & Industrial Solutions
+        </Text>
+        <Text style={styles.footerVersion}>Tasker Company v1.0.0</Text>
+      </Animated.View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: Colors.neutral.white,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    decorativeCircle1: {
-        position: 'absolute',
-        width: 300,
-        height: 300,
-        borderRadius: 150,
-        backgroundColor: Colors.themes.customer.primary + '10',
-        top: -100,
-        right: -100,
-    },
-    decorativeCircle2: {
-        position: 'absolute',
-        width: 200,
-        height: 200,
-        borderRadius: 100,
-        backgroundColor: Colors.themes.customer.primary + '08',
-        bottom: -50,
-        left: -50,
-    },
-    decorativeCircle3: {
-        position: 'absolute',
-        width: 150,
-        height: 150,
-        borderRadius: 75,
-        backgroundColor: Colors.themes.customer.primary + '15',
-        top: height / 2,
-        right: -50,
-    },
-    content: {
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    logoContainer: {
-        marginBottom: 32,
-    },
-    logoCircle: {
-        width: 140,
-        height: 140,
-        borderRadius: 70,
-        backgroundColor: Colors.themes.customer.primary,
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: Colors.themes.customer.primary,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.3,
-        shadowRadius: 16,
-        elevation: 8,
-        position: 'relative',
-    },
-    toolIcon: {
-        position: 'absolute',
-        bottom: 5,
-        right: 5,
-        backgroundColor: Colors.themes.customer.primary,
-        width: 42,
-        height: 42,
-        borderRadius: 21,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 3,
-        borderColor: Colors.neutral.white,
-    },
-    appName: {
-        fontSize: 32,
-        fontWeight: '700',
-        color: Colors.text.primary,
-        marginBottom: 8,
-        letterSpacing: -0.5,
-    },
-    tagline: {
-        fontSize: 16,
-        color: Colors.text.secondary,
-        marginBottom: 48,
-        fontWeight: '400',
-    },
-    loadingContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    loadingDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: Colors.themes.customer.primary,
-    },
-    footer: {
-        position: 'absolute',
-        bottom: 40,
-        alignItems: 'center',
-    },
-    footerText: {
-        fontSize: 12,
-        color: Colors.text.tertiary,
-        marginBottom: 4,
-    },
-    version: {
-        fontSize: 11,
-        color: Colors.text.tertiary,
-    },
-})
+  container: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  glassCardContainer: {
+    width: LOGO_WIDTH,
+    height: LOGO_HEIGHT,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 12,
+  },
+  revealMask: {
+    height: LOGO_HEIGHT,
+    overflow: "hidden",
+    position: "relative",
+    justifyContent: "center",
+    alignItems: "flex-start",
+  },
+  logoImage: {
+    width: LOGO_WIDTH,
+    height: LOGO_HEIGHT,
+  },
+  glassBeamContainer: {
+    position: "absolute",
+    top: -50,
+    bottom: -50,
+    width: 65,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  glassOuterGlow: {
+    position: "absolute",
+    width: 65,
+    height: "100%",
+    backgroundColor: "rgba(255, 255, 255, 0.45)",
+    borderRadius: 30,
+  },
+  glassInnerCore: {
+    width: 14,
+    height: "100%",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    shadowColor: "#ffffff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 15,
+    elevation: 8,
+    borderRadius: 7,
+  },
+  footer: {
+    position: "absolute",
+    bottom: 45,
+    alignItems: "center",
+  },
+  footerTagline: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#334155",
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  footerVersion: {
+    fontSize: 11,
+    color: "#94A3B8",
+    fontWeight: "400",
+  },
+});

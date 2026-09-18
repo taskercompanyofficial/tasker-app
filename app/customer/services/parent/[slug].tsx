@@ -5,8 +5,9 @@ import { useFetchParentService } from "@/hooks/useFetchParentService";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useMemo, useState } from "react";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { Image } from "expo-image";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   StyleSheet,
   Text,
@@ -19,7 +20,8 @@ import CheckoutModal from "@/components/checkout/CheckoutModal";
 export default function ParentServiceDetailPage() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const { data, loading } = useFetchParentService(slug);
-  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const checkoutModalRef = React.useRef<BottomSheetModal>(null);
+  const insets = useSafeAreaInsets();
   const [quantity, setQuantity] = useState(0);
   const checkoutItems = useMemo(() => {
     if (!data) return [];
@@ -48,7 +50,7 @@ export default function ParentServiceDetailPage() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
@@ -66,13 +68,13 @@ export default function ParentServiceDetailPage() {
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!data) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
@@ -90,7 +92,7 @@ export default function ParentServiceDetailPage() {
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Not found</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -103,8 +105,8 @@ export default function ParentServiceDetailPage() {
 
   if (data?.status === "comming-soon") {
     return (
-      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-        <View style={styles.header}>
+      <View style={styles.container}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, Spacing.sm) }]}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
@@ -139,13 +141,13 @@ export default function ParentServiceDetailPage() {
           </View>
           <Text style={styles.stayTuned}>Stay tuned for updates</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, Spacing.sm) }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
@@ -261,7 +263,7 @@ export default function ParentServiceDetailPage() {
         )}
       </ScrollView>
       {quantity === 0 ? (
-        <View style={styles.footerBar}>
+        <View style={[styles.footerBar, { paddingBottom: Math.max(insets.bottom, 12) + Spacing.sm }]}>
           <View style={styles.footerInfo}>
             <Text style={styles.footerLabel}>Price</Text>
             <Text style={styles.footerPrice}>
@@ -277,7 +279,7 @@ export default function ParentServiceDetailPage() {
           </TouchableOpacity>
         </View>
       ) : (
-        <View style={styles.checkoutBar}>
+        <View style={[styles.checkoutBar, { paddingBottom: Math.max(insets.bottom, 12) + Spacing.sm }]}>
           <View style={styles.checkoutInfo}>
             <View style={styles.itemsCount}>
               <Ionicons name="cart" size={20} color={Colors.text.secondary} />
@@ -290,7 +292,7 @@ export default function ParentServiceDetailPage() {
           </View>
           <TouchableOpacity
             style={styles.checkoutButton}
-            onPress={() => setShowCheckoutModal(true)}
+            onPress={() => checkoutModalRef.current?.present()}
           >
             <Text style={styles.checkoutButtonText}>Checkout</Text>
             <Ionicons
@@ -302,12 +304,11 @@ export default function ParentServiceDetailPage() {
         </View>
       )}
       <CheckoutModal
-        visible={showCheckoutModal}
-        onClose={() => setShowCheckoutModal(false)}
+        ref={checkoutModalRef}
         items={checkoutItems}
         totalAmount={totalAmount}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

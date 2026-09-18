@@ -7,9 +7,10 @@ import { Spacing, BorderRadius, Typography } from "@/constants/Styles";
 import { PARENT_SERVICE_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
 import { ParentService } from "@/types/parent-service";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useRef } from "react";
 import {
   FlatList,
   RefreshControl,
@@ -19,7 +20,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ServicesPage() {
   const [services, setServices] = useState<ParentService[]>([]);
@@ -30,7 +31,9 @@ export default function ServicesPage() {
   const [selectedServices, setSelectedServices] = useState<{
     [key: number]: number;
   }>({});
-  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  
+  const insets = useSafeAreaInsets();
+  const checkoutModalRef = useRef<BottomSheetModal>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -123,7 +126,7 @@ export default function ServicesPage() {
   };
 
   const handleCheckout = () => {
-    setShowCheckoutModal(true);
+    checkoutModalRef.current?.present();
   };
 
   const renderServiceCard = ({ item }: { item: ParentService }) => (
@@ -139,9 +142,9 @@ export default function ServicesPage() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, Spacing.sm) }]}>
         <View>
           <Text style={styles.headerTitle}>Our Services</Text>
           <Text style={styles.headerSubtitle}>
@@ -214,7 +217,7 @@ export default function ServicesPage() {
 
       {/* Bottom Checkout Bar */}
       {getTotalItems() > 0 && (
-        <View style={styles.checkoutBar}>
+        <View style={[styles.checkoutBar, { paddingBottom: Math.max(insets.bottom, 12) + Spacing.sm }]}>
           <View style={styles.checkoutInfo}>
             <View style={styles.itemsCount}>
               <Ionicons name="cart" size={20} color={Colors.text.secondary} />
@@ -245,12 +248,11 @@ export default function ServicesPage() {
 
       {/* Checkout Modal */}
       <CheckoutModal
-        visible={showCheckoutModal}
-        onClose={() => setShowCheckoutModal(false)}
+        ref={checkoutModalRef}
         items={getCheckoutItems()}
         totalAmount={calculateTotal()}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -1,8 +1,9 @@
-import axios from "axios";
+import axios, { InternalAxiosRequestConfig, AxiosResponse } from "axios";
 import { useAuthStore } from "@/context/auth-store";
 import { router } from "expo-router";
 import Toast from "react-native-toast-message";
 import { APP_LOGS_INGEST_URL } from "@/lib/api-endpoints";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const myAxios = axios.create({
   headers: {
@@ -12,17 +13,25 @@ const myAxios = axios.create({
   withCredentials: false,
 });
 
+// Cache prefix to separate network cache from other AsyncStorage data
+const CACHE_PREFIX = "@network_cache_";
+
+// Helper to generate cache key based on URL and params
+const getCacheKey = (config: InternalAxiosRequestConfig) => {
+  const url = config.url || "";
+  const params = config.params ? JSON.stringify(config.params) : "";
+  return `${CACHE_PREFIX}${url}_${params}`;
+};
+
 // Add request interceptor to inject token from auth store
 myAxios.interceptors.request.use(
   (config) => {
     try {
-      // getState() is synchronous — no race conditions, no async needed
       const token = useAuthStore.getState().token;
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
         config.headers.Accept = "application/json";
 
-        // Don't override Content-Type if it's already set (e.g., for FormData)
         if (!config.headers["Content-Type"]) {
           config.headers["Content-Type"] = "application/json";
         }
@@ -38,22 +47,88 @@ myAxios.interceptors.request.use(
   }
 );
 
-// Track if we're already handling an auth error to prevent multiple redirects
 let isHandlingAuthError = false;
 
-// Add response interceptor for error handling
+// Add response interceptor for error handling and caching
 myAxios.interceptors.response.use(
-  (response) => response,
+  async (response: AxiosResponse) => {
+    // Cache successful GET requests for offline support
+    if (response.config.method?.toLowerCase() === "get") {
+      try {
+        const cacheKey = getCacheKey(response.config);
+        // Only cache the data part to save space
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(response.data));
+      } catch (e) {
+        console.warn("Failed to cache API response:", e);
+      }
+    }
+    return response;
+  },
   async (error) => {
     const requestUrl = error?.config?.url as string | undefined;
     if (requestUrl && requestUrl.includes(APP_LOGS_INGEST_URL)) {
       return Promise.reject(error);
     }
 
+    // --- OFFLINE SUPPORT FALLBACK ---
+    // If it's a network error (no response)
+    if (!error.response) {
+      const method = error.config?.method?.toLowerCase();
+
+      if (method === "get") {
+        try {
+          const cacheKey = getCacheKey(error.config);
+          const cachedData = await AsyncStorage.getItem(cacheKey);
+
+          if (cachedData) {
+            console.log(`[Offline Mode] Serving cached data for: ${requestUrl}`);
+            return Promise.resolve({
+              data: JSON.parse(cachedData),
+              status: 200,
+              statusText: "OK",
+              headers: {},
+              config: error.config,
+            });
+          }
+        } catch (e) {
+          console.warn("Failed to retrieve cached data:", e);
+        }
+      } else if (method === "post" || method === "put" || method === "delete") {
+        try {
+          // Enqueue the mutation action for later sync
+          const { useOfflineStore } = require("@/context/offline-store");
+          useOfflineStore.getState().enqueueAction({
+            url: error.config.url,
+            method: error.config.method,
+            data: error.config.data,
+            headers: error.config.headers,
+          });
+
+          console.log(`[Offline Mode] Queued action: ${method.toUpperCase()} ${requestUrl}`);
+          Toast.show({
+            type: "info",
+            text1: "Action Queued",
+            text2: "Will submit when internet is restored.",
+          });
+
+          // Return a dummy successful response (202 Accepted) so the UI doesn't crash
+          return Promise.resolve({
+            data: { queued: true, message: "Action stored offline" },
+            status: 202,
+            statusText: "Accepted",
+            headers: {},
+            config: error.config,
+          });
+        } catch (e) {
+          console.warn("Failed to queue offline action:", e);
+        }
+      }
+    }
+
+    // --- STANDARD ERROR HANDLING ---
     const status = error.response?.status;
     const message = error.response?.data?.message || error.message;
 
-    // Handle 401 Unauthorized or 403 Forbidden (token expired or invalid)
     if ((status === 401 || status === 403) && !isHandlingAuthError) {
       isHandlingAuthError = true;
 
@@ -71,10 +146,8 @@ myAxios.interceptors.response.use(
         });
 
         if (currentMode) {
-          // Only sign out the current mode — preserve other mode sessions
           await signOutMode(currentMode);
 
-          // After signing out this mode, check if another session is available
           const next = useAuthStore.getState();
           if (next.appMode === "vendor" || next.appMode === "vendor_staff") {
             router.replace("/vendor/(tabs)/dashboard");

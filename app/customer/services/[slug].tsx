@@ -1,18 +1,19 @@
-import Loader from '@/components/Loader'
-import ParentServiceCard from '@/components/services/ParentServiceCard'
 import CheckoutModal from '@/components/checkout/CheckoutModal'
 import AlertModal from '@/components/common/AlertModal'
+import Loader from '@/components/Loader'
+import ParentServiceCard from '@/components/services/ParentServiceCard'
 import Colors from '@/constants/Colors'
-import { Spacing, BorderRadius, Typography, Shadows } from '@/constants/Styles'
+import { BorderRadius, Shadows, Spacing, Typography } from '@/constants/Styles'
 import { GET_SERVICES_URL } from '@/lib/api-endpoints'
 import myAxios from '@/lib/axios.config'
 import { ParentService } from '@/types/parent-service'
 import { Service } from '@/types/service'
 import { Ionicons } from '@expo/vector-icons'
-import { useLocalSearchParams, router } from 'expo-router'
-import React, { useEffect, useState } from 'react'
-import { RefreshControl, ScrollView, StyleSheet, Text, View, TouchableOpacity, TextInput, StatusBar } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { BottomSheetModal } from '@gorhom/bottom-sheet'
+import { router, useLocalSearchParams } from 'expo-router'
+import { useEffect, useRef, useState } from 'react'
+import { RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 export default function ServiceDetail() {
     const { slug } = useLocalSearchParams<{ slug: string }>()
@@ -21,8 +22,10 @@ export default function ServiceDetail() {
     const [selectedServices, setSelectedServices] = useState<{ [key: number]: number }>({})
     const [searchQuery, setSearchQuery] = useState('')
     const [showFilters, setShowFilters] = useState(false)
-    const [showCheckoutModal, setShowCheckoutModal] = useState(false)
     const [showInfoModal, setShowInfoModal] = useState(false)
+
+    const checkoutModalRef = useRef<BottomSheetModal>(null)
+    const insets = useSafeAreaInsets()
 
     const refresh = () => {
         setLoading(true)
@@ -90,7 +93,7 @@ export default function ServiceDetail() {
     }
 
     const handleCheckout = () => {
-        setShowCheckoutModal(true)
+        checkoutModalRef.current?.present()
     }
 
     const filteredServices = service?.parent_services?.filter(ps =>
@@ -104,18 +107,18 @@ export default function ServiceDetail() {
 
     if (!service) {
         return (
-            <SafeAreaView style={styles.container}>
+            <View style={[styles.container, { paddingTop: insets.top }]}>
                 <Text style={styles.errorText}>Service not found</Text>
-            </SafeAreaView>
+            </View>
         )
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor={Colors.neutral.white} />
 
             {/* Custom Header */}
-            <View style={styles.customHeader}>
+            <View style={[styles.customHeader, { paddingTop: insets.top }]}>
                 <View style={styles.headerTop}>
                     <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                         <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
@@ -224,7 +227,7 @@ export default function ServiceDetail() {
 
             {/* Bottom Checkout Bar */}
             {getTotalItems() > 0 && (
-                <View style={styles.checkoutBar}>
+                <View style={[styles.checkoutBar, { paddingBottom: Math.max(insets.bottom, 12) + Spacing.sm }]}>
                     <View style={styles.checkoutInfo}>
                         <View style={styles.itemsCount}>
                             <Ionicons name="cart" size={20} color={Colors.text.secondary} />
@@ -244,8 +247,7 @@ export default function ServiceDetail() {
 
             {/* Checkout Modal */}
             <CheckoutModal
-                visible={showCheckoutModal}
-                onClose={() => setShowCheckoutModal(false)}
+                ref={checkoutModalRef}
                 items={getCheckoutItems()}
                 totalAmount={calculateTotal()}
             />
@@ -261,15 +263,7 @@ export default function ServiceDetail() {
                     onPress: () => setShowInfoModal(false),
                 }}
             />
-            {/* Floating Support Button */}
-            <TouchableOpacity 
-                style={styles.floatingButton}
-                onPress={() => router.push('/customer/support-chat')}
-            >
-                <Ionicons name="chatbubbles" size={24} color={Colors.neutral.white} />
-                <View style={styles.unreadDot} />
-            </TouchableOpacity>
-        </SafeAreaView>
+        </View>
     )
 }
 

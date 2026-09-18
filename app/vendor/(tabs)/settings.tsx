@@ -23,7 +23,7 @@ import { router } from "expo-router";
 import CustomSwitch from "@/components/common/CustomSwitch";
 import AlertModal from "@/components/common/AlertModal";
 import * as SystemUI from "expo-system-ui";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
 import { useBiometric } from "@/hooks/use-biometric";
 import * as SecureStore from "expo-secure-store";
 

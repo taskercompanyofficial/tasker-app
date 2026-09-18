@@ -1,9 +1,11 @@
-import { Redirect, Stack } from "expo-router";
 import { useSession } from "@/context/ctx";
-import React, { useEffect } from "react";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
-import axios from "@/lib/axios.config";
 import { API_URL } from "@/lib/api-endpoints";
+import axios from "@/lib/axios.config";
+import { Redirect, Stack } from "expo-router";
+import { useEffect } from "react";
+import { View } from "react-native";
+import { PermanentFloatingChatBubble } from "@/components/Chat/PermanentFloatingChatBubble";
 
 export default function CustomerLayout() {
   const { session } = useSession();
@@ -41,25 +43,30 @@ export default function CustomerLayout() {
   }
 
   return (
-    <Stack
-      screenOptions={{ headerShown: false, animation: "slide_from_right" }}
-    >
-      <Stack.Screen name="index" />
-      <Stack.Screen name="orders/history" />
-      <Stack.Screen name="orders/[orderNumber]" />
-      <Stack.Screen name="commercial-quote/index" />
-      <Stack.Screen name="contact-us/index" />
-      <Stack.Screen name="free-installation/index" />
-      <Stack.Screen name="notifications/index" />
-      <Stack.Screen name="profile/edit" />
-      <Stack.Screen name="profile/addresses" />
-      <Stack.Screen name="services/[slug]" />
-      <Stack.Screen
-        name="support-chat"
-        options={{ animation: "slide_from_bottom" }}
-      />
-      <Stack.Screen name="order-chat/[id]" />
-      <Stack.Screen name="(tabs)" />
-    </Stack>
+    <View style={{ flex: 1 }}>
+      <Stack
+        screenOptions={{ headerShown: false, animation: "slide_from_right" }}
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="orders/history" />
+        <Stack.Screen name="orders/[orderNumber]" />
+        <Stack.Screen name="commercial-quote/index" />
+        <Stack.Screen name="contact-us/index" />
+        <Stack.Screen name="free-installation/index" />
+        <Stack.Screen name="notifications/index" />
+        <Stack.Screen name="profile/edit" />
+        <Stack.Screen name="profile/addresses" />
+        <Stack.Screen name="complete-profile" />
+        <Stack.Screen name="services/[slug]" />
+        <Stack.Screen
+          name="support-chat"
+          options={{ animation: "slide_from_bottom" }}
+        />
+        <Stack.Screen name="order-chat/[id]" />
+        <Stack.Screen name="(tabs)" />
+      </Stack>
+      <PermanentFloatingChatBubble />
+    </View>
   );
 }
+

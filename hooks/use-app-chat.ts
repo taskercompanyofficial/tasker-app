@@ -3,6 +3,7 @@ import { useSession } from "@/context/ctx";
 import { createEcho } from "@/lib/echo";
 import myAxios from "@/lib/axios.config";
 import {
+  CHAT_INITIATE_SUPPORT_URL,
   CHAT_INITIATE_ORDER_URL,
   CHAT_MESSAGES_URL,
   CHAT_SEND_MESSAGE_URL,
@@ -48,8 +49,7 @@ export function useAppChat({ workOrderId, conversationId: initialConversationId 
   const fetchMessages = useCallback(async (convId: number | string) => {
     try {
       const { data } = await myAxios.get(CHAT_MESSAGES_URL(mode, convId));
-      // Laravel returns response.data for paginated results
-      setMessages(data.data); 
+      setMessages(data.data || []); 
     } catch (err) {
       console.error("Error fetching messages:", err);
       setError("Failed to load message history.");
@@ -59,41 +59,69 @@ export function useAppChat({ workOrderId, conversationId: initialConversationId 
   useEffect(() => {
     if (!session.token) return;
 
+    let isMounted = true;
+
     const initChat = async () => {
       setLoading(true);
+      setError(null);
       try {
         let convId = initialConversationId;
 
-        // If we only have workOrderId, initiate first
+        // If workOrderId is provided, initiate order chat
         if (!convId && workOrderId) {
           const { data } = await myAxios.post(CHAT_INITIATE_ORDER_URL(mode, workOrderId));
-          setConversation(data.conversation);
-          convId = data.conversation.id;
+          if (isMounted && data.conversation) {
+            setConversation(data.conversation);
+            convId = data.conversation.id;
+          }
+        } 
+        // If neither conversationId nor workOrderId is provided, initiate Support Chat
+        else if (!convId) {
+          const { data } = await myAxios.post(CHAT_INITIATE_SUPPORT_URL(mode));
+          if (isMounted && data.conversation) {
+            setConversation(data.conversation);
+            convId = data.conversation.id;
+          }
         }
 
-        if (convId) {
+        if (convId && isMounted) {
           await fetchMessages(convId);
 
           // Setup Echo
-          const echo = createEcho(session.token!);
-          echoRef.current = echo;
+          try {
+            const echo = createEcho(session.token!);
+            echoRef.current = echo;
 
-          echo.private(`app-chat.${convId}`)
-            .listen(".message.sent", (e: { message: AppMessage }) => {
-              setMessages((prev) => [e.message, ...prev]);
-            });
+            echo.private(`app-chat.${convId}`)
+              .listen(".message.sent", (e: { message: AppMessage }) => {
+                if (!isMounted) return;
+                setMessages((prev) => {
+                  if (prev.some((m) => m.id === e.message.id)) {
+                    return prev;
+                  }
+                  return [e.message, ...prev];
+                });
+              });
+          } catch (echoErr) {
+            console.warn("WebSocket subscription optional warning:", echoErr);
+          }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Chat Init Error:", err);
-        setError("Could not connect to chat.");
+        if (isMounted) {
+          setError(err?.response?.data?.message || "Could not connect to chat.");
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     initChat();
 
     return () => {
+      isMounted = false;
       if (echoRef.current) {
         echoRef.current.disconnect();
       }
@@ -108,31 +136,80 @@ export function useAppChat({ workOrderId, conversationId: initialConversationId 
   ) => {
     if (!conversation) return;
 
+    const tempId = -Date.now();
+    const clientMessageId = `client_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+    // Optimistic UI update - show message in UI instantly
+    const optimisticMessage: AppMessage = {
+      id: tempId,
+      app_conversation_id: conversation.id,
+      sender_id: session.user?.id || 0,
+      sender_type: currentUserType,
+      type,
+      content: content || "",
+      media_path: mediaFile?.uri || null,
+      metadata: metadata || null,
+      is_read: false,
+      status: "sending",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      sender: session.user || undefined,
+    };
+
+    setMessages((prev) => [optimisticMessage, ...prev]);
     setSending(true);
+    setError(null);
+
     try {
-      const formData = new FormData();
-      formData.append("type", type);
-      if (content) formData.append("content", content);
+      let requestPayload: any;
+      let headers: any = {};
+
       if (mediaFile) {
-        // Handle physical file for upload
+        const formData = new FormData();
+        formData.append("type", type);
+        if (content) formData.append("content", content);
+        formData.append("client_message_id", clientMessageId);
         formData.append("media", {
           uri: mediaFile.uri,
           type: mediaFile.mimeType || "application/octet-stream",
           name: mediaFile.fileName || "upload_media",
         } as any);
+        if (metadata) formData.append("metadata", typeof metadata === "string" ? metadata : JSON.stringify(metadata));
+        requestPayload = formData;
+        headers["Content-Type"] = "multipart/form-data";
+      } else {
+        requestPayload = {
+          type,
+          content: content || "",
+          client_message_id: clientMessageId,
+          metadata: metadata || null,
+        };
       }
-      if (metadata) formData.append("metadata", JSON.stringify(metadata));
 
       const { data } = await myAxios.post(
         CHAT_SEND_MESSAGE_URL(mode, conversation.id),
-        formData,
-        { headers: { "Content-Type": "multipart-form-data" } }
+        requestPayload,
+        { headers }
       );
 
-      setMessages((prev) => [data.message, ...prev]);
-    } catch (err) {
-      console.error("Send Error:", err);
-      setError("Failed to send message.");
+      setMessages((prev) => {
+        // Remove temporary optimistic message and deduplicate server message
+        let updated = prev.filter((m) => m.id !== tempId && m.id !== data.message.id);
+        updated = [data.message, ...updated];
+
+        // If backend support bot generated a reply
+        if (data.reply && !updated.some((m) => m.id === data.reply.id)) {
+          updated = [data.reply, ...updated];
+        }
+
+        return updated;
+      });
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.message || err?.message || "Failed to send message.";
+      console.error("Send Error:", errorMsg, err?.response?.data);
+      setError(errorMsg);
+      // Remove failed optimistic message
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
     } finally {
       setSending(false);
     }

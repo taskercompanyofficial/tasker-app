@@ -1,6 +1,6 @@
-import { useEffect, useCallback } from "react";
-import { router } from "expo-router";
 import { useAuthStore } from "@/context/auth-store";
+import { router } from "expo-router";
+import { useCallback, useEffect } from "react";
 import { Platform } from "react-native";
 
 let Notifications: any = null;
@@ -44,7 +44,9 @@ export function useNotificationDeepLink() {
       case "order":
       case "work_order":
       case "order_status":
-        const orderRef = data.order_number || data.order_id || data.work_order_id;
+      case "new_order":
+      case "order_update":
+        const orderRef = data.order_number || data.work_order_number || data.work_order_id || data.order_id || data.id;
         if (orderRef) {
           router.push(`/customer/orders/${orderRef}`);
         }
@@ -81,22 +83,23 @@ export function useNotificationDeepLink() {
   };
 
   useEffect(() => {
-    if (!Notifications) return;
+    if (!Notifications?.addNotificationResponseReceivedListener) return;
 
     // Listen for notification taps (when app is in background/quit)
     const subscription = Notifications.addNotificationResponseReceivedListener(
       handleNotificationResponse
     );
 
-    // Check if app was opened from a notification
-    Notifications.getLastNotificationResponseAsync().then((response: any) => {
-      if (response?.notification) {
-        handleNotificationResponse(response);
-      }
-    });
+    if (Notifications?.getLastNotificationResponseAsync) {
+      Notifications.getLastNotificationResponseAsync().then((response: any) => {
+        if (response?.notification) {
+          handleNotificationResponse(response);
+        }
+      }).catch(() => {});
+    }
 
     return () => {
-      subscription.remove();
+      subscription?.remove?.();
     };
   }, [handleNotificationResponse]);
 }

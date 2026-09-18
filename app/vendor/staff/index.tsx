@@ -15,7 +15,7 @@ import Colors from "@/constants/Colors";
 import { Spacing, Typography, BorderRadius, Shadows } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
 import myAxios from "@/lib/axios.config";
 import {
   VENDOR_STAFF_URL,

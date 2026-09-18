@@ -1,18 +1,19 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  StatusBar,
-  Image,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
 import Colors from "@/constants/Colors";
-import { Spacing, BorderRadius } from "@/constants/Styles";
+import { BorderRadius, Shadows, Spacing } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import {
+  Image,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type Role = "customer" | "provider" | null;
 
@@ -30,117 +31,214 @@ export default function RoleSelectionScreen() {
       await setAppMode("vendor");
       router.push("/auth/vendor/sign-in");
     }
-
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor={Colors.neutral.white}
-      />
+    <LinearGradient
+      colors={["#FFFFFF", "#FDFBF7", "#F3F6FC"]}
+      start={{ x: 0.1, y: 0 }}
+      end={{ x: 0.9, y: 1 }}
+      style={styles.container}
+    >
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-      {/* Top Image */}
-      <View style={styles.imageContainer}>
-        <Image
-          source={require("@/assets/images/signin-illustration.png")}
-          style={styles.illustration}
-          resizeMode="contain"
-        />
-      </View>
+      {/* Ambient Shine / Decorative Glow Orbs */}
+      <View style={styles.goldGlowOrb} />
+      <View style={styles.navyGlowOrb} />
+      <View style={styles.centerShineCircle} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Welcome to Tasker Company</Text>
-        <Text style={styles.subtitle}>Select your role to continue</Text>
-      </View>
-
-      {/* Role Buttons */}
-      <View style={styles.buttonsContainer}>
-        {/* Customer Button */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => handleRoleSelect("customer")}
-          style={[
-            styles.roleButton,
-            styles.customerButton,
-            selectedRole === "customer" && styles.buttonPressed,
-          ]}
-        >
-          <View style={styles.iconCircle}>
-            <Ionicons
-              name="person-outline"
-              size={24}
-              color={Colors.themes.customer.primary}
+      <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+        {/* Top Hero Graphic with Soft Glow */}
+        <View style={styles.imageContainer}>
+          <View style={styles.imageShadowWrapper}>
+            <Image
+              source={require("@/assets/images/role-selection-hero.png")}
+              style={styles.illustration}
+              resizeMode="contain"
             />
           </View>
-          <Text style={styles.roleButtonText}>I&apos;m a Customer</Text>
-          <Ionicons
-            name="arrow-forward"
-            size={20}
-            color={Colors.neutral.white}
-          />
-        </TouchableOpacity>
+        </View>
 
-        {/* Provider Button */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => handleRoleSelect("provider")}
-          style={[
-            styles.roleButton,
-            styles.providerButton,
-            selectedRole === "provider" && styles.buttonPressed,
-          ]}
-        >
-          <View style={styles.iconCircle}>
-            <Ionicons
-              name="construct-outline"
-              size={24}
-              color={Colors.themes.provider.primary}
-            />
-          </View>
-          <Text style={styles.roleButtonText}>I&apos;m a Service Provider</Text>
-          <Ionicons
-            name="arrow-forward"
-            size={20}
-            color={Colors.neutral.white}
-          />
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Welcome to Tasker Company</Text>
+        </View>
+
+        {/* Compact Role Selection Buttons */}
+        <View style={styles.buttonsContainer}>
+          {/* Customer Button (Gold Gradient) */}
+          <TouchableOpacity
+            activeOpacity={0.88}
+            onPress={() => handleRoleSelect("customer")}
+            style={[
+              styles.roleButtonWrapper,
+              selectedRole === "customer" && styles.buttonPressed,
+            ]}
+          >
+            <LinearGradient
+              colors={["#C9A227", "#8A6A1F"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.roleButton}
+            >
+              <View style={[styles.iconCircle, styles.customerIconCircle]}>
+                <Ionicons
+                  name="person"
+                  size={22}
+                  color={Colors.themes.customer.primary}
+                />
+              </View>
+              <View style={styles.roleTextWrapper}>
+                <Text style={styles.roleButtonTitle}>I&apos;m a Customer</Text>
+                <Text style={styles.roleButtonSubtitle}>
+                  Book & track home services
+                </Text>
+              </View>
+              <View style={styles.arrowContainer}>
+                <Ionicons
+                  name="arrow-forward"
+                  size={18}
+                  color={Colors.neutral.white}
+                />
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Provider Button (Deep Navy Gradient) */}
+          <TouchableOpacity
+            activeOpacity={0.88}
+            onPress={() => handleRoleSelect("provider")}
+            style={[
+              styles.roleButtonWrapper,
+              selectedRole === "provider" && styles.buttonPressed,
+            ]}
+          >
+            <LinearGradient
+              colors={["#1E3A8A", "#0F172A"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.roleButton}
+            >
+              <View style={[styles.iconCircle, styles.providerIconCircle]}>
+                <Ionicons
+                  name="construct"
+                  size={22}
+                  color={Colors.themes.provider.primary}
+                />
+              </View>
+              <View style={styles.roleTextWrapper}>
+                <Text style={styles.roleButtonTitle}>
+                  I&apos;m a Service Provider
+                </Text>
+                <Text style={styles.roleButtonSubtitle}>
+                  Manage jobs, staff & earnings
+                </Text>
+              </View>
+              <View style={styles.arrowContainer}>
+                <Ionicons
+                  name="arrow-forward"
+                  size={18}
+                  color={Colors.neutral.white}
+                />
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral.white,
+  },
+  safeArea: {
+    flex: 1,
     paddingHorizontal: Spacing.lg,
     justifyContent: "center",
   },
-  imageContainer: {
-    alignItems: "center",
-    marginBottom: Spacing.xl,
+  // Ambient Shine Elements
+  goldGlowOrb: {
+    position: "absolute",
+    top: -50,
+    right: -50,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: "rgba(217, 119, 6, 0.12)",
   },
-  illustration: {
+  navyGlowOrb: {
+    position: "absolute",
+    bottom: -60,
+    left: -60,
     width: 240,
     height: 240,
+    borderRadius: 120,
+    backgroundColor: "rgba(30, 58, 138, 0.08)",
+  },
+  centerShineCircle: {
+    position: "absolute",
+    top: "30%",
+    left: "15%",
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: "rgba(255, 255, 255, 0.6)",
+  },
+  imageContainer: {
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.md,
+  },
+  imageShadowWrapper: {
+    width: "100%",
+    height: 300,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  illustration: {
+    width: 350,
+    height: 350,
   },
   header: {
     alignItems: "center",
-    marginBottom: Spacing.xxl,
-    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.xl,
+    paddingHorizontal: Spacing.md,
+  },
+  badgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(217, 119, 6, 0.1)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+    gap: 6,
+    marginBottom: Spacing.xs,
+  },
+  miniBrandDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.themes.customer.primary,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: Colors.themes.customer.primary,
+    letterSpacing: 0.8,
   },
   title: {
     fontSize: 22,
     fontWeight: "700",
     color: Colors.text.primary,
-    marginBottom: Spacing.sm,
+    marginBottom: 4,
     textAlign: "center",
   },
   subtitle: {
     fontSize: 13,
-    fontWeight: "400",
+    fontWeight: "500",
     color: Colors.text.secondary,
     textAlign: "center",
   },
@@ -148,37 +246,58 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     paddingHorizontal: Spacing.xs,
   },
+  roleButtonWrapper: {
+    borderRadius: BorderRadius.lg,
+    overflow: "hidden",
+    ...Shadows.md,
+  },
   roleButton: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    borderRadius: BorderRadius.sm,
-    paddingVertical: Spacing.sm,
+    paddingVertical: 14,
     paddingHorizontal: Spacing.md,
   },
-  customerButton: {
-    backgroundColor: Colors.themes.customer.primary,
-  },
-  providerButton: {
-    backgroundColor: Colors.themes.provider.primary,
-  },
   buttonPressed: {
-    opacity: 0.9,
+    opacity: 0.92,
     transform: [{ scale: 0.98 }],
   },
   iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.sm,
-    backgroundColor: "white",
+    width: 46,
+    height: 46,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.neutral.white,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: Spacing.md - 4,
+    marginRight: Spacing.md,
+    ...Shadows.sm,
   },
-  roleButtonText: {
+  customerIconCircle: {
+    backgroundColor: Colors.neutral.white,
+  },
+  providerIconCircle: {
+    backgroundColor: Colors.neutral.white,
+  },
+  roleTextWrapper: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: "600",
+  },
+  roleButtonTitle: {
+    fontSize: 15,
+    fontWeight: "700",
     color: Colors.neutral.white,
+  },
+  roleButtonSubtitle: {
+    fontSize: 11,
+    color: "rgba(255, 255, 255, 0.88)",
+    marginTop: 2,
+    fontWeight: "500",
+  },
+  arrowContainer: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: Spacing.xs,
   },
 });

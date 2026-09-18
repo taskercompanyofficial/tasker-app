@@ -7,7 +7,7 @@ import { VENDOR_WORK_ORDER_URL } from "@/lib/api-endpoints";
 import axios from "@/lib/axios.config";
 import { WorkOrder } from "@/types/work-order";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {

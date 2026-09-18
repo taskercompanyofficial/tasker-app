@@ -3,7 +3,6 @@ import { Spacing } from "@/constants/Styles";
 import { useAuthStore } from "@/context/auth-store";
 import { useEcho } from "@/context/EchoProvider";
 import { router } from "expo-router";
-import React from "react";
 import {
   StatusBar,
   StyleSheet,
@@ -37,8 +36,9 @@ export default function Header({
     return "Good Evening";
   };
 
-  /** Live connection badge */
+  /** Live connection badge (only displayed for vendors/technicians) */
   const ConnectionStatus = () => {
+    if (!isVendor) return null;
     const isLive = isConnected;
     const isConnecting = connectionState === "connecting" || connectionState === "initialized";
     const dotColor = isLive ? Colors.success : isConnecting ? "#F59E0B" : Colors.error;

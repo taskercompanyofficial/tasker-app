@@ -5,10 +5,10 @@ import { useSession } from '@/context/ctx'
 import { ADDRESS_URL } from '@/lib/api-endpoints'
 import myAxios from '@/lib/axios.config'
 import { Ionicons } from '@expo/vector-icons'
-import React, { useEffect, useState } from 'react'
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import React, { useEffect, useState, useImperativeHandle, forwardRef } from 'react'
+import { StyleSheet, Text, TouchableOpacity, View, FlatList, Pressable } from 'react-native'
 
-interface Address {
+export interface Address {
     id: number
     customer_id: number
     address_type: 'home' | 'office' | 'other'
@@ -27,14 +27,26 @@ interface Address {
 interface AddressSelectorProps {
     selectedAddressId: number | null
     onSelectAddress: (addressId: number, address: Address) => void
+    onAddNewAddress?: () => void
+    onViewDetails?: (address: Address) => void
     error?: string
 }
 
-export default function AddressSelector({ selectedAddressId, onSelectAddress, error }: AddressSelectorProps) {
-    const { session } = useSession()
-    const [addresses, setAddresses] = useState<Address[]>([])
-    const [showAddressForm, setShowAddressForm] = useState(false)
-    const [loading, setLoading] = useState(true)
+export interface AddressSelectorRef {
+    refresh: () => void
+    getAddress: (id: number | null) => Address | null
+}
+
+export default forwardRef<AddressSelectorRef, AddressSelectorProps>(
+    function AddressSelector({ selectedAddressId, onSelectAddress, onAddNewAddress, onViewDetails, error }, ref) {
+        const { session } = useSession()
+        const [addresses, setAddresses] = useState<Address[]>([])
+        const [loading, setLoading] = useState(true)
+
+        useImperativeHandle(ref, () => ({
+            refresh: fetchAddresses,
+            getAddress: (id) => addresses.find(a => a.id === id) || null
+        }))
 
     useEffect(() => {
         if (session.user?.id) {
@@ -55,23 +67,21 @@ export default function AddressSelector({ selectedAddressId, onSelectAddress, er
         }
     }
 
-    const handleSaveAddress = () => {
-        fetchAddresses()
-        setShowAddressForm(false)
-    }
-
     return (
-        <>
-            <View style={styles.container}>
+        <View style={styles.container}>
                 {loading ? (
                     <View style={styles.loadingContainer}>
                         <Text style={styles.loadingText}>Loading addresses...</Text>
                     </View>
-                ) : addresses.length > 0 ? (
-                    <>
-                        {addresses.map((address) => (
+                ) : (
+                    <FlatList
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        data={addresses}
+                        keyExtractor={(item) => item.id.toString()}
+                        contentContainerStyle={{ gap: Spacing.sm }}
+                        renderItem={({ item: address }) => (
                             <TouchableOpacity
-                                key={address.id}
                                 style={[
                                     styles.addressCard,
                                     selectedAddressId === address.id && styles.addressCardSelected
@@ -92,51 +102,48 @@ export default function AddressSelector({ selectedAddressId, onSelectAddress, er
                                             {address.address_type.charAt(0).toUpperCase() + address.address_type.slice(1)}
                                         </Text>
                                     </View>
-                                    <View style={[
-                                        styles.radioButton,
-                                        selectedAddressId === address.id && styles.radioButtonSelected
-                                    ]}>
-                                        {selectedAddressId === address.id && (
-                                            <View style={styles.radioButtonInner} />
-                                        )}
+                                    <View style={styles.radioAndInfo}>
+                                        {onViewDetails ? (
+                                            <TouchableOpacity
+                                                style={styles.infoButton}
+                                                onPress={() => onViewDetails(address)}
+                                                hitSlop={8}
+                                            >
+                                                <Ionicons name="information-circle-outline" size={20} color={Colors.text.tertiary} />
+                                            </TouchableOpacity>
+                                        ) : null}
+                                        <View style={[
+                                            styles.radioButton,
+                                            selectedAddressId === address.id && styles.radioButtonSelected
+                                        ]}>
+                                            {selectedAddressId === address.id && (
+                                                <View style={styles.radioButtonInner} />
+                                            )}
+                                        </View>
                                     </View>
                                 </View>
-                                <Text style={styles.addressText}>{address.address_line_1}</Text>
-                                {address.address_line_2 && <Text style={styles.addressText}>{address.address_line_2}</Text>}
-                                <Text style={styles.addressText}>{address.city}, {address.state} {address.zip_code || ''}</Text>
+                                <Text style={styles.addressText} numberOfLines={1}>{address.address_line_1}</Text>
+                                {address.address_line_2 ? <Text style={styles.addressText} numberOfLines={1}>{address.address_line_2}</Text> : null}
+                                <Text style={styles.addressText} numberOfLines={1}>{address.city}, {address.state} {address.zip_code || ''}</Text>
                             </TouchableOpacity>
-                        ))}
-                        <TouchableOpacity
-                            style={styles.addAddressButton}
-                            onPress={() => setShowAddressForm(true)}
-                        >
-                            <Ionicons name="add-circle" size={16} color={Colors.themes.customer.primary} />
-                            <Text style={styles.addAddressText}>Add New Address</Text>
-                        </TouchableOpacity>
-                    </>
-                ) : (
-                    <TouchableOpacity
-                        style={styles.emptyAddressButton}
-                        onPress={() => setShowAddressForm(true)}
-                    >
-                        <Ionicons name="location-outline" size={32} color={Colors.text.tertiary} />
-                        <Text style={styles.emptyAddressText}>No addresses found</Text>
-                        <Text style={styles.addAddressText}>Add New Address</Text>
-                    </TouchableOpacity>
+                        )}
+                        ListFooterComponent={
+                            onAddNewAddress ? (
+                                <TouchableOpacity
+                                    style={[styles.addAddressButton, addresses.length === 0 && styles.addAddressButtonEmpty]}
+                                    onPress={onAddNewAddress}
+                                >
+                                    <Ionicons name="add-circle-outline" size={28} color={Colors.themes.customer.primary} />
+                                    <Text style={styles.addAddressText}>Add New</Text>
+                                </TouchableOpacity>
+                            ) : null
+                        }
+                    />
                 )}
                 {error && <Text style={styles.error}>{error}</Text>}
             </View>
-
-            {/* Address Form Modal */}
-            <AddAddressForm
-                visible={showAddressForm}
-                onClose={() => setShowAddressForm(false)}
-                onSave={handleSaveAddress}
-                customer_id={session.user?.id}
-            />
-        </>
     )
-}
+})
 
 const styles = StyleSheet.create({
     container: {
@@ -152,6 +159,7 @@ const styles = StyleSheet.create({
         color: Colors.text.secondary,
     },
     addressCard: {
+        width: 220,
         padding: Spacing.md,
         borderRadius: 12,
         borderWidth: 1,
@@ -181,6 +189,14 @@ const styles = StyleSheet.create({
     addressLabelSelected: {
         color: Colors.themes.customer.primary,
     },
+    radioAndInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    infoButton: {
+        padding: 2,
+    },
     radioButton: {
         width: 20,
         height: 20,
@@ -205,34 +221,24 @@ const styles = StyleSheet.create({
         lineHeight: 18,
     },
     addAddressButton: {
-        flexDirection: 'row',
+        width: 140,
+        justifyContent: 'center',
         alignItems: 'center',
-        gap: 6,
+        gap: 8,
         padding: Spacing.md,
-        borderRadius: 8,
+        borderRadius: 12,
         borderWidth: 1,
         borderStyle: 'dashed',
         borderColor: Colors.themes.customer.primary,
+        backgroundColor: Colors.themes.customer.primary + '08',
+    },
+    addAddressButtonEmpty: {
+        width: 220,
     },
     addAddressText: {
         fontSize: 13,
         fontWeight: '600',
         color: Colors.themes.customer.primary,
-    },
-    emptyAddressButton: {
-        padding: Spacing.xl,
-        borderRadius: 12,
-        borderWidth: 2,
-        borderStyle: 'dashed',
-        borderColor: Colors.border.light,
-        alignItems: 'center',
-        gap: Spacing.xs,
-    },
-    emptyAddressText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: Colors.text.secondary,
-        marginTop: Spacing.xs,
     },
     error: {
         fontSize: 12,

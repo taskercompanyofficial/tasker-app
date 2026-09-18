@@ -1,33 +1,18 @@
-import FileGallery from "@/components/FileGallery";
-import { FloatingChatButton } from "@/components/Chat/FloatingChatButton";
-import Modal from "@/components/Modal";
-import {
-  ActionButtons,
-  CustomerInfoSection,
-  ProductInfoSection,
-  ReasonModal,
-  ScheduleModal,
-  ServiceHeaderCard,
-  ServiceInfoSection,
-  WorkOrderHeader,
-} from "@/components/work-order-details";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing, Typography } from "@/constants/Styles";
 import { useWorkOrder } from "@/hooks/useWorkOrder";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import StaffSelectionModal from "@/components/work-order-details/StaffSelectionModal";
 import {
   ActivityIndicator,
-  RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+import UberVendorWorkOrderView from "@/components/work-order-details/UberVendorWorkOrderView";
 
 export default function VendorWorkOrderDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -115,7 +100,7 @@ export default function VendorWorkOrderDetailsScreen() {
 
   if (loading) {
     return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator
             size="large"
@@ -129,7 +114,7 @@ export default function VendorWorkOrderDetailsScreen() {
 
   if (!workOrder) {
     return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <View style={styles.errorContainer}>
           <Ionicons
             name="alert-circle-outline"
@@ -143,228 +128,38 @@ export default function VendorWorkOrderDetailsScreen() {
     );
   }
 
+  // Modern Uber / inDrive / Yango Map & Bottom Sheet View
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <WorkOrderHeader statusName={workOrder.status.name} workOrderId={id} />
-
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[Colors.themes.provider.primary]}
-          />
-        }
-      >
-        <ServiceHeaderCard
-          serviceName={workOrder.service?.name || "Service"}
-          parentServiceName={workOrder.parent_service?.name}
-          workOrderNumber={workOrder.work_order_number}
-          createdAt={workOrder.created_at}
-          assignedAt={workOrder.assigned_at}
-          productImage={workOrder.product?.image}
-          brandName={workOrder.brand?.name}
-          priority={workOrder.priority}
-          categoryName={workOrder.category?.name}
-          brandComplaintNo={workOrder.brand_complaint_no}
-        />
-
-        <CustomerInfoSection
-          customer={workOrder.customer}
-          address={workOrder.address}
-          extraNumber={workOrder.extra_number}
-        />
-
-        <ServiceInfoSection
-          product={workOrder.product}
-          category={workOrder.category}
-          parentService={workOrder.parent_service}
-          service={workOrder.service}
-          serviceConcern={workOrder.service_sub_concern}
-          serviceSubConcern={workOrder.service_concern}
-          warrantyType={workOrder.warranty_type}
-          isWarrantyCase={!!workOrder.is_warranty_case}
-          warrantyStatus={workOrder.warrentyStatus}
-          subStatus={workOrder.sub_status}
-          customerDescription={workOrder.customer_description}
-          reminders={workOrder.reminders}
-          assignmentMessage={workOrder.notes}
-        />
-
-        <ProductInfoSection
-          brand={workOrder.brand}
-          product={workOrder.product}
-          productIndoorModel={workOrder.product_indoor_model}
-          indoorSerialNumber={workOrder.indoor_serial_number}
-          productOutdoorModel={workOrder.product_outdoor_model}
-          outdoorSerialNumber={workOrder.outdoor_serial_number}
-          purchaseDate={workOrder.purchase_date}
-          isWarrantyCase={!!workOrder.is_warranty_case}
-          technicianRemarks={workOrder.technician_remarks}
-          reference={workOrder.reference}
-          extraNumber={workOrder.extra_number}
-        />
-
-        <View style={styles.section}>
-          <FileGallery files={workOrder.files || []} title="Photos/Documents" />
-        </View>
-
-        {workOrder.accepted_at && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <Ionicons
-                  name="people-outline"
-                  size={18}
-                  color={Colors.themes.provider.primary}
-                />
-                <Text style={styles.sectionTitle}>Field Team</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.assignButton}
-                onPress={() => setShowStaffModal(true)}
-              >
-                <Text style={styles.assignButtonText}>
-                  {workOrder.vendor_staff ? "Change Staff" : "Assign Staff"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.sectionContent}>
-              {workOrder.vendor_staff ? (
-                <View style={styles.assignedStaffCard}>
-                  <View style={styles.staffAvatarSmall}>
-                    <Text style={styles.avatarTextSmall}>
-                      {workOrder.vendor_staff.name.charAt(0).toUpperCase()}
-                    </Text>
-                  </View>
-                  <View style={styles.staffDetails}>
-                    <Text style={styles.staffNameText}>
-                      {workOrder.vendor_staff.name}
-                    </Text>
-                    <Text style={styles.staffPhoneText}>
-                      {workOrder.vendor_staff.phone}
-                    </Text>
-                  </View>
-                  <View style={styles.statusBadgeSmall}>
-                    <Text style={styles.statusBadgeTextSmall}>Assigned</Text>
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.emptyStaffState}>
-                  <Text style={styles.emptyStaffText}>
-                    No staff assigned yet.
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
-
-        <ActionButtons
-          workOrderId={Number(id)}
-          isPendingAcceptance={isPendingAcceptance}
-          isAccepted={isAccepted}
-          currentStatusSlug={currentStatusSlug}
-          currentSubStatusSlug={currentSubStatusSlug}
-          accepting={accepting}
-          rejecting={rejecting}
-          updatingStatus={updatingStatus}
-          onAccept={() => setShowAcceptModal(true)}
-          onReject={() => setShowRejectModal(true)}
-          onCancel={() => setShowCancelModal(true)}
-          onSchedule={() => setShowScheduleModal(true)}
-          onStatusUpdate={handleStatusButtonPress}
-        />
-      </ScrollView>
-
-      <Modal
-        visible={showAcceptModal}
-        type="confirm"
-        title="Accept Job"
-        message="Are you sure you want to accept this job?"
-        actions={[
-          {
-            text: "Cancel",
-            onPress: () => setShowAcceptModal(false),
-            variant: "outline",
-          },
-          { text: "Accept", onPress: onAccept, variant: "primary" },
-        ]}
-        onClose={() => setShowAcceptModal(false)}
-      />
-
-      <ReasonModal
-        visible={showRejectModal}
-        title="Reject Job"
-        message="Please provide a reason for rejection:"
-        placeholder="Enter rejection reason..."
-        confirmText="Reject"
-        loading={rejecting}
-        onConfirm={onReject}
-        onCancel={() => setShowRejectModal(false)}
-      />
-
-      <ReasonModal
-        visible={showCancelModal}
-        title="Cancel Job"
-        message="Please provide a reason for cancellation:"
-        placeholder="Enter cancellation reason..."
-        confirmText="Cancel Job"
-        loading={rejecting}
-        onConfirm={onCancelOrder}
-        onCancel={() => setShowCancelModal(false)}
-      />
-
-      <ScheduleModal
-        visible={showScheduleModal}
-        loading={updatingStatus}
-        onConfirm={onScheduleOrder}
-        onCancel={() => setShowScheduleModal(false)}
-      />
-
-      <ReasonModal
-        visible={showStatusModal}
-        title="Update Status"
-        message={`Update job status to ${pendingStatusUpdate?.statusName}?`}
-        placeholder="Add remarks or comments (optional)..."
-        confirmText="Confirm"
-        loading={updatingStatus}
-        onConfirm={onStatusUpdate}
-        onCancel={() => {
-          setShowStatusModal(false);
-          clearStatusUpdate();
-        }}
-      />
-
-      <Modal
-        visible={showSuccessModal}
-        type="success"
-        title="Success"
-        message={modalMessage}
-        onClose={() => setShowSuccessModal(false)}
-      />
-      <Modal
-        visible={showErrorModal}
-        type="error"
-        title="Error"
-        message={modalMessage}
-        onClose={() => setShowErrorModal(false)}
-      />
-
-      <StaffSelectionModal
-        visible={showStaffModal}
-        staff={approvedStaff}
-        onSelect={onAssignStaff}
-        onClose={() => setShowStaffModal(false)}
-        loading={updatingStatus}
-      />
-
-      {isAccepted && <FloatingChatButton workOrderId={id} />}
-    </SafeAreaView>
+    <UberVendorWorkOrderView
+      workOrder={workOrder}
+      id={id}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      approvedStaff={approvedStaff}
+      accepting={accepting}
+      rejecting={rejecting}
+      updatingStatus={updatingStatus}
+      isPendingAcceptance={isPendingAcceptance}
+      isAccepted={isAccepted}
+      currentStatusSlug={currentStatusSlug || ""}
+      currentSubStatusSlug={currentSubStatusSlug}
+      pendingStatusUpdate={pendingStatusUpdate}
+      modalMessage={modalMessage}
+      showSuccessModal={showSuccessModal}
+      showErrorModal={showErrorModal}
+      handleAccept={handleAccept}
+      handleReject={handleReject}
+      handleCancel={handleCancel}
+      handleSchedule={handleSchedule}
+      handleAssignStaff={handleAssignStaff}
+      handleUpdateStatus={handleUpdateStatus}
+      showStatusUpdateModal={showStatusUpdateModal}
+      clearStatusUpdate={clearStatusUpdate}
+      setShowSuccessModal={setShowSuccessModal}
+      setShowErrorModal={setShowErrorModal}
+    />
   );
+
 }
 
 const styles = StyleSheet.create({

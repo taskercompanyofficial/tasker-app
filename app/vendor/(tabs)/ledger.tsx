@@ -15,7 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/Colors";
 import { Spacing, Shadows, Typography } from "@/constants/DesignSystem";
 import myAxios from "@/lib/axios.config";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
 import { VENDOR_RATES_URL } from "@/lib/api-endpoints";
 import { useSession } from "@/context/ctx";
 

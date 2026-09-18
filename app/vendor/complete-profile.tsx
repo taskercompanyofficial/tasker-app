@@ -161,11 +161,30 @@ export default function CompleteProfile() {
         >
           <View style={styles.centeredContent}>
             <View style={styles.headerTextContainer}>
-              <Text style={styles.title}>Finish Registration</Text>
+              <Text style={styles.title}>Vendor Profile Details</Text>
               <Text style={styles.subtitle}>
-                We need a few more details to get your account verified and ready for work.
+                Provide your professional details and verification documents to start accepting service orders.
               </Text>
             </View>
+
+            {/* Registered Phone Badge Card */}
+            {user?.phone ? (
+              <View style={styles.phoneBadgeCard}>
+                <View style={styles.phoneBadgeLeft}>
+                  <View style={styles.phoneIconCircle}>
+                    <Ionicons name="call" size={16} color={Colors.themes.provider.primary} />
+                  </View>
+                  <View>
+                    <Text style={styles.phoneBadgeLabel}>Registered Phone</Text>
+                    <Text style={styles.phoneBadgeValue}>{user.phone}</Text>
+                  </View>
+                </View>
+                <View style={styles.verifiedChip}>
+                  <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                  <Text style={styles.verifiedChipText}>Verified</Text>
+                </View>
+              </View>
+            ) : null}
 
             <View style={styles.formContainer}>
               <View style={styles.profileImageContainer}>
@@ -224,7 +243,7 @@ export default function CompleteProfile() {
                 leftIcon={<Ionicons name="briefcase-outline" size={18} color={Colors.themes.provider.primary} />}
               />
 
-              <Text style={styles.sectionLabel}>Products You Handle</Text>
+              <Text style={styles.sectionLabel}>Products & Services You Handle</Text>
               {loadingCats ? (
                 <ActivityIndicator color={Colors.themes.provider.primary} />
               ) : (
@@ -247,6 +266,7 @@ export default function CompleteProfile() {
                 </View>
               )}
 
+              <Text style={styles.sectionLabel}>Verification Documents (CNIC)</Text>
               <View style={styles.documentRow}>
                 <TouchableOpacity onPress={() => pickImage('cnic_front_file')} style={styles.docPicker}>
                   {data.cnic_front_file ? (
@@ -272,7 +292,7 @@ export default function CompleteProfile() {
               </View>
 
               <Button
-                title={processing ? "Submitting..." : "Submit for Verification"}
+                title={processing ? "Submitting..." : "Submit Profile for Review"}
                 onPress={handleSubmit}
                 fullWidth
                 loading={processing}
@@ -421,5 +441,56 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.neutral.gray[500],
     marginTop: 4,
+  },
+  phoneBadgeCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: Colors.themes.provider.primary + "0A",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.themes.provider.primary + "25",
+    padding: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  phoneBadgeLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  phoneIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Colors.themes.provider.primary + "18",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  phoneBadgeLabel: {
+    fontSize: 11,
+    color: Colors.text.tertiary,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  phoneBadgeValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.text.primary,
+    marginTop: 1,
+  },
+  verifiedChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#10B98115",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  verifiedChipText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#10B981",
   },
 });

@@ -1,62 +1,194 @@
-import React, { useRef, useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  Dimensions,
-  TouchableOpacity,
-  Animated,
-  Image,
-} from "react-native";
-import { useRouter } from "expo-router";
+import Colors from "@/constants/Colors";
+import { BorderRadius, Spacing } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Spacing } from "@/constants/Styles";
-import Colors from "@/constants/Colors";
-import Button from "@/components/Button";
+import { useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import {
+  Animated,
+  Dimensions,
+  Easing,
+  FlatList,
+  Image,
+  Platform,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 const ONBOARDING_KEY = "@tasker_onboarding_complete";
+
+interface FloatingChip {
+  id: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  iconColor: string;
+  text: string;
+  positionStyle: object;
+  floatDelay?: number;
+}
 
 interface OnboardingSlide {
   id: string;
   image: any;
+  badge: string;
   title: string;
   description: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  color: string;
+  chips: FloatingChip[];
 }
 
 const slides: OnboardingSlide[] = [
   {
     id: "1",
-    image: require("@/assets/images/onboarding_services.png"),
-    title: "Expert HVAC Services",
+    image: require("@/assets/images/onboarding-slide-1.png"),
+    badge: "Trusted Platform",
+    title: "Connecting Customers with Expert Technicians",
     description:
-      "Get professional AC, washing machine, and geyser services from verified technicians. Quality you can trust.",
-    icon: "snow",
-    color: Colors.themes.customer.primary,
+      "Your one-stop destination for verified HVAC specialists, home appliance maintenance, and reliable repairs.",
+    chips: [
+      {
+        id: "c1",
+        icon: "shield-checkmark",
+        iconColor: "#059669",
+        text: "Verified Match",
+        positionStyle: { top: -6, left: -4 },
+        floatDelay: 0,
+      },
+      {
+        id: "c2",
+        icon: "star",
+        iconColor: "#D97706",
+        text: "4.9★ Rated Pros",
+        positionStyle: { top: 26, right: -10 },
+        floatDelay: 400,
+      },
+      {
+        id: "c3",
+        icon: "construct",
+        iconColor: "#0284C7",
+        text: "Certified HVACR",
+        positionStyle: { bottom: -8, right: -4 },
+        floatDelay: 800,
+      },
+    ],
   },
   {
     id: "2",
-    image: require("@/assets/images/onboarding_booking.png"),
-    title: "Book in Seconds",
+    image: require("@/assets/images/onboarding-slide-2.png"),
+    badge: "Instant Booking",
+    title: "Book Verified Technicians in Minutes",
     description:
-      "Schedule your service instantly. Same-day appointments available. Track your technician in real-time.",
-    icon: "calendar",
-    color: Colors.themes.provider.primary,
+      "Select your required service, choose a convenient date and time, and enjoy transparent pricing with no hidden costs.",
+    chips: [
+      {
+        id: "c4",
+        icon: "flash",
+        iconColor: "#D97706",
+        text: "Instant Confirm",
+        positionStyle: { top: -6, left: -4 },
+        floatDelay: 0,
+      },
+      {
+        id: "c5",
+        icon: "calendar",
+        iconColor: "#2563EB",
+        text: "Flexible Slots",
+        positionStyle: { top: 26, right: -10 },
+        floatDelay: 400,
+      },
+      {
+        id: "c6",
+        icon: "pricetag",
+        iconColor: "#059669",
+        text: "Upfront Rates",
+        positionStyle: { bottom: -8, left: -4 },
+        floatDelay: 800,
+      },
+    ],
   },
   {
     id: "3",
-    image: require("@/assets/images/onboarding_tracking.png"),
-    title: "Track & Rate Service",
+    image: require("@/assets/images/onboarding-slide-3.jpg"),
+    badge: "Quality Guaranteed",
+    title: "Live Updates & Trusted Warranty",
     description:
-      "Monitor progress live and share your experience. Your feedback helps us maintain excellence.",
-    icon: "star",
-    color: Colors.success,
+      "Stay informed with real-time technician arrival updates, verified professional ratings, and service warranty support.",
+    chips: [
+      {
+        id: "c7",
+        icon: "location",
+        iconColor: "#DC2626",
+        text: "Live Tracking",
+        positionStyle: { top: -6, left: -4 },
+        floatDelay: 0,
+      },
+      {
+        id: "c8",
+        icon: "shield-checkmark",
+        iconColor: "#059669",
+        text: "Service Warranty",
+        positionStyle: { top: 26, right: -10 },
+        floatDelay: 400,
+      },
+      {
+        id: "c9",
+        icon: "headset",
+        iconColor: "#7C3AED",
+        text: "24/7 Support",
+        positionStyle: { bottom: -8, right: -4 },
+        floatDelay: 800,
+      },
+    ],
   },
 ];
+
+function AnimatedFloatingBadge({
+  chip,
+}: {
+  chip: FloatingChip;
+}) {
+  const floatAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: -8,
+          duration: 1800,
+          delay: chip.floatDelay || 0,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatAnim, {
+          toValue: 0,
+          duration: 1800,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [chip.floatDelay, floatAnim]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.floatingChip,
+        chip.positionStyle,
+        {
+          transform: [{ translateY: floatAnim }],
+        },
+      ]}
+    >
+      <Ionicons name={chip.icon} size={13} color={chip.iconColor} />
+      <Text style={styles.floatingChipText}>{chip.text}</Text>
+    </Animated.View>
+  );
+}
 
 export default function Onboarding() {
   const router = useRouter();
@@ -68,7 +200,7 @@ export default function Onboarding() {
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
-      duration: 800,
+      duration: 500,
       useNativeDriver: true,
     }).start();
   }, []);
@@ -81,31 +213,23 @@ export default function Onboarding() {
 
   const viewConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
-  const scrollTo = () => {
+  const navigateToRoleSelection = async () => {
+    try {
+      await AsyncStorage.setItem(ONBOARDING_KEY, "true");
+    } catch {
+      // Ignore storage errors and continue navigation
+    }
+    router.replace("/auth/role-selection");
+  };
+
+  const handleNext = () => {
     if (currentIndex < slides.length - 1) {
-      slidesRef.current?.scrollToIndex({ index: currentIndex + 1 });
+      slidesRef.current?.scrollToIndex({
+        index: currentIndex + 1,
+        animated: true,
+      });
     } else {
-      handleGetStarted();
-    }
-  };
-
-  const handleSkip = async () => {
-    try {
-      await AsyncStorage.setItem(ONBOARDING_KEY, "true");
-      router.replace("/auth/role-selection");
-    } catch (error) {
-      console.error("Error saving onboarding status:", error);
-      router.replace("/auth/role-selection");
-    }
-  };
-
-  const handleGetStarted = async () => {
-    try {
-      await AsyncStorage.setItem(ONBOARDING_KEY, "true");
-      router.replace("/auth/role-selection");
-    } catch (error) {
-      console.error("Error saving onboarding status:", error);
-      router.replace("/auth/role-selection");
+      void navigateToRoleSelection();
     }
   };
 
@@ -122,164 +246,158 @@ export default function Onboarding() {
       (index + 1) * width,
     ];
 
-    const scale = scrollX.interpolate({
-      inputRange,
-      outputRange: [0.85, 1, 0.85],
-      extrapolate: "clamp",
-    });
-
     const opacity = scrollX.interpolate({
       inputRange,
-      outputRange: [0.3, 1, 0.3],
+      outputRange: [0.35, 1, 0.35],
       extrapolate: "clamp",
     });
 
-    const translateY = scrollX.interpolate({
+    const scale = scrollX.interpolate({
       inputRange,
-      outputRange: [50, 0, 50],
+      outputRange: [0.9, 1, 0.9],
       extrapolate: "clamp",
     });
 
     return (
       <View style={styles.slide}>
+        {/* 3D Visual Stage with Floating Chips in Air */}
         <Animated.View
           style={[
-            styles.imageContainer,
+            styles.imageWrapper,
             {
-              transform: [{ scale }, { translateY }],
               opacity,
+              transform: [{ scale }],
             },
           ]}
         >
-          <View style={[styles.imageBg, { backgroundColor: "#fff" }]} />
           <Image
             source={item.image}
-            style={styles.image}
+            style={styles.heroImage}
             resizeMode="contain"
           />
-          <Animated.View
-            style={[styles.iconBadge, { backgroundColor: item.color }]}
-          >
-            <Ionicons name={item.icon} size={28} color={Colors.neutral.white} />
-          </Animated.View>
+
+          {/* Animated Floating Chips in Air */}
+          {item.chips.map((chip) => (
+            <AnimatedFloatingBadge key={chip.id} chip={chip} />
+          ))}
         </Animated.View>
 
-        <Animated.View style={[styles.textContainer, { opacity }]}>
+        {/* Text Area */}
+        <View style={styles.textContainer}>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{item.badge}</Text>
+          </View>
+
           <Text style={styles.title}>{item.title}</Text>
           <Text style={styles.description}>{item.description}</Text>
-        </Animated.View>
-      </View>
-    );
-  };
-
-  const Paginator = () => {
-    return (
-      <View style={styles.paginatorContainer}>
-        {slides.map((_, index) => {
-          const inputRange = [
-            (index - 1) * width,
-            index * width,
-            (index + 1) * width,
-          ];
-
-          const dotWidth = scrollX.interpolate({
-            inputRange,
-            outputRange: [8, 28, 8],
-            extrapolate: "clamp",
-          });
-
-          const opacity = scrollX.interpolate({
-            inputRange,
-            outputRange: [0.3, 1, 0.3],
-            extrapolate: "clamp",
-          });
-
-          return (
-            <Animated.View
-              key={index.toString()}
-              style={[
-                styles.dot,
-                {
-                  width: dotWidth,
-                  opacity,
-                  backgroundColor: Colors.themes.customer.primary,
-                },
-              ]}
-            />
-          );
-        })}
+        </View>
       </View>
     );
   };
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      {/* Skip Button */}
-      <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-        <Text style={styles.skipText}>Skip</Text>
-        <Ionicons
-          name="arrow-forward"
-          size={16}
-          color={Colors.text.secondary}
-        />
-      </TouchableOpacity>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Slides */}
-      <View style={styles.slidesContainer}>
-        <FlatList
-          ref={slidesRef}
-          data={slides}
-          renderItem={renderSlide}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          pagingEnabled
-          bounces={false}
-          keyExtractor={(item) => item.id}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-            { useNativeDriver: false },
-          )}
-          onViewableItemsChanged={viewableItemsChanged}
-          viewabilityConfig={viewConfig}
-          scrollEventThrottle={16}
-        />
-      </View>
+      <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+        {/* Minimal Header */}
+        <View style={styles.header}>
+          <Image
+            source={require("@/assets/images/tasker-logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
 
-      {/* Bottom Section */}
-      <View style={styles.bottomContainer}>
-        <Paginator />
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={() => void navigateToRoleSelection()}
+            activeOpacity={0.6}
+          >
+            <Text style={styles.skipText}>Skip</Text>
+          </TouchableOpacity>
+        </View>
 
-        {/* Action Buttons */}
-        <View style={styles.buttonContainer}>
-          <Button
-            title={currentIndex === slides.length - 1 ? "Get Started" : "Next"}
-            onPress={scrollTo}
-            fullWidth
-            size="large"
-            icon={
-              currentIndex === slides.length - 1 ? (
-                <Ionicons
-                  name="rocket"
-                  size={20}
-                  color={Colors.neutral.white}
-                />
-              ) : (
-                <Ionicons
-                  name="arrow-forward"
-                  size={20}
-                  color={Colors.neutral.white}
-                />
-              )
-            }
+        {/* FlatList Slides */}
+        <View style={styles.slidesContainer}>
+          <FlatList
+            ref={slidesRef}
+            data={slides}
+            renderItem={renderSlide}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            pagingEnabled
+            bounces={false}
+            keyExtractor={(item) => item.id}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+              { useNativeDriver: false },
+            )}
+            onViewableItemsChanged={viewableItemsChanged}
+            viewabilityConfig={viewConfig}
+            scrollEventThrottle={16}
           />
         </View>
 
-        {/* Trust Badge */}
-        <View style={styles.trustBadge}>
-          <Ionicons name="shield-checkmark" size={16} color={Colors.success} />
-          <Text style={styles.trustText}>Trusted by 10,000+ customers</Text>
+        {/* Minimal Bottom Footer */}
+        <View style={styles.footer}>
+          {/* Clean Pagination Dots */}
+          <View style={styles.paginationRow}>
+            {slides.map((_, index) => {
+              const inputRange = [
+                (index - 1) * width,
+                index * width,
+                (index + 1) * width,
+              ];
+
+              const dotWidth = scrollX.interpolate({
+                inputRange,
+                outputRange: [7, 24, 7],
+                extrapolate: "clamp",
+              });
+
+              const dotColor = scrollX.interpolate({
+                inputRange,
+                outputRange: ["#E5E7EB", Colors.themes.customer.primary, "#E5E7EB"],
+                extrapolate: "clamp",
+              });
+
+              return (
+                <Animated.View
+                  key={index.toString()}
+                  style={[
+                    styles.dot,
+                    {
+                      width: dotWidth,
+                      backgroundColor: dotColor,
+                    },
+                  ]}
+                />
+              );
+            })}
+          </View>
+
+          {/* Clean Primary Button */}
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={handleNext}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.primaryButtonText}>
+              {currentIndex === slides.length - 1 ? "Get Started" : "Continue"}
+            </Text>
+            <Ionicons
+              name="arrow-forward"
+              size={18}
+              color="#18181B"
+            />
+          </TouchableOpacity>
+
+          {/* Minimal Trust Subtext */}
+          <Text style={styles.trustText}>
+            Verified Technicians • Quality Guaranteed
+          </Text>
         </View>
-      </View>
+      </SafeAreaView>
     </Animated.View>
   );
 }
@@ -287,25 +405,31 @@ export default function Onboarding() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral.white,
+    backgroundColor: "#FFFFFF",
   },
-  skipButton: {
-    position: "absolute",
-    top: 50,
-    right: 20,
-    zIndex: 10,
+  safeArea: {
+    flex: 1,
+  },
+  header: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: Colors.neutral.gray[100],
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Platform.OS === "android" ? 12 : 4,
+    paddingBottom: 4,
+  },
+  logo: {
+    width: 140,
+    height: 40,
+  },
+  skipButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   skipText: {
     fontSize: 14,
     fontWeight: "500",
-    color: Colors.text.secondary,
+    color: "#6B7280",
   },
   slidesContainer: {
     flex: 1,
@@ -313,91 +437,109 @@ const styles = StyleSheet.create({
   slide: {
     width,
     flex: 1,
-    justifyContent: "center",
     alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: Spacing.xl,
   },
-  imageContainer: {
-    width: width * 0.75,
-    height: width * 0.75,
-    justifyContent: "center",
+  imageWrapper: {
+    width: width * 1,
+    height: height * 1,
+    maxHeight: 310,
     alignItems: "center",
-    marginBottom: Spacing.xl,
+    justifyContent: "center",
     position: "relative",
+    overflow: "visible",
+    marginBottom: Spacing.sm,
   },
-  imageBg: {
-    position: "absolute",
-    width: "100%",
-    height: "100%",
-    borderRadius: (width * 0.75) / 2,
-  },
-  image: {
-    width: "85%",
+  heroImage: {
+    width: "90%",
     height: "85%",
   },
-  iconBadge: {
+  floatingChip: {
     position: "absolute",
-    bottom: 10,
-    right: 10,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: "center",
+    flexDirection: "row",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
+    gap: 5,
+    backgroundColor: "rgba(255, 255, 255, 0.96)",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+    zIndex: 10,
+  },
+  floatingChipText: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "#1F2937",
+    letterSpacing: 0.1,
   },
   textContainer: {
     alignItems: "center",
-    paddingHorizontal: Spacing.lg,
+  },
+  badge: {
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+    marginBottom: 8,
+  },
+  badgeText: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "#4B5563",
+    letterSpacing: 0.2,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: Colors.text.primary,
-    marginBottom: Spacing.sm,
+    fontSize: 21,
+    fontWeight: "600",
+    color: "#18181B",
     textAlign: "center",
-    letterSpacing: -0.5,
+    marginBottom: 8,
+    lineHeight: 28,
   },
   description: {
-    fontSize: 15,
-    color: Colors.text.secondary,
+    fontSize: 13.5,
+    fontWeight: "400",
+    color: "#6B7280",
     textAlign: "center",
-    lineHeight: 22,
-    paddingHorizontal: Spacing.sm,
+    lineHeight: 20,
   },
-  bottomContainer: {
-    paddingBottom: 40,
+  footer: {
     paddingHorizontal: Spacing.xl,
+    paddingBottom: Platform.OS === "android" ? 22 : 12,
   },
-  paginatorContainer: {
+  paginationRow: {
     flexDirection: "row",
-    height: 8,
+    height: 7,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: Spacing.xl,
-    gap: 6,
+    marginBottom: Spacing.lg,
+    gap: 5,
   },
   dot: {
-    height: 8,
-    borderRadius: 4,
+    height: 6,
+    borderRadius: 3,
   },
-  buttonContainer: {
-    marginBottom: Spacing.md,
-  },
-  trustBadge: {
+  primaryButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    paddingTop: Spacing.sm,
+    backgroundColor: Colors.themes.customer.primary,
+    height: 52,
+    borderRadius: 14,
+    gap: 8,
+    marginBottom: 12,
+  },
+  primaryButtonText: {
+    fontSize: 15.5,
+    fontWeight: "600",
+    color: "#18181B",
   },
   trustText: {
     fontSize: 12,
-    color: Colors.text.tertiary,
-    fontWeight: "500",
+    fontWeight: "400",
+    color: "#9CA3AF",
+    textAlign: "center",
   },
 });

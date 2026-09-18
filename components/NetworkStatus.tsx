@@ -1,36 +1,90 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Animated } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
+import { Shadows } from "@/constants/Styles";
 import { useNetwork } from "@/hooks/use-network";
+import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
+import { useEffect } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function NetworkStatus() {
   const { isOffline } = useNetwork();
-  const [visible, setVisible] = useState(false);
-  const translateY = new Animated.Value(-40);
+  const insets = useSafeAreaInsets();
+
+  // Start off-screen
+  const translateY = useSharedValue(-100);
+  const opacity = useSharedValue(0);
+
+  const processOfflineQueue = async () => {
+    const { useOfflineStore } = require("@/context/offline-store");
+    const myAxios = require("@/lib/axios.config").default;
+    const { queue, dequeueAction } = useOfflineStore.getState();
+
+    if (queue.length === 0) return;
+
+    console.log(`[Offline Sync] Processing ${queue.length} queued actions...`);
+
+    // Process sequentially
+    for (const req of queue) {
+      try {
+        await myAxios({
+          url: req.url,
+          method: req.method,
+          data: req.data,
+          headers: req.headers,
+        });
+        dequeueAction(req.id);
+        console.log(`[Offline Sync] Successfully synced action: ${req.url}`);
+      } catch (error) {
+        console.error(`[Offline Sync] Failed to sync action: ${req.url}`, error);
+        // We leave it in the queue for the next attempt
+      }
+    }
+  };
 
   useEffect(() => {
     if (isOffline) {
-      setVisible(true);
-      Animated.spring(translateY, {
-        toValue: 0,
-        useNativeDriver: true,
-      }).start();
+      // Slide in and fade in
+      opacity.value = withTiming(1, { duration: 300 });
+      translateY.value = withSpring(insets.top + 10, {
+        damping: 12,
+        stiffness: 90,
+      });
     } else {
-      Animated.timing(translateY, {
-        toValue: -40,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => setVisible(false));
+      // Slide out and fade out
+      opacity.value = withTiming(0, { duration: 300 });
+      translateY.value = withTiming(-100, { duration: 300 });
+
+      // When internet returns, process the offline queue
+      processOfflineQueue();
     }
-  }, [isOffline]);
+  }, [isOffline, insets.top]);
 
-  if (!visible) return null;
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+    opacity: opacity.value,
+  }));
 
+  // Render the wrapper even if online (to allow exit animation), but 
+  // opacity/translate hides it.
   return (
-    <Animated.View style={[styles.container, { transform: [{ translateY }] }]}>
-      <Ionicons name="cloud-offline-outline" size={16} color="#FFFFFF" />
-      <Text style={styles.text}>No internet connection</Text>
+    <Animated.View style={[styles.container, animatedStyle]} pointerEvents="none">
+      <BlurView intensity={60} tint="dark" style={styles.blurContainer}>
+        <View style={styles.content}>
+          <View style={styles.iconContainer}>
+            <Ionicons name="cloud-offline" size={20} color={Colors.error} />
+          </View>
+          <Text style={styles.text}>
+            No internet issue, app running in offline
+          </Text>
+        </View>
+      </BlurView>
     </Animated.View>
   );
 }
@@ -41,13 +95,26 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 40,
-    backgroundColor: Colors.error,
+    alignItems: "center",
+    zIndex: 9999,
+  },
+  blurContainer: {
+    borderRadius: 30,
+    overflow: "hidden",
+    ...Shadows.md,
+  },
+  content: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: "rgba(0, 0, 0, 0.4)", // Darken the blur slightly
     gap: 8,
-    zIndex: 9999,
+  },
+  iconContainer: {
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    padding: 6,
+    borderRadius: 16,
   },
   text: {
     color: "#FFFFFF",

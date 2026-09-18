@@ -30,7 +30,7 @@ const Colors = {
   },
 
   border: {
-    light: "#E5E7EB",
+    light: "#f4f4f5ff",
     medium: "#D1D5DB",
     dark: "#9CA3AF",
   },
@@ -38,7 +38,7 @@ const Colors = {
   background: {
     primary: "#FFFFFF",
     secondary: "#F9FAFB",
-    tertiary: "#F3F4F6",
+    tertiary: "#F3F4F7",
   },
 
   // Social media colors
@@ -54,18 +54,18 @@ const Colors = {
   // App Themes
   themes: {
     customer: {
-      primary: "#0F766E", // Professional Teal
-      primaryLight: "#14B8A6",
-      primaryDark: "#0D5550",
-      accent: "#5EEAD4",
-      background: "#F0FDFA",
+      primary: "#D4AF37",      // Classic Royal Gold
+      primaryLight: "#F1D77A", // Soft Champagne Gold
+      primaryDark: "#8A6A1F",  // Deep Antique Gold
+      accent: "#C9A227",       // Rich Metallic Gold
+      background: "#FFFCF2",   // Warm Ivory Gold Tint
     },
     provider: {
-      primary: "#1E40AF", // Medium Dark Blue
-      primaryLight: "#3B82F6",
-      primaryDark: "#1E3A8A",
-      accent: "#60A5FA",
-      background: "#EFF6FF",
+      primary: "#1E3A8A", // Professional Deep Navy Blue
+      primaryLight: "#3B82F6", // Royal Blue
+      primaryDark: "#172554", // Midnight Navy
+      accent: "#60A5FA", // Sky Blue Glow
+      background: "#EFF6FF", // Crisp Ice Navy Tint
     },
   },
 };

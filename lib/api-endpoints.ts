@@ -1,4 +1,4 @@
-const BACKEND_URL_ENV = "https://api.taskercompany.cloud";
+const BACKEND_URL_ENV = "https://glpcdycei3.sharedwithexpose.com";
 if (!BACKEND_URL_ENV) {
   throw new Error("EXPO_PUBLIC_BACKEND_URL is not set");
 }
@@ -15,6 +15,7 @@ export const LOGOUT_URL = `${APP_URL}/auth/sign-out`;
 export const OTP_URL = `${APP_URL}/auth/check-credentials`;
 export const GET_ME_USER_URL = `${APP_URL}/auth/me`;
 export const UPDATE_PROFILE_URL = `${APP_URL}/auth/update-profile`;
+export const DELETE_ACCOUNT_URL = `${APP_URL}/auth/delete-account`;
 
 // Website URLs
 export const GET_CATEGORIES_URL = `${APP_URL}/categories`;
@@ -121,6 +122,18 @@ export const VENDOR_LOCATION_PING_URL = `${API_URL}/vendor/location/ping`;
 export const VENDOR_STAFF_LOCATION_PING_URL = `${API_URL}/vendor-staff/location/ping`;
 
 // App Chat Endpoints
+export const CHAT_INITIATE_SUPPORT_URL = (
+  mode: "customer" | "vendor" | "vendor-staff",
+) => {
+  const prefix =
+    mode === "vendor"
+      ? "vendor"
+      : mode === "vendor-staff"
+        ? "vendor-staff"
+        : "tasker-app";
+  return `${API_URL}/${prefix}/chat/initiate-support-chat`;
+};
+
 export const CHAT_INITIATE_ORDER_URL = (
   mode: "customer" | "vendor" | "vendor-staff",
   workOrderId: number | string,

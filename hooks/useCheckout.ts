@@ -11,7 +11,7 @@ export type CheckoutItem = {
   discountType: "percentage" | "fixed";
 };
 
-type PaymentMethodId = "cash" | "card" | "wallet";
+export type PaymentMethodId = "cash" | "card" | "wallet" | "online";
 
 function pad(n: number) {
   return n < 10 ? `0${n}` : `${n}`;
@@ -46,8 +46,12 @@ export function useCheckout(items: CheckoutItem[]) {
     }
     return now;
   });
+  const [customerName, setCustomerName] = useState<string>("");
+  const [customerPhone, setCustomerPhone] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>("cash");
   const [notes, setNotes] = useState<string>("");
+  const [reminderOption, setReminderOption] = useState<string>("1h");
+  const [attachments, setAttachments] = useState<Array<{ uri: string; name?: string; type?: string } | string>>([]);
   const [addressId, setAddressId] = useState<number | null>(null);
   const [processing, setProcessing] = useState(false);
 
@@ -69,9 +73,13 @@ export function useCheckout(items: CheckoutItem[]) {
 
     const payload: CreateWorkOrderPayload = {
       customer_address_id: addressId,
+      customer_name: customerName || undefined,
+      customer_phone: customerPhone || undefined,
       items: mappedItems,
       payment_method: paymentMethod,
       notes,
+      reminders: reminderOption,
+      attachments,
     };
 
     setProcessing(true);
@@ -100,12 +108,19 @@ export function useCheckout(items: CheckoutItem[]) {
     setScheduledTime,
     paymentMethod,
     setPaymentMethod,
+    customerName,
+    setCustomerName,
+    customerPhone,
+    setCustomerPhone,
     notes,
     setNotes,
+    reminderOption,
+    setReminderOption,
+    attachments,
+    setAttachments,
     addressId,
     setAddressId,
     processing,
     submit,
   };
 }
-

@@ -22,8 +22,6 @@ export function VideoMessage({ uri }: VideoMessageProps) {
       <VideoView
         style={styles.video}
         player={player}
-        allowsFullscreen
-        allowsPictureInPicture
         contentFit="cover"
       />
       {!player.playing && (
@@ -54,7 +52,11 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(0,0,0,0.2)",

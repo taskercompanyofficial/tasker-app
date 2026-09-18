@@ -1,141 +1,93 @@
-import Button from "@/components/Button";
-import Input from "@/components/Input";
-import BackButtonHeader from "@/components/auth/BackButtonHeader";
-import BiometricLoginButton from "@/components/auth/BiometricLoginButton";
-import LoginHeader from "@/components/auth/LoginHeader";
 import Colors from "@/constants/Colors";
-import { Spacing } from "@/constants/Styles";
+import { BorderRadius, Shadows, Spacing } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
 import useForm from "@/hooks/use-form";
-import { Ionicons } from "@expo/vector-icons";
 import {
   VENDOR_OTP_URL,
   VENDOR_OTP_VERIFY_URL,
-  VENDOR_QUICK_LOGIN_REGISTER_URL,
-  VENDOR_QUICK_LOGIN_URL,
-  VENDOR_STAFF_QUICK_LOGIN_REGISTER_URL,
-  VENDOR_STAFF_QUICK_LOGIN_URL,
 } from "@/lib/api-endpoints";
-import { router } from "expo-router";
-import React, { useState, useEffect } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
-import { useBiometric } from "@/hooks/use-biometric";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import myAxios from "@/lib/axios.config";
-import * as SecureStore from "expo-secure-store";
 
-type LoginStep = "credentials" | "otp";
-
-const LAST_USER_PHONE_KEY = "@last_user_phone";
-const BIOMETRIC_VENDOR_CREDENTIAL_KEY = "@biometric_vendor_quick_login";
-
-type QuickLoginCredential = {
-  phone: string;
-  quickLoginToken: string;
-  expiresAt: string;
-  userType: "vendor" | "vendor_staff";
-};
+type Step = "phone" | "otp" | "success";
 
 export default function VendorSignIn() {
   const { signIn } = useSession();
-  const { isAvailable, biometryType, isEnabled: biometricEnabled, authenticate, enableBiometric: enableBiometricAuth } = useBiometric();
-
-  const [loginStep, setLoginStep] = useState<LoginStep>("credentials");
-  const [showPassword, setShowPassword] = useState(false);
-  const [bioLoading, setBioLoading] = useState(false);
+  const router = useRouter();
+  const [step, setStep] = useState<Step>("phone");
+  const [sendMethod, setSendMethod] = useState<"sms" | "whatsapp">("whatsapp");
+  const [resendTimer, setResendTimer] = useState(0);
 
   const { data, setData, processing, errors, post } = useForm({
     phone: "",
-    password: "",
     otp: "",
     source: "vendor-app",
     intent: "login",
+    channel: "whatsapp",
   });
 
-  // Phone stored in 0302 format in database - send as-is
-  const formattedPhone = data.phone.replace(/\D/g, "");
-  const isValidPhone = /^\+?[0-9]{10,15}$/.test(data.phone || "");
-  const isValidOtp = data.otp?.length === 6;
-  const canSubmit = isValidPhone && data.password && data.password.length >= 6;
+  const handlePhoneChange = (text: string) => {
+    // Only allow digits and a single leading '+'
+    let cleaned = text.replace(/[^\d+]/g, "").replace(/(?!^)\+/g, "");
 
-  // Check saved credentials on mount
-  useEffect(() => {
-    const loadSavedCredentials = async () => {
-      const [savedPhone, savedQuickRaw] = await Promise.all([
-        AsyncStorage.getItem(LAST_USER_PHONE_KEY),
-        SecureStore.getItemAsync(BIOMETRIC_VENDOR_CREDENTIAL_KEY),
-      ]);
-
-      if (savedPhone) {
-        setData((prev) => ({ ...prev, phone: savedPhone }));
-      }
-
-      if (!savedQuickRaw) return;
-
-      try {
-        const savedQuick = JSON.parse(savedQuickRaw) as QuickLoginCredential;
-        if (!savedQuick?.phone || !savedQuick?.quickLoginToken || !savedQuick?.expiresAt) {
-          await SecureStore.deleteItemAsync(BIOMETRIC_VENDOR_CREDENTIAL_KEY);
-          return;
-        }
-        if (new Date(savedQuick.expiresAt).getTime() <= Date.now()) {
-          await SecureStore.deleteItemAsync(BIOMETRIC_VENDOR_CREDENTIAL_KEY);
-          return;
-        }
-      } catch {
-        await SecureStore.deleteItemAsync(BIOMETRIC_VENDOR_CREDENTIAL_KEY);
-      }
-    };
-    loadSavedCredentials();
-  }, []);
-
-  // Step 1: Send OTP to phone
-  const handleLogin = () => {
-    if (!isValidPhone) {
-      Toast.show({ type: "error", text1: "Enter a valid phone number" });
-      return;
-    }
-    if (!data.password || data.password.length < 6) {
-      Toast.show({ type: "error", text1: "Password must be at least 6 characters" });
-      return;
+    // If Android SIM suggestion returns 923... without '+', auto prepend '+'
+    if (cleaned.startsWith("923") && !cleaned.startsWith("+")) {
+      cleaned = "+" + cleaned;
     }
 
-    // Debug logging
-    console.log("Login attempt:", {
-      phone: data.phone,
-    });
+    // Max length: 13 if starts with '+', otherwise 11 digits
+    const maxLen = cleaned.startsWith("+") ? 13 : 11;
+    if (cleaned.length > maxLen) {
+      cleaned = cleaned.slice(0, maxLen);
+    }
 
-    // Send OTP (password verified in step 2)
-    // Backend will auto-detect if phone belongs to vendor or vendor_staff
-    const otpUrl = VENDOR_OTP_URL;
-    console.log("OTP URL:", otpUrl);
+    setData((prev) => ({ ...prev, phone: cleaned }));
+  };
 
-    post(otpUrl, {
-      onSuccess: () => {
-        setLoginStep("otp");
+  const isValidPhone =
+    /^03\d{9}$/.test(data.phone) || /^\+92\d{10}$/.test(data.phone);
+  const isValidOtp = /^\d{6}$/.test(data.otp);
+
+  const handleSendOtp = (channel: "sms" | "whatsapp" = "whatsapp") => {
+    setSendMethod(channel);
+    const phoneToSend = data.phone.trim();
+    setData((prev) => ({ ...prev, phone: phoneToSend, channel }));
+
+    post(VENDOR_OTP_URL, {
+      onSuccess: (response) => {
+        setStep("otp");
+        setResendTimer(90);
         Toast.show({
           type: "success",
-          text1: "OTP sent to your WhatsApp",
+          text1:
+            response?.message ||
+            "OTP sent via WhatsApp successfully",
         });
       },
       onError: (error) => {
-        console.log("OTP Error:", error);
-        // Show more helpful error message
         if (error.message?.includes("No account found")) {
           Toast.show({
             type: "error",
             text1: "No vendor account found",
-            text2: "Please check your phone number",
+            text2: "Please check your phone number or contact support",
           });
         } else {
           Toast.show({
@@ -147,462 +99,622 @@ export default function VendorSignIn() {
     });
   };
 
-  // Step 2: Verify OTP and complete login
-  const handleVerifyOtp = () => {
-    if (!isValidOtp) {
-      Toast.show({ type: "error", text1: "Enter a valid 6-digit OTP" });
-      return;
-    }
-
-    // Backend will auto-detect if phone belongs to vendor or vendor_staff
-    const verifyUrl = VENDOR_OTP_VERIFY_URL;
-
-    post(verifyUrl, {
-      onSuccess: async (response: { token?: string; message?: string; user_type?: string }) => {
+  const handleVerifyOtp = async () => {
+    post(VENDOR_OTP_VERIFY_URL, {
+      onSuccess: async (response: {
+        token?: string;
+        message?: string;
+        user_type?: string;
+      }) => {
         if (response.token) {
-          // Save for next time
-          await AsyncStorage.setItem(LAST_USER_PHONE_KEY, data.phone);
+          const userType = (response.user_type || "vendor") as
+            | "vendor"
+            | "vendor_staff";
 
-          const userType = (response.user_type || "vendor") as "vendor" | "vendor_staff";
-
-          // Register secure quick-login credential for this device
-          if (biometricEnabled) {
-            try {
-              const registerUrl =
-                userType === "vendor_staff"
-                  ? VENDOR_STAFF_QUICK_LOGIN_REGISTER_URL
-                  : VENDOR_QUICK_LOGIN_REGISTER_URL;
-              const quickResponse = await myAxios.post(
-                registerUrl,
-                { device_name: `${Platform.OS}-app` },
-                { headers: { Authorization: `Bearer ${response.token}` } },
-              );
-              const payload = quickResponse.data || {};
-              if (payload.quick_login_token && payload.expires_at) {
-                const credential: QuickLoginCredential = {
-                  phone: data.phone,
-                  quickLoginToken: payload.quick_login_token,
-                  expiresAt: payload.expires_at,
-                  userType,
-                };
-                await SecureStore.setItemAsync(
-                  BIOMETRIC_VENDOR_CREDENTIAL_KEY,
-                  JSON.stringify(credential),
-                );
-              }
-            } catch (e) {
-              console.warn("[Biometric] Failed to register quick login token", e);
-            }
-          }
-
-          Toast.show({ type: "success", text1: response.message || "Login successful" });
+          setStep("success");
+          Toast.show({
+            type: "success",
+            text1: response.message || "Login successful",
+          });
           await signIn(response.token, userType);
           router.replace("/vendor/(tabs)/dashboard");
         } else {
+          setData((prev) => ({ ...prev, otp: "" }));
           Toast.show({ type: "error", text1: "Invalid OTP" });
         }
       },
       onError: (error) => {
-        console.log("Verify Error:", error);
-        if (error.message?.includes("Invalid password")) {
-          Toast.show({
-            type: "error",
-            text1: "Incorrect password",
-            text2: "Please check your password and try again",
-          });
-        } else {
-          Toast.show({ type: "error", text1: error.message || "Invalid OTP" });
-        }
+        setData((prev) => ({ ...prev, otp: "" }));
+        Toast.show({
+          type: "error",
+          text1: error?.message || "Invalid OTP",
+        });
       },
     });
   };
 
-  // Biometric login
-  const handleBiometricLogin = async () => {
-    if (!data.phone) {
-      Toast.show({ type: "error", text1: "Enter your phone number first" });
-      return;
+  // Countdown timer for resend OTP (90 seconds)
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (step === "otp" && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
     }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [step, resendTimer]);
 
-    setBioLoading(true);
-    try {
-      const success = await authenticate("Verify your identity");
-      if (!success) return;
-
-      const quickRaw = await SecureStore.getItemAsync(BIOMETRIC_VENDOR_CREDENTIAL_KEY);
-      if (!quickRaw) {
-        Toast.show({
-          type: "info",
-          text1: "Biometric quick login not set",
-          text2: "Login once with OTP and enable biometric again",
-        });
-        return;
-      }
-
-      const credential = JSON.parse(quickRaw) as QuickLoginCredential;
-      const quickUrl =
-        credential.userType === "vendor_staff"
-          ? VENDOR_STAFF_QUICK_LOGIN_URL
-          : VENDOR_QUICK_LOGIN_URL;
-
-      const response = await myAxios.post(quickUrl, {
-        phone: credential.phone,
-        quick_login_token: credential.quickLoginToken,
-      });
-
-      const payload = response.data || {};
-      const token = payload.token;
-      if (!token) {
-        Toast.show({ type: "error", text1: "Login failed" });
-        return;
-      }
-
-      await AsyncStorage.setItem(LAST_USER_PHONE_KEY, credential.phone);
-      setData((prev) => ({ ...prev, phone: credential.phone }));
-      Toast.show({ type: "success", text1: payload.message || "Login successful" });
-      const userType = (payload.user_type || "vendor") as "vendor" | "vendor_staff";
-      await signIn(token, userType);
-      router.replace("/vendor/(tabs)/dashboard");
-    } catch (error: any) {
-      await SecureStore.deleteItemAsync(BIOMETRIC_VENDOR_CREDENTIAL_KEY);
-      Toast.show({
-        type: "error",
-        text1: error?.response?.data?.message || error?.message || "Login failed",
-      });
-    } finally {
-      setBioLoading(false);
-    }
+  const formatTimer = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
-  // Enable biometric after successful password entry
-  const handleEnableBiometric = async () => {
-    const quickRaw = await SecureStore.getItemAsync(BIOMETRIC_VENDOR_CREDENTIAL_KEY);
-    if (!quickRaw) {
-      Toast.show({
-        type: "error",
-        text1: "Complete OTP login first",
-        text2: "Then enable biometric quick login",
-      });
-      return;
+  // Auto-submit OTP when 6 digits entered
+  useEffect(() => {
+    if (step === "otp" && isValidOtp && !processing && data.otp) {
+      void handleVerifyOtp();
     }
-
-    const success = await enableBiometricAuth();
-    if (success) {
-      Toast.show({ type: "success", text1: "Biometric login enabled" });
-    }
-  };
+  }, [step, isValidOtp, processing, data.otp]);
 
   const handleBackPress = () => {
-    if (loginStep === "otp") {
-      setLoginStep("credentials");
+    if (step === "otp") {
+      setStep("phone");
+      setResendTimer(0);
       setData((prev) => ({ ...prev, otp: "" }));
     } else {
       router.replace("/auth/role-selection");
     }
   };
 
+  const openUrl = (url: string) => {
+    Linking.openURL(url).catch(() => { });
+  };
+
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* Background Accent */}
-      <View style={styles.backgroundAccent} />
+    <LinearGradient
+      colors={[
+        Colors.themes.provider.primaryDark,
+        Colors.themes.provider.primary,
+        Colors.themes.provider.primaryDark,
+      ]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.container}
+    >
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      {/* Header - Transparent */}
-      <BackButtonHeader
-        title="Vendor Login"
-        onBackPress={handleBackPress}
-        backgroundColor="transparent"
-      />
+      <SafeAreaView edges={["top"]} style={styles.topSafeArea}>
+        {/* Nav Icons with Center Logo */}
+        <View style={styles.navRow}>
+          <TouchableOpacity
+            onPress={handleBackPress}
+            style={styles.circleIconButton}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-
-          {/* Login Header - No Icon */}
-          <LoginHeader
-            title={
-              loginStep === "otp"
-                ? "Verify OTP"
-                : "Vendor Login"
-            }
-            subtitle={
-              loginStep === "otp"
-                ? `Enter the 6-digit code sent to ${data.phone}`
-                : "Login to manage your service business"
-            }
-            theme="vendor"
-            hideIcon
+          <Image
+            source={require("@/assets/images/tasker-logo.png")}
+            style={styles.headerCenterLogo}
+            resizeMode="contain"
           />
 
-          {/* Form */}
-          <View style={styles.formContainer}>
-            {loginStep === "credentials" ? (
-              <>
-                {/* Phone Input */}
-                <Input
-                  label="Phone Number"
-                  placeholder="03XXXXXXXXX"
-                  value={data.phone}
-                  onChangeText={(text) => setData((prev) => ({ ...prev, phone: text }))}
-                  keyboardType="phone-pad"
-                  error={errors.phone}
-                  theme="vendor"
-                  leftIcon={
-                    <Ionicons
-                      name="call-outline"
-                      size={20}
-                      color={Colors.themes.provider.primary}
-                    />
-                  }
-                />
+          <TouchableOpacity
+            onPress={() => openUrl("tel:+923000000000")}
+            style={styles.circleIconButton}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="headset" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
 
-                {/* Password Input */}
-                <Input
-                  label="Password"
-                  placeholder="Your password"
-                  value={data.password}
-                  onChangeText={(text) => setData((prev) => ({ ...prev, password: text }))}
-                  secureTextEntry={!showPassword}
-                  error={errors.password}
-                  theme="vendor"
-                  leftIcon={
-                    <Ionicons
-                      name="lock-closed-outline"
-                      size={20}
-                      color={Colors.themes.provider.primary}
-                    />
-                  }
-                  rightIcon={
-                    <Ionicons
-                      name={showPassword ? "eye-off-outline" : "eye-outline"}
-                      size={22}
-                      color={Colors.themes.provider.primary}
-                    />
-                  }
-                  onRightIconPress={() => setShowPassword(!showPassword)}
+        {/* Brand Header on Left */}
+        <View style={styles.brandRow}>
+          <View style={styles.brandInfo}>
+            <View style={styles.titleBadgeRow}>
+              <View style={styles.licensedPill}>
+                <Ionicons
+                  name="shield-checkmark"
+                  size={12}
+                  color={Colors.themes.provider.accent}
                 />
+                <Text style={styles.licensedText}>Partner Network</Text>
+              </View>
+            </View>
+            <Text style={styles.brandSubtitle}>
+              Manage jobs, staff & earnings
+            </Text>
+          </View>
+        </View>
+      </SafeAreaView>
 
-                {/* Forgot Password */}
+      {/* Vendor Technician Illustration Positioned on Right Overlapping Sheet */}
+      <Image
+        source={require("@/assets/images/vendor-hero.png")}
+        style={styles.heroIllustrationRight}
+        resizeMode="contain"
+      />
+
+      {/* Main Content White Sheet with Smooth Rounded Top */}
+      <View style={styles.sheetContainer}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {step === "phone" && (
+              <View style={styles.formSection}>
+                {/* Active Tab Heading (OTP Login only) */}
+                <View style={styles.tabContainer}>
+                  <View style={styles.activeTabWrapper}>
+                    <Text style={styles.tabTitle}>Sign in</Text>
+                    <View style={styles.tabUnderline} />
+                  </View>
+                </View>
+
+                {/* Phone Input Box */}
+                <View style={styles.inputContainer}>
+                  <Ionicons
+                    name="call-outline"
+                    size={20}
+                    color={Colors.themes.provider.primary}
+                  />
+                  <View style={styles.inputDivider} />
+                  <TextInput
+                    style={styles.phoneInput}
+                    placeholder="Enter phone number"
+                    placeholderTextColor="#9CA3AF"
+                    value={data.phone}
+                    onChangeText={handlePhoneChange}
+                    keyboardType="phone-pad"
+                    autoComplete="tel"
+                    textContentType="telephoneNumber"
+                    importantForAutofill="yes"
+                    autoCorrect={false}
+                    maxLength={data.phone.startsWith("+") ? 13 : 11}
+                    autoFocus={false}
+                  />
+                </View>
+                {errors.phone && (
+                  <Text style={styles.errorText}>{errors.phone}</Text>
+                )}
+
+                {/* Send via WhatsApp Button */}
                 <TouchableOpacity
-                  style={styles.forgotPassword}
-                  onPress={() => router.push("/auth/vendor/forgot-password")}
+                  style={[
+                    styles.smsButton,
+                    (!isValidPhone || processing) && styles.buttonDisabled,
+                  ]}
+                  activeOpacity={0.88}
+                  disabled={!isValidPhone || processing}
+                  onPress={() => handleSendOtp("whatsapp")}
                 >
-                  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                  {processing && sendMethod === "whatsapp" ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons
+                        name="logo-whatsapp"
+                        size={21}
+                        color="#25D366"
+                      />
+                      <Text style={styles.smsButtonText}>
+                        Send via WhatsApp
+                      </Text>
+                    </>
+                  )}
                 </TouchableOpacity>
 
-                {/* Login Button */}
-                <Button
-                  title={processing ? "Signing In..." : "Sign In"}
-                  onPress={handleLogin}
-                  fullWidth
-                  loading={processing}
-                  disabled={!canSubmit}
-                  theme="vendor"
-                />
-
-                {/* Biometric Login Button */}
-                {isAvailable && biometricEnabled && data.phone && (
-                  <BiometricLoginButton
-                    onPress={handleBiometricLogin}
-                    biometryType={
-                      biometryType === "FINGERPRINT"
-                        ? "Fingerprint"
-                        : biometryType === "FACIAL_RECOGNITION"
-                          ? "FaceID"
-                          : "Fingerprint"
+                {/* Terms and Privacy Policy */}
+                <Text style={styles.termsText}>
+                  By proceeding you agree to{" "}
+                  <Text
+                    style={styles.termsLink}
+                    onPress={() =>
+                      openUrl("https://taskercompany.com/privacy-policy")
                     }
-                    loading={bioLoading}
-                  />
-                )}
+                  >
+                    Privacy Policy
+                  </Text>{" "}
+                  and{" "}
+                  <Text
+                    style={styles.termsLink}
+                    onPress={() =>
+                      openUrl("https://taskercompany.com/partner-terms")
+                    }
+                  >
+                    Partner Terms
+                  </Text>
+                  .
+                </Text>
+              </View>
+            )}
 
-                {/* Enable Biometric Toggle */}
-                {isAvailable && !biometricEnabled && data.phone && loginStep === "credentials" && (
-                  <TouchableOpacity style={styles.enableBiometric} onPress={handleEnableBiometric}>
-                    <Ionicons name="finger-print-outline" size={18} color={Colors.themes.provider.primary} />
-                    <Text style={styles.enableBiometricText}>
-                      Enable {biometryType === "FACIAL_RECOGNITION" ? "Face ID" : "Fingerprint"} Login
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
-
-                {/* Register Link */}
-                <View style={styles.footer}>
-                  <Text style={styles.footerText}>Don&apos;t have an account?</Text>
-                  <TouchableOpacity onPress={() => router.push("/auth/vendor/register")}>
-                    <Text style={styles.signUpText}>Register</Text>
-                  </TouchableOpacity>
+            {step === "otp" && (
+              <View style={styles.formSection}>
+                <View style={styles.tabContainer}>
+                  <View style={styles.activeTabWrapper}>
+                    <Text style={styles.tabTitle}>Verify OTP</Text>
+                    <View style={styles.tabUnderline} />
+                  </View>
                 </View>
-              </>
-            ) : (
-              <>
-                {/* OTP Icon */}
-                <View style={styles.otpIconContainer}>
-                  <Ionicons name="logo-whatsapp" size={48} color="#25D366" />
-                </View>
+
+                <Text style={styles.otpSubtitle}>
+                  Enter the 6-digit code sent to{" "}
+                  <Text style={styles.boldPhone}>{data.phone}</Text>
+                </Text>
 
                 {/* OTP Input */}
-                <Input
-                  label="Enter 6-Digit Code"
-                  placeholder="000000"
-                  value={data.otp}
-                  onChangeText={(text) => setData((prev) => ({ ...prev, otp: text }))}
-                  keyboardType="number-pad"
-                  maxLength={6}
-                  error={errors.otp}
-                  theme="vendor"
-                  textContentType="oneTimeCode"
-                  autoComplete="sms-otp"
-                  style={styles.otpInput}
-                />
+                <View style={[styles.inputContainer, styles.otpContainer]}>
+                  <TextInput
+                    style={styles.otpInput}
+                    placeholder="• • • • • •"
+                    placeholderTextColor="#D1D5DB"
+                    value={data.otp}
+                    onChangeText={(text) =>
+                      setData((prev) => ({
+                        ...prev,
+                        otp: text.replace(/\D/g, ""),
+                      }))
+                    }
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    autoFocus
+                  />
+                </View>
+                {errors.otp && (
+                  <Text style={styles.errorText}>{errors.otp}</Text>
+                )}
 
                 {/* Verify Button */}
-                <Button
-                  title={processing ? "Verifying..." : "Verify & Login"}
+                <TouchableOpacity
+                  style={[
+                    styles.smsButton,
+                    (!isValidOtp || processing) && styles.buttonDisabled,
+                  ]}
+                  activeOpacity={0.88}
+                  disabled={!isValidOtp || processing}
                   onPress={handleVerifyOtp}
-                  fullWidth
-                  loading={processing}
-                  disabled={!isValidOtp}
-                  theme="vendor"
-                />
-
-                {/* Resend OTP */}
-                <TouchableOpacity onPress={handleLogin} style={styles.resendButton}>
-                  <Text style={styles.resendText}>Resend Code</Text>
+                >
+                  {processing ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Text style={styles.smsButtonText}>Verify & Login</Text>
+                  )}
                 </TouchableOpacity>
 
-                {/* WhatsApp Note */}
-                <View style={styles.whatsappNote}>
-                  <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
-                  <Text style={styles.whatsappNoteText}>
-                    Check your WhatsApp for the OTP
-                  </Text>
-                </View>
-              </>
+                {/* Resend Options */}
+                {resendTimer > 0 ? (
+                  <View style={styles.resendRow}>
+                    <Ionicons name="time-outline" size={15} color="#6B7280" />
+                    <Text style={styles.resendTimerText}>
+                      Resend code in{" "}
+                      <Text style={styles.resendTimerHighlight}>
+                        {formatTimer(resendTimer)}
+                      </Text>
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.resendRow}>
+                    <TouchableOpacity
+                      onPress={() => handleSendOtp("whatsapp")}
+                      disabled={processing}
+                      style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                    >
+                      <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
+                      <Text style={styles.resendActionText}>
+                        Resend via WhatsApp
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  onPress={() => {
+                    setStep("phone");
+                    setResendTimer(0);
+                    setData((prev) => ({ ...prev, otp: "" }));
+                  }}
+                  style={styles.changeNumberBtn}
+                >
+                  <Text style={styles.changeNumberText}>Change phone number</Text>
+                </TouchableOpacity>
+              </View>
             )}
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+
+            {step === "success" && (
+              <View style={styles.successContainer}>
+                <View style={styles.successIcon}>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={72}
+                    color={Colors.themes.provider.primary}
+                  />
+                </View>
+                <Text style={styles.successTitle}>Welcome Back!</Text>
+                <Text style={styles.successText}>
+                  Opening your vendor portal...
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral.white,
   },
-  backgroundAccent: {
+  topSafeArea: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Platform.OS === "android" ? 12 : 0,
+    paddingBottom: 28,
+  },
+  navRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.sm,
+  },
+  circleIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerCenterLogo: {
+    width: 170,
+    height: 58,
+  },
+  brandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingRight: 110,
+    marginBottom: Spacing.xs,
+  },
+  brandInfo: {
+    maxWidth: "100%",
+  },
+  titleBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 4,
+  },
+  licensedPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.4)",
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: BorderRadius.full,
+    gap: 3,
+  },
+  licensedText: {
+    fontSize: 9.5,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  brandSubtitle: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "rgba(255, 255, 255, 0.85)",
+    marginTop: 1,
+  },
+  heroIllustrationRight: {
     position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 200,
-    backgroundColor: Colors.themes.provider.primary + "10",
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    right: -10,
+    top: Platform.OS === "android" ? 70 : 60,
+    width: 160,
+    height: 230,
+    zIndex: 10,
+  },
+  sheetContainer: {
+    flex: 1,
+    backgroundColor: Colors.neutral.white,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    overflow: "hidden",
+    ...Shadows.lg,
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: Spacing.lg,
-    paddingTop: 80, // Space for header
+    paddingTop: Spacing.xl,
     paddingBottom: Spacing.xl,
-    gap: Spacing.lg,
   },
-  formContainer: {
-    gap: Spacing.md,
+  formSection: {
     width: "100%",
   },
-  forgotPassword: {
-    alignSelf: "flex-end",
-    marginTop: -8,
-    marginBottom: 8,
-  },
-  forgotPasswordText: {
-    fontSize: 12,
-    color: Colors.themes.provider.primary,
-    fontWeight: "500",
-  },
-  footer: {
+  tabContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: Spacing.xs,
-    marginTop: Spacing.lg,
+    marginBottom: Spacing.lg,
   },
-  footerText: {
-    fontSize: 13,
-    color: Colors.text.secondary,
-  },
-  signUpText: {
-    fontSize: 13,
-    color: Colors.themes.provider.primary,
-    fontWeight: "600",
-  },
-  enableBiometric: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 8,
-  },
-  enableBiometricText: {
-    fontSize: 13,
-    color: Colors.themes.provider.primary,
-    fontWeight: "500",
-  },
-  staffInfoBox: {
-    flexDirection: "row",
+  activeTabWrapper: {
     alignItems: "flex-start",
-    backgroundColor: Colors.themes.provider.background,
-    borderRadius: 10,
-    padding: 12,
-    gap: 8,
-    marginTop: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.themes.provider.accent + "30",
   },
-  staffInfoText: {
+  tabTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#18181B",
+  },
+  tabUnderline: {
+    width: 80,
+    height: 3.5,
+    backgroundColor: Colors.themes.provider.primary,
+    borderRadius: 2,
+    marginTop: 6,
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1.2,
+    borderColor: "#E5E7EB",
+    borderRadius: 14,
+    backgroundColor: "#F9FAFB",
+    paddingHorizontal: 14,
+    height: 52,
+    marginBottom: 6,
+  },
+  inputDivider: {
+    width: 1,
+    height: 22,
+    backgroundColor: "#D1D5DB",
+    marginHorizontal: 10,
+  },
+  phoneInput: {
     flex: 1,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#18181B",
+  },
+  errorText: {
     fontSize: 12,
-    color: Colors.text.secondary,
+    color: "#DC2626",
+    marginBottom: 10,
+    marginLeft: 4,
+  },
+  smsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.themes.provider.primary,
+    height: 50,
+    borderRadius: 14,
+    marginTop: 12,
+    gap: 8,
+    ...Shadows.sm,
+  },
+  smsButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  whatsappButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#25D366",
+    height: 50,
+    borderRadius: 14,
+    marginTop: 10,
+    gap: 8,
+  },
+  whatsappButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1F2937",
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  termsText: {
+    fontSize: 12,
+    color: "#6B7280",
+    textAlign: "center",
+    marginTop: 22,
     lineHeight: 18,
   },
-  otpIconContainer: {
-    alignItems: "center",
-    marginBottom: 8,
+  termsLink: {
+    color: Colors.themes.provider.primary,
+    fontWeight: "600",
+    textDecorationLine: "underline",
+  },
+  otpSubtitle: {
+    fontSize: 14,
+    color: "#4B5563",
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  boldPhone: {
+    fontWeight: "700",
+    color: "#111827",
+  },
+  otpContainer: {
+    justifyContent: "center",
+    height: 56,
   },
   otpInput: {
+    flex: 1,
+    fontSize: 22,
+    fontWeight: "700",
+    letterSpacing: 10,
     textAlign: "center",
-    fontSize: 24,
-    letterSpacing: 8,
+    color: "#111827",
   },
-  resendButton: {
-    alignSelf: "center",
-    paddingVertical: Spacing.sm,
-  },
-  resendText: {
-    color: Colors.themes.provider.primary,
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  whatsappNote: {
+  resendRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 18,
     gap: 8,
-    paddingVertical: 12,
-    backgroundColor: "#25D366" + "10",
-    borderRadius: 8,
   },
-  whatsappNoteText: {
-    fontSize: 12,
-    color: "#25D366",
+  resendTimerText: {
+    fontSize: 13,
+    color: "#6B7280",
     fontWeight: "500",
+  },
+  resendTimerHighlight: {
+    color: Colors.themes.provider.primary,
+    fontWeight: "700",
+  },
+  resendActionText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.themes.provider.primary,
+  },
+  resendDot: {
+    color: "#9CA3AF",
+    fontSize: 14,
+  },
+  changeNumberBtn: {
+    alignSelf: "center",
+    marginTop: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  changeNumberText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6B7280",
+    textDecorationLine: "underline",
+  },
+  successContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+  successIcon: {
+    marginBottom: 16,
+  },
+  successTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#111827",
+    marginBottom: 8,
+  },
+  successText: {
+    fontSize: 14,
+    color: "#6B7280",
   },
 });

@@ -1,118 +1,201 @@
-import AlertModal from "@/components/common/AlertModal";
-import Input from "@/components/Input";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
 import useForm from "@/hooks/use-form";
-import { APP_URL } from "@/lib/api-endpoints";
+import { UPDATE_PROFILE_URL } from "@/lib/api-endpoints";
+import { compressAndSquare } from "@/lib/image";
+import getImageUrl from "@/lib/utils";
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { compressAndSquare } from "@/lib/image";
 import {
-  Image,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Toast from "react-native-toast-message";
 
-interface ProfileForm {
+type GenderOption = "male" | "female" | "other";
+
+interface ProfileFormData {
   name: string;
   email: string;
-  avatar?: File | null;
+  gender: string;
+  dob: string;
+  avatar?: any;
 }
 
 export default function EditProfilePage() {
   const { session, refetchUser } = useSession();
+  const user = session.user;
+
+  // Initial user fields
+  const initialName =
+    user?.name && !/^cus[A-Z0-9]{4,20}$/i.test(user.name) && user.name !== "Customer"
+      ? user.name
+      : "";
+
+  const isDobLocked = !!user?.dob;
+
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
-  const [alertModal, setAlertModal] = useState({
-    visible: false,
-    type: "success" as "success" | "error",
-    title: "",
-    message: "",
-  });
+  const [gender, setGender] = useState<GenderOption>(
+    (user?.gender as GenderOption) || "male"
+  );
 
-  const { data, setData, errors, processing, post } = useForm<ProfileForm>({
-    name: session.user?.name || "",
-    email: session.user?.email || "",
-    avatar: null,
-  });
-
-  const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (status !== "granted") {
-      setAlertModal({
-        visible: true,
-        type: "error",
-        title: "Permission Denied",
-        message:
-          "Sorry, we need camera roll permissions to change your profile picture.",
-      });
-      return;
+  // Date of Birth state
+  const parseInitialDob = (): Date => {
+    if (user?.dob) {
+      const parsed = new Date(user.dob);
+      if (!isNaN(parsed.getTime())) return parsed;
     }
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 22);
+    return d;
+  };
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
+  const [dobDate, setDobDate] = useState<Date>(parseInitialDob);
+  const [hasSelectedDob, setHasSelectedDob] = useState<boolean>(!!user?.dob);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const { data, setData, errors, clearErrors, processing, post } =
+    useForm<ProfileFormData>({
+      name: initialName,
+      email: user?.email || "",
+      gender: (user?.gender as string) || "male",
+      dob: user?.dob || "",
+      avatar: null,
     });
 
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      let uri = asset.uri;
+  const handlePickAvatar = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Toast.show({
+          type: "error",
+          text1: "Permission Required",
+          text2: "Gallery access is required to change profile picture.",
+        });
+        return;
+      }
 
-      // Professional Compression & Squaring for Profile
-      uri = await compressAndSquare(uri, 800, 0.85);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
 
-      setSelectedImageUri(uri);
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        let uri = result.assets[0].uri;
+        uri = await compressAndSquare(uri, 800, 0.85);
 
-      const filename = uri.split("/").pop() || "avatar.jpg";
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : "image/jpeg";
+        setSelectedImageUri(uri);
 
-      const file = {
-        uri,
-        name: filename,
-        type,
-      } as any;
+        const filename = uri.split("/").pop() || "avatar.jpg";
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : "image/jpeg";
 
-      setData("avatar", file);
+        setData("avatar", {
+          uri,
+          name: filename,
+          type,
+        } as any);
+        if (errors.avatar) clearErrors("avatar");
+      }
+    } catch (err) {
+      console.error("Avatar pick error:", err);
+      Toast.show({
+        type: "error",
+        text1: "Image Selection Failed",
+        text2: "Unable to process selected photo.",
+      });
     }
+  };
+
+  const handleGenderSelect = (selectedGender: GenderOption) => {
+    setGender(selectedGender);
+    setData("gender", selectedGender);
+    if (errors.gender) clearErrors("gender");
+  };
+
+  const handleDateValueChange = (_event: any, selectedDate?: Date) => {
+    if (Platform.OS === "android") {
+      setShowDatePicker(false);
+    }
+    if (selectedDate) {
+      setDobDate(selectedDate);
+      setHasSelectedDob(true);
+      const formatted = selectedDate.toISOString().split("T")[0];
+      setData("dob", formatted);
+      if (errors.dob) clearErrors("dob");
+    }
+  };
+
+  const formatDateDisplay = (date: Date) => {
+    if (!hasSelectedDob) return "Select date of birth";
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   };
 
   const handleSubmit = () => {
-    post(`${APP_URL}/auth/update`, {
-      onSuccess: async (response) => {
-        await refetchUser();
+    const payloadDob = hasSelectedDob
+      ? data.dob || dobDate.toISOString().split("T")[0]
+      : data.dob;
 
-        setAlertModal({
-          visible: true,
+    setData("dob", payloadDob);
+    setData("gender", gender);
+
+    post(UPDATE_PROFILE_URL, {
+      onSuccess: async (response) => {
+        await refetchUser("customer");
+        Toast.show({
           type: "success",
-          title: "Success",
-          message: response.message || "Profile updated successfully!",
+          text1: "Profile Updated",
+          text2: response?.message || "Your profile was successfully updated!",
         });
         setSelectedImageUri(null);
+        setTimeout(() => {
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace("/customer/(tabs)/settings");
+          }
+        }, 300);
       },
       onError: (error) => {
-        setAlertModal({
-          visible: true,
+        Toast.show({
           type: "error",
-          title: "Error",
-          message: error.message,
+          text1: "Update Failed",
+          text2: error?.message || "Please check the highlighted errors below.",
         });
       },
     });
   };
 
-  const displayImage = selectedImageUri || session.user?.avatar_url;
+  const displayAvatarUri = selectedImageUri
+    ? selectedImageUri
+    : user?.avatar_url
+    ? getImageUrl(user.avatar_url)
+    : null;
+
   const userInitials =
-    data.name
+    (data.name || user?.name || "U")
+      ?.trim()
       ?.split(" ")
       .map((n) => n[0])
       .join("")
@@ -121,122 +204,441 @@ export default function EditProfilePage() {
 
   return (
     <View style={styles.container}>
-      {/* Blue Header Section with Avatar */}
-      <View style={styles.headerSection}>
-        <SafeAreaView edges={["top"]} style={styles.safeArea}>
-          {/* Top Row */}
-          <View style={styles.topRow}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.backButton}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        {/* Header with Theme Gradient */}
+        <LinearGradient
+          colors={[
+            Colors.themes.customer.primary,
+            Colors.themes.customer.primaryDark,
+          ]}
+          style={styles.headerBanner}
+        >
+          <SafeAreaView edges={["top"]} style={styles.safeArea}>
+            <View style={styles.topBar}>
+              <TouchableOpacity
+                onPress={() => router.back()}
+                style={styles.backButton}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>Edit Profile</Text>
+              <View style={styles.headerPlaceholder} />
+            </View>
+
+            {/* Avatar Section */}
+            <View style={styles.avatarSection}>
+              <View style={styles.avatarWrapper}>
+                {displayAvatarUri ? (
+                  <Image
+                    source={{ uri: displayAvatarUri }}
+                    style={styles.avatarImage}
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="disk"
+                  />
+                ) : (
+                  <View style={styles.avatarFallback}>
+                    <Text style={styles.avatarInitials}>{userInitials}</Text>
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={styles.cameraBadge}
+                  onPress={handlePickAvatar}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="camera" size={15} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.userNameHeader} numberOfLines={1}>
+                {data.name || "Customer"}
+              </Text>
+              <Text style={styles.userPhoneHeader}>
+                {user?.phone || user?.email || "Tasker Customer"}
+              </Text>
+            </View>
+          </SafeAreaView>
+        </LinearGradient>
+
+        {/* Form Content */}
+        <ScrollView
+          style={styles.scrollArea}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.formCard}>
+            <Text style={styles.cardSectionTitle}>Personal Information</Text>
+
+            {/* Full Name (Required) */}
+            <View style={styles.labelRow}>
+              <Text style={styles.fieldLabel}>Full Name</Text>
+              <Text style={styles.requiredStar}>*</Text>
+            </View>
+            <View
+              style={[
+                styles.inputWrapper,
+                errors.name ? styles.inputWrapperError : null,
+              ]}
             >
               <Ionicons
-                name="arrow-back"
-                size={20}
-                color={Colors.neutral.white}
+                name="person-outline"
+                size={19}
+                color={errors.name ? "#EF4444" : "#6B7280"}
               />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Profile</Text>
-            <View style={styles.placeholder} />
-          </View>
+              <View
+                style={[
+                  styles.inputDivider,
+                  errors.name ? styles.inputDividerError : null,
+                ]}
+              />
+              <TextInput
+                style={styles.textInput}
+                placeholder="Enter your full name"
+                placeholderTextColor="#9CA3AF"
+                value={data.name}
+                onChangeText={(text) => {
+                  setData("name", text);
+                  if (errors.name) clearErrors("name");
+                }}
+                autoCapitalize="words"
+                autoCorrect={false}
+              />
+            </View>
+            {errors.name && (
+              <View style={styles.errorRow}>
+                <Ionicons name="alert-circle" size={13} color="#EF4444" />
+                <Text style={styles.errorText}>{errors.name}</Text>
+              </View>
+            )}
 
-          {/* Centered Avatar */}
-          <View style={styles.avatarSection}>
-            <View style={styles.avatarContainer}>
-              {displayImage ? (
-                <Image source={{ uri: displayImage }} style={styles.avatar} />
-              ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Text style={styles.avatarText}>{userInitials}</Text>
-                </View>
-              )}
-              <TouchableOpacity style={styles.cameraButton} onPress={pickImage}>
+            {/* Email Address (Optional) */}
+            <View style={styles.labelRow}>
+              <Text style={styles.fieldLabel}>Email Address</Text>
+              <Text style={styles.optionalTag}>(Optional)</Text>
+            </View>
+            <View
+              style={[
+                styles.inputWrapper,
+                errors.email ? styles.inputWrapperError : null,
+              ]}
+            >
+              <Ionicons
+                name="mail-outline"
+                size={19}
+                color={errors.email ? "#EF4444" : "#6B7280"}
+              />
+              <View
+                style={[
+                  styles.inputDivider,
+                  errors.email ? styles.inputDividerError : null,
+                ]}
+              />
+              <TextInput
+                style={styles.textInput}
+                placeholder="Enter email address (optional)"
+                placeholderTextColor="#9CA3AF"
+                value={data.email}
+                onChangeText={(text) => {
+                  setData("email", text);
+                  if (errors.email) clearErrors("email");
+                }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+            {errors.email && (
+              <View style={styles.errorRow}>
+                <Ionicons name="alert-circle" size={13} color="#EF4444" />
+                <Text style={styles.errorText}>{errors.email}</Text>
+              </View>
+            )}
+
+            {/* Phone Number (Readonly Linked Account) */}
+            <View style={styles.labelRow}>
+              <Text style={styles.fieldLabel}>Phone Number</Text>
+            </View>
+            <View style={[styles.inputWrapper, styles.inputWrapperDisabled]}>
+              <Ionicons name="call-outline" size={19} color="#9CA3AF" />
+              <View style={styles.inputDivider} />
+              <Text style={styles.disabledInputText}>
+                {user?.phone || "No phone linked"}
+              </Text>
+              <View style={styles.verifiedTag}>
+                <Ionicons name="shield-checkmark" size={13} color="#16A34A" />
+                <Text style={styles.verifiedTagText}>Verified</Text>
+              </View>
+            </View>
+            <Text style={styles.helperText}>
+              Phone number is tied to your account login.
+            </Text>
+
+            {/* Gender Selection */}
+            <View style={styles.labelRow}>
+              <Text style={styles.fieldLabel}>Gender</Text>
+            </View>
+            <View style={styles.genderRow}>
+              {/* Male */}
+              <TouchableOpacity
+                style={[
+                  styles.genderCard,
+                  gender === "male" && styles.genderCardActive,
+                ]}
+                onPress={() => handleGenderSelect("male")}
+                activeOpacity={0.8}
+              >
                 <Ionicons
-                  name="camera"
-                  size={14}
-                  color={Colors.neutral.white}
+                  name="man"
+                  size={19}
+                  color={
+                    gender === "male"
+                      ? Colors.themes.customer.primaryDark
+                      : "#6B7280"
+                  }
                 />
+                <Text
+                  style={[
+                    styles.genderText,
+                    gender === "male" && styles.genderTextActive,
+                  ]}
+                >
+                  Male
+                </Text>
+                {gender === "male" && (
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={15}
+                    color={Colors.themes.customer.primaryDark}
+                  />
+                )}
+              </TouchableOpacity>
+
+              {/* Female */}
+              <TouchableOpacity
+                style={[
+                  styles.genderCard,
+                  gender === "female" && styles.genderCardActive,
+                ]}
+                onPress={() => handleGenderSelect("female")}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="woman"
+                  size={19}
+                  color={
+                    gender === "female"
+                      ? Colors.themes.customer.primaryDark
+                      : "#6B7280"
+                  }
+                />
+                <Text
+                  style={[
+                    styles.genderText,
+                    gender === "female" && styles.genderTextActive,
+                  ]}
+                >
+                  Female
+                </Text>
+                {gender === "female" && (
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={15}
+                    color={Colors.themes.customer.primaryDark}
+                  />
+                )}
+              </TouchableOpacity>
+
+              {/* Other */}
+              <TouchableOpacity
+                style={[
+                  styles.genderCard,
+                  gender === "other" && styles.genderCardActive,
+                ]}
+                onPress={() => handleGenderSelect("other")}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="people-outline"
+                  size={19}
+                  color={
+                    gender === "other"
+                      ? Colors.themes.customer.primaryDark
+                      : "#6B7280"
+                  }
+                />
+                <Text
+                  style={[
+                    styles.genderText,
+                    gender === "other" && styles.genderTextActive,
+                  ]}
+                >
+                  Other
+                </Text>
+                {gender === "other" && (
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={15}
+                    color={Colors.themes.customer.primaryDark}
+                  />
+                )}
               </TouchableOpacity>
             </View>
-            <Text style={styles.profileName}>{data.name || "User"}</Text>
-            <Text style={styles.profileEmail}>
-              {session.user?.email || session.user?.phone}
-            </Text>
+            {errors.gender && (
+              <View style={styles.errorRow}>
+                <Ionicons name="alert-circle" size={13} color="#EF4444" />
+                <Text style={styles.errorText}>{errors.gender}</Text>
+              </View>
+            )}
+
+            {/* Date of Birth (Locked if already set) */}
+            <View style={styles.labelRow}>
+              <Text style={styles.fieldLabel}>Date of Birth</Text>
+              {isDobLocked && (
+                <View style={styles.lockedBadge}>
+                  <Ionicons name="lock-closed" size={11} color="#6B7280" />
+                  <Text style={styles.lockedBadgeText}>Non-changeable</Text>
+                </View>
+              )}
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.inputWrapper,
+                isDobLocked ? styles.inputWrapperDisabled : null,
+                errors.dob ? styles.inputWrapperError : null,
+              ]}
+              onPress={() => {
+                if (!isDobLocked) {
+                  setShowDatePicker(true);
+                }
+              }}
+              activeOpacity={isDobLocked ? 1 : 0.8}
+              disabled={isDobLocked}
+            >
+              <Ionicons
+                name={isDobLocked ? "lock-closed-outline" : "calendar-outline"}
+                size={19}
+                color={errors.dob ? "#EF4444" : isDobLocked ? "#9CA3AF" : "#6B7280"}
+              />
+              <View
+                style={[
+                  styles.inputDivider,
+                  errors.dob ? styles.inputDividerError : null,
+                ]}
+              />
+              <Text
+                style={[
+                  styles.textInput,
+                  isDobLocked && styles.disabledInputText,
+                  !hasSelectedDob && styles.placeholderDateText,
+                ]}
+              >
+                {formatDateDisplay(dobDate)}
+              </Text>
+              {!isDobLocked && (
+                <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
+              )}
+            </TouchableOpacity>
+            {errors.dob && (
+              <View style={styles.errorRow}>
+                <Ionicons name="alert-circle" size={13} color="#EF4444" />
+                <Text style={styles.errorText}>{errors.dob}</Text>
+              </View>
+            )}
+            {isDobLocked && (
+              <Text style={styles.helperText}>
+                Date of birth cannot be changed once saved.
+              </Text>
+            )}
           </View>
-        </SafeAreaView>
-      </View>
 
-      {/* White Content Area */}
-      <View style={styles.contentSection}>
-        <ScrollView
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {/* Form Card */}
-          <View style={styles.formCard}>
-            <Text style={styles.sectionTitle}>Personal Information</Text>
-
-            <Input
-              label="Full Name"
-              placeholder="Enter your name"
-              value={data.name}
-              onChangeText={(text) => setData("name", text)}
-              error={errors.name}
-              leftIcon={
-                <Ionicons
-                  name="person-outline"
-                  size={18}
-                  color={Colors.text.tertiary}
-                />
-              }
-            />
-
-            <Input
-              label="Email Address"
-              placeholder="Enter your email"
-              value={data.email}
-              onChangeText={(text) => setData("email", text)}
-              error={errors.email}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              leftIcon={
-                <Ionicons
-                  name="mail-outline"
-                  size={18}
-                  color={Colors.text.tertiary}
-                />
-              }
-            />
-          </View>
-
-          {/* Save Button */}
+          {/* Action Save Button */}
           <TouchableOpacity
-            style={[styles.saveButton, processing && styles.saveButtonDisabled]}
+            style={[styles.saveBtn, processing && styles.saveBtnDisabled]}
             onPress={handleSubmit}
             disabled={processing}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
           >
-            <Text style={styles.saveButtonText}>
-              {processing ? "Saving..." : "Save Changes"}
-            </Text>
+            {processing ? (
+              <View style={styles.btnRow}>
+                <ActivityIndicator color="#FFFFFF" size="small" />
+                <Text style={styles.saveBtnText}>Saving Changes...</Text>
+              </View>
+            ) : (
+              <View style={styles.btnRow}>
+                <Ionicons name="checkmark-done" size={18} color="#FFFFFF" />
+                <Text style={styles.saveBtnText}>Save Changes</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
 
-      {/* Alert Modal */}
-      <AlertModal
-        visible={alertModal.visible}
-        type={alertModal.type}
-        title={alertModal.title}
-        message={alertModal.message}
-        onClose={() => {
-          setAlertModal({ ...alertModal, visible: false });
-          if (alertModal.type === "success") {
-            router.back();
-          }
-        }}
-      />
+      {/* Android Date Picker */}
+      {Platform.OS === "android" && showDatePicker && !isDobLocked && (
+        <DateTimePicker
+          value={dobDate}
+          mode="date"
+          display="default"
+          maximumDate={new Date()}
+          minimumDate={new Date(1940, 0, 1)}
+          onValueChange={handleDateValueChange}
+          onDismiss={() => setShowDatePicker(false)}
+        />
+      )}
+
+      {/* iOS Date Picker Modal */}
+      {Platform.OS === "ios" && !isDobLocked && (
+        <Modal
+          visible={showDatePicker}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <TouchableOpacity
+            style={styles.iosModalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowDatePicker(false)}
+          >
+            <View style={styles.iosPickerContainer}>
+              <View style={styles.iosPickerHeader}>
+                <TouchableOpacity
+                  onPress={() => setShowDatePicker(false)}
+                  style={styles.iosPickerHeaderBtn}
+                >
+                  <Text style={styles.iosPickerCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <Text style={styles.iosPickerTitle}>Date of Birth</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowDatePicker(false);
+                    setHasSelectedDob(true);
+                    setData("dob", dobDate.toISOString().split("T")[0]);
+                    if (errors.dob) clearErrors("dob");
+                  }}
+                  style={styles.iosPickerHeaderBtn}
+                >
+                  <Text style={styles.iosPickerDoneText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={dobDate}
+                mode="date"
+                display="spinner"
+                maximumDate={new Date()}
+                minimumDate={new Date(1940, 0, 1)}
+                textColor="#18181B"
+                onValueChange={handleDateValueChange}
+                style={styles.iosDateTimePicker}
+              />
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -244,27 +646,29 @@ export default function EditProfilePage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background.tertiary,
+    backgroundColor: "#F8FAFC",
   },
-  headerSection: {
-    backgroundColor: Colors.themes.customer.primary,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+  keyboardAvoid: {
+    flex: 1,
+  },
+  headerBanner: {
     paddingBottom: Spacing.lg,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
   },
   safeArea: {
     paddingHorizontal: Spacing.md,
   },
-  topRow: {
+  topBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.xs,
   },
   backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: "rgba(255, 255, 255, 0.2)",
     justifyContent: "center",
     alignItems: "center",
@@ -272,103 +676,294 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: Colors.neutral.white,
+    color: "#FFFFFF",
   },
-  placeholder: {
-    width: 36,
+  headerPlaceholder: {
+    width: 38,
   },
   avatarSection: {
     alignItems: "center",
-    paddingTop: Spacing.sm,
+    paddingTop: Spacing.xs,
   },
-  avatarContainer: {
+  avatarWrapper: {
     position: "relative",
     marginBottom: Spacing.sm,
   },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  avatarImage: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     borderWidth: 3,
-    borderColor: "rgba(255, 255, 255, 0.3)",
+    borderColor: "rgba(255, 255, 255, 0.4)",
   },
-  avatarPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  avatarFallback: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     backgroundColor: "rgba(255, 255, 255, 0.25)",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 3,
-    borderColor: "rgba(255, 255, 255, 0.3)",
+    borderColor: "rgba(255, 255, 255, 0.4)",
   },
-  avatarText: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: Colors.neutral.white,
+  avatarInitials: {
+    fontSize: 30,
+    fontWeight: "800",
+    color: "#FFFFFF",
   },
-  cameraButton: {
+  cameraBadge: {
     position: "absolute",
     bottom: 0,
     right: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: Colors.themes.customer.primaryDark,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: Colors.neutral.white,
+    borderColor: "#FFFFFF",
   },
-  profileName: {
+  userNameHeader: {
     fontSize: 18,
     fontWeight: "700",
-    color: Colors.neutral.white,
+    color: "#FFFFFF",
     marginBottom: 2,
   },
-  profileEmail: {
-    fontSize: 12,
-    color: "rgba(255, 255, 255, 0.8)",
+  userPhoneHeader: {
+    fontSize: 13,
+    color: "rgba(255, 255, 255, 0.85)",
   },
-  contentSection: {
-    flex: 1,
-    marginTop: -10,
-  },
-  scrollView: {
+  scrollArea: {
     flex: 1,
   },
   scrollContent: {
     padding: Spacing.md,
+    paddingBottom: Spacing.xl,
   },
   formCard: {
-    backgroundColor: Colors.neutral.white,
-    borderRadius: 16,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: Colors.text.primary,
-    marginBottom: Spacing.md,
-  },
-  saveButton: {
-    backgroundColor: Colors.themes.customer.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    shadowColor: Colors.themes.customer.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 2,
   },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    color: Colors.neutral.white,
+  cardSectionTitle: {
     fontSize: 15,
     fontWeight: "700",
+    color: "#1E293B",
+    marginBottom: Spacing.md,
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+    marginTop: 12,
+    gap: 4,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#374151",
+  },
+  requiredStar: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#EF4444",
+  },
+  optionalTag: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#9CA3AF",
+  },
+  lockedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 6,
+  },
+  lockedBadgeText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 50,
+  },
+  inputWrapperDisabled: {
+    backgroundColor: "#F3F4F6",
+    borderColor: "#E5E7EB",
+  },
+  inputWrapperError: {
+    borderColor: "#EF4444",
+    backgroundColor: "#FEF2F2",
+  },
+  inputDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: "#E5E7EB",
+    marginHorizontal: 10,
+  },
+  inputDividerError: {
+    backgroundColor: "#FCA5A5",
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 14,
+    color: "#1F2937",
+    fontWeight: "500",
+  },
+  disabledInputText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  placeholderDateText: {
+    color: "#9CA3AF",
+  },
+  verifiedTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#DCFCE7",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  verifiedTagText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#16A34A",
+  },
+  helperText: {
+    fontSize: 11,
+    color: "#9CA3AF",
+    marginTop: 4,
+    marginLeft: 4,
+  },
+  errorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 4,
+    marginLeft: 4,
+  },
+  errorText: {
+    fontSize: 12,
+    color: "#EF4444",
+    fontWeight: "500",
+  },
+  genderRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  genderCard: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#F9FAFB",
+  },
+  genderCardActive: {
+    borderColor: Colors.themes.customer.primary,
+    backgroundColor: "#FFFBEB",
+  },
+  genderText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  genderTextActive: {
+    color: Colors.themes.customer.primaryDark,
+    fontWeight: "700",
+  },
+  saveBtn: {
+    backgroundColor: Colors.themes.customer.primary,
+    paddingVertical: 15,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: Colors.themes.customer.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  saveBtnDisabled: {
+    opacity: 0.65,
+  },
+  btnRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  saveBtnText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  iosModalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+  },
+  iosPickerContainer: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 30,
+  },
+  iosPickerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  iosPickerHeaderBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  iosPickerCancelText: {
+    fontSize: 15,
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  iosPickerTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#18181B",
+  },
+  iosPickerDoneText: {
+    fontSize: 15,
+    color: Colors.themes.customer.primary,
+    fontWeight: "700",
+  },
+  iosDateTimePicker: {
+    height: 200,
   },
 });

@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
-import { Redirect } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import Splash from "@/components/splash";
 import { useAuthStore } from "@/context/auth-store";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Redirect } from "expo-router";
+import { useEffect, useState } from "react";
 
 const ONBOARDING_KEY = "@tasker_onboarding_complete";
 
@@ -81,7 +81,7 @@ export default function Index() {
       },
       timestamp: Date.now(),
     }),
-  }).catch(() => {});
+  }).catch(() => { });
   // #endregion
 
   return <Redirect href={href as any} />;

@@ -34,7 +34,7 @@ import Toast from "react-native-toast-message";
 // Dynamic loading for OS notifications to prevent crashes in Expo Go SDK 53+
 let Notifications: any = null;
 try {
-  if (Platform.OS !== "web") {
+  if (Platform.OS !== "web" && !__DEV__) {
     Notifications = require("expo-notifications");
   }
 } catch (e) {
@@ -104,11 +104,11 @@ interface EchoContextType {
 const EchoContext = createContext<EchoContextType>({
   isConnected: false,
   connectionState: "initialized",
-  onNotification: () => () => {},
-  onWorkOrderUpdate: () => () => {},
-  onChatMessage: () => () => {},
+  onNotification: () => () => { },
+  onWorkOrderUpdate: () => () => { },
+  onChatMessage: () => () => { },
   realtimeUnreadCount: 0,
-  resetRealtimeUnread: () => {},
+  resetRealtimeUnread: () => { },
 });
 
 export function useEcho(): EchoContextType {
@@ -318,7 +318,7 @@ export function EchoProvider({ children }: PropsWithChildren) {
 
         // Show local notification (OS Popup) - Safe check for Expo Go
         try {
-          if (Platform.OS !== "web") {
+          if (Platform.OS !== "web" && Notifications?.scheduleNotificationAsync) {
             Notifications.scheduleNotificationAsync({
               content: {
                 title: event.notification.title,

@@ -2,9 +2,14 @@ import Constants from "expo-constants";
 import { useEffect, useState } from "react";
 import { Platform } from "react-native";
 
-import * as Notifications from "expo-notifications";
-
-// Notifications statically imported above.
+let Notifications: any = null;
+try {
+  if (Platform.OS !== "web" && !__DEV__) {
+    Notifications = require("expo-notifications");
+  }
+} catch (e) {
+  console.warn("[Push] expo-notifications not available in Expo Go");
+}
 export function usePushNotifications() {
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
 

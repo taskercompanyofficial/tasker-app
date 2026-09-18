@@ -6,8 +6,9 @@ import { useSession } from "@/context/ctx";
 import { ADDRESS_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
 import { Ionicons } from "@expo/vector-icons";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { router, useFocusEffect } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -42,8 +43,7 @@ export default function MyAddressesPage() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showAddressForm, setShowAddressForm] = useState(false);
-  const [editingAddress, setEditingAddress] = useState<Address | null>(null);
+  const addAddressModalRef = useRef<BottomSheetModal>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -93,20 +93,17 @@ export default function MyAddressesPage() {
     );
   };
 
-  const handleEditAddress = (address: Address) => {
-    setEditingAddress(address);
-    setShowAddressForm(true);
+  const handleAddNew = () => {
+    addAddressModalRef.current?.present();
   };
 
-  const handleAddNew = () => {
-    setEditingAddress(null);
-    setShowAddressForm(true);
+  const handleEditAddress = (_address: Address) => {
+    addAddressModalRef.current?.present();
   };
 
   const handleSaveAddress = () => {
     fetchAddresses();
-    setShowAddressForm(false);
-    setEditingAddress(null);
+    addAddressModalRef.current?.dismiss();
   };
 
   const getAddressIcon = (type: string) => {
@@ -230,13 +227,9 @@ export default function MyAddressesPage() {
         }
       />
 
-      {/* Add/Edit Address Form */}
+      {/* Add Address Form Modal */}
       <AddAddressForm
-        visible={showAddressForm}
-        onClose={() => {
-          setShowAddressForm(false);
-          setEditingAddress(null);
-        }}
+        ref={addAddressModalRef}
         onSave={handleSaveAddress}
         customer_id={session.user?.id}
       />

@@ -1,4 +1,3 @@
-import myAxios from "@/lib/axios.config";
 import { APP_LOGS_INGEST_URL } from "@/lib/api-endpoints";
 import { useAuthStore } from "@/context/auth-store";
 
@@ -33,10 +32,11 @@ const stringifyArg = (value: unknown): string => {
   }
 };
 
-const sendRemoteLog = (event: string, payload?: DebugPayload, level: string = "info") => {
-  const session = useAuthStore.getState();
-  void myAxios
-    .post(APP_LOGS_INGEST_URL, {
+const sendRemoteLog = async (event: string, payload?: DebugPayload, level: string = "info") => {
+  try {
+    const session = useAuthStore.getState();
+    const { default: myAxios } = await import("@/lib/axios.config");
+    await myAxios.post(APP_LOGS_INGEST_URL, {
       event,
       level,
       channel: "mobile-app",
@@ -45,10 +45,10 @@ const sendRemoteLog = (event: string, payload?: DebugPayload, level: string = "i
       mode: session.appMode,
       platform: "mobile",
       payload,
-    })
-    .catch(() => {
-      // Prevent logging failures from affecting app runtime.
     });
+  } catch {
+    // Prevent logging failures from affecting app runtime.
+  }
 };
 
 export function addDebugLog(event: string, payload?: DebugPayload) {

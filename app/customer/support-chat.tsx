@@ -1,528 +1,339 @@
 import Colors from "@/constants/Colors";
-import { BorderRadius, Shadows, Spacing, Typography } from "@/constants/Styles";
-import { useSession } from "@/context/ctx";
-import { useEcho } from "@/context/EchoProvider";
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import { Spacing } from "@/constants/Styles";
+import { ChatRoom } from "@/components/Chat/ChatRoom";
+import { ORDER_URL } from "@/lib/api-endpoints";
+import myAxios from "@/lib/axios.config";
+import { Order } from "@/types/order";
+import { Ionicons, MaterialCommunityIcons, FontAwesome } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
+  Linking,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
-  ActivityIndicator,
-  Linking,
-  ScrollView,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as ImagePicker from "expo-image-picker";
-import { Image } from "expo-image";
 
-const QUICK_OPTIONS = [
-  "Work Order Issue",
-  "Chat with Technician",
-  "Billing Support",
-  "Other",
-];
+export default function CustomerSupportChatHub() {
+  const params = useLocalSearchParams<{ initialWorkOrderId?: string }>();
+  const [activeWorkOrders, setActiveWorkOrders] = useState<Order[]>([]);
+  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(
+    params.initialWorkOrderId || null
+  );
 
-interface Message {
-  id: string;
-  text?: string;
-  sender: "me" | "support";
-  time: string;
-  image?: string;
-}
+  useEffect(() => {
+    fetchActiveOrders();
+  }, []);
 
-export default function CustomerSupportChat() {
-  const { session } = useSession();
-  const { isConnected } = useEcho();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      text: "Hi there! How can we help you with Tasker today?",
-      sender: "support",
-      time: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    },
-  ]);
-  const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const flatListRef = useRef<FlatList>(null);
-
-  const sendMessage = () => {
-    if (!input.trim()) return;
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: input.trim(),
-      sender: "me",
-      time: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
-    setMessages((prev) => [...prev, newMessage]);
-    setInput("");
-    simulateSupportResponse();
-  };
-
-  const sendQuickOption = (option: string) => {
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: option,
-      sender: "me",
-      time: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
-    setMessages((prev) => [...prev, newMessage]);
-    simulateSupportResponse();
-  };
-
-  const sendImageMessage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        sender: "me",
-        image: result.assets[0].uri,
-        time: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-      setMessages((prev) => [...prev, newMessage]);
-      simulateSupportResponse();
+  const fetchActiveOrders = async () => {
+    try {
+      const res = await myAxios.get(ORDER_URL);
+      const ordersList: Order[] = res.data?.data?.data || res.data?.data || [];
+      // Filter active orders
+      const active = ordersList.filter(
+        (o) => o.status === "in_progress" || o.status === "pending" || o.status === "confirmed" || o.status === "scheduled"
+      );
+      setActiveWorkOrders(active);
+    } catch (err) {
+      console.error("Failed to fetch orders for chat hub:", err);
     }
   };
 
-  const simulateSupportResponse = () => {
-    setIsTyping(true);
-    setTimeout(
-      () => {
-        const responses = [
-          "We're looking into this right now.",
-          "Could you please provide more details?",
-          "Thank you for the information. We'll get back to you shortly.",
-          "I understand. Let me check with my team.",
-          "Please hold on for a moment while I verify.",
-        ];
-        const randomResponse =
-          responses[Math.floor(Math.random() * responses.length)];
-
-        const supportMessage: Message = {
-          id: Date.now().toString(),
-          text: randomResponse,
-          sender: "support",
-          time: new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        };
-        setMessages((prev) => [...prev, supportMessage]);
-        setIsTyping(false);
-      },
-      2000 + Math.random() * 2000,
-    );
+  const handleCall = () => {
+    Linking.openURL("tel:03041112717").catch(() => {});
   };
 
-  useEffect(() => {
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  }, [messages, isTyping]);
+  const handleWhatsApp = () => {
+    Linking.openURL("https://wa.me/923041112717").catch(() => {});
+  };
 
-  const renderMessage = ({ item }: { item: Message }) => (
-    <View
-      style={[
-        styles.messageRow,
-        item.sender === "me" ? styles.myMessageRow : styles.supportMessageRow,
-      ]}
-    >
-      {item.sender === "support" && (
-        <View style={styles.avatarContainer}>
-          <Ionicons
-            name="headset"
-            size={16}
-            color={Colors.themes.customer.primary}
+  const isSupportDesk = !selectedWorkOrderId;
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      {/* App Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={24} color={Colors.text.primary} />
+        </TouchableOpacity>
+
+        <View style={styles.avatarWrapper}>
+          {isSupportDesk ? (
+            <Image
+              source={require("@/assets/images/tasker-ai-avatar.jpg")}
+              style={styles.avatarImg}
+            />
+          ) : (
+            <View
+              style={[
+                styles.avatar,
+                { backgroundColor: "#3B82F6" },
+              ]}
+            >
+              <Ionicons
+                name="construct"
+                size={18}
+                color="#FFFFFF"
+              />
+            </View>
+          )}
+          <View style={styles.onlineBadge} />
+        </View>
+
+        <View style={styles.headerTextContainer}>
+          <View style={styles.headerTitleRow}>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {isSupportDesk ? "Tasky • AI Chat Support" : `Order #${selectedWorkOrderId}`}
+            </Text>
+            <MaterialCommunityIcons
+              name="check-decagram"
+              size={14}
+              color={Colors.themes.customer.primary}
+            />
+          </View>
+          <View style={styles.statusRow}>
+            <View style={styles.statusDot} />
+            <Text style={styles.headerSubtitle}>
+              {isSupportDesk ? "⚡ Live 24/7 AI Assistant • Instant Reply" : "Direct Order Chat"}
+            </Text>
+          </View>
+        </View>
+
+        {/* Quick Action Buttons */}
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.callBtn]}
+            onPress={handleCall}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="call" size={15} color={Colors.themes.customer.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.whatsappBtn]}
+            onPress={handleWhatsApp}
+            activeOpacity={0.7}
+          >
+            <FontAwesome name="whatsapp" size={16} color="#25D366" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Active Complaints / Work Order Selector Bar if active orders exist */}
+      {activeWorkOrders.length > 0 && (
+        <View style={styles.selectorBar}>
+          <ScrollViewHorizontalSelector
+            orders={activeWorkOrders}
+            selectedId={selectedWorkOrderId}
+            onSelect={(id) => setSelectedWorkOrderId(id)}
           />
         </View>
       )}
-      <View
-        style={[
-          styles.bubble,
-          item.sender === "me" ? styles.myBubble : styles.supportBubble,
-          item.image ? styles.imageBubble : null,
-        ]}
-      >
-        {item.image ? (
-          <Image
-            source={{ uri: item.image }}
-            style={styles.messageImage}
-            contentFit="cover"
-          />
-        ) : null}
-        {item.text ? (
-          <Text
-            style={[
-              styles.messageText,
-              item.sender === "me"
-                ? styles.myMessageText
-                : styles.supportMessageText,
-              item.image ? { marginTop: Spacing.xs } : null,
-            ]}
-          >
-            {item.text}
-          </Text>
-        ) : null}
-        <Text
-          style={[
-            styles.timeText,
-            item.sender === "me" ? styles.myTimeText : styles.supportTimeText,
-          ]}
-        >
-          {item.time}
-        </Text>
-      </View>
-    </View>
-  );
 
-  return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="chevron-back" size={28} color={Colors.text.primary} />
-        </TouchableOpacity>
-
-        <View style={styles.headerAvatarContainer}>
-          <Ionicons
-            name="headset"
-            size={24}
-            color={Colors.neutral.white}
-            style={styles.headerAvatarIcon}
-          />
-          <View
-            style={[
-              styles.onlineIndicator,
-              !isConnected && { backgroundColor: Colors.error },
-            ]}
-          />
-        </View>
-
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerTitle}>Tasker Support</Text>
-          <Text style={styles.headerStatus}>
-            {isConnected ? "Online" : "Offline"}
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          style={styles.headerActionButton}
-          onPress={() => Linking.openURL("tel:03041112717")}
-        >
-          <Ionicons name="call-outline" size={22} color={Colors.text.primary} />
-        </TouchableOpacity>
-      </View>
-
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-      >
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          renderItem={renderMessage}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ListFooterComponent={
-            isTyping ? (
-              <View style={[styles.messageRow, styles.supportMessageRow]}>
-                <View style={styles.avatarContainer}>
-                  <Ionicons
-                    name="headset"
-                    size={16}
-                    color={Colors.themes.customer.primary}
-                  />
-                </View>
-                <View
-                  style={[
-                    styles.bubble,
-                    styles.supportBubble,
-                    {
-                      paddingVertical: Spacing.md,
-                      paddingHorizontal: Spacing.lg,
-                    },
-                  ]}
-                >
-                  <ActivityIndicator
-                    size="small"
-                    color={Colors.themes.customer.primary}
-                  />
-                </View>
-              </View>
-            ) : null
-          }
+      {/* Real-Time Chat Room */}
+      <View style={{ flex: 1 }}>
+        <ChatRoom
+          key={selectedWorkOrderId || "support"}
+          workOrderId={selectedWorkOrderId || undefined}
+          hideHeader={true}
         />
+      </View>
+    </SafeAreaView>
+  );
+}
 
-        <View style={styles.quickOptionsWrap}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.quickOptionsScroll}
-          >
-            {QUICK_OPTIONS.map((option, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.quickOptionChip}
-                onPress={() => sendQuickOption(option)}
-              >
-                <Text style={styles.quickOptionText}>{option}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+function ScrollViewHorizontalSelector({
+  orders,
+  selectedId,
+  onSelect,
+}: {
+  orders: Order[];
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
+}) {
+  return (
+    <FlatList
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      data={[{ id: null, order_number: "Tasker Support" }, ...orders]}
+      keyExtractor={(item) => (item.id ? item.id.toString() : "support")}
+      contentContainerStyle={styles.selectorContent}
+      renderItem={({ item }) => {
+        const isSupportTab = item.id === null;
+        const isSelected = isSupportTab
+          ? selectedId === null
+          : selectedId === item.id.toString() || selectedId === item.order_number;
 
-        <View style={styles.inputArea}>
-          <TouchableOpacity
-            style={styles.attachButton}
-            onPress={sendImageMessage}
-          >
-            <Ionicons
-              name="add-circle-outline"
-              size={28}
-              color={Colors.text.secondary}
-            />
-          </TouchableOpacity>
-
-          <View style={styles.textInputContainer}>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Type your message..."
-              placeholderTextColor={Colors.text.tertiary}
-              value={input}
-              onChangeText={setInput}
-              multiline
-              maxLength={1000}
-            />
-          </View>
-
+        return (
           <TouchableOpacity
             style={[
-              styles.sendButton,
-              !input.trim() && { backgroundColor: Colors.neutral.gray[200] },
+              styles.selectorChip,
+              isSelected && styles.selectorChipSelected,
             ]}
-            onPress={sendMessage}
-            disabled={!input.trim()}
+            onPress={() =>
+              onSelect(isSupportTab ? null : item.id.toString())
+            }
+            activeOpacity={0.7}
           >
             <Ionicons
-              name="send"
-              size={18}
-              color={input.trim() ? Colors.neutral.white : Colors.text.tertiary}
+              name={isSupportTab ? "sparkles" : "construct"}
+              size={13}
+              color={isSelected ? Colors.neutral.white : Colors.text.secondary}
             />
+            <Text
+              style={[
+                styles.selectorText,
+                isSelected && styles.selectorTextSelected,
+              ]}
+            >
+              {isSupportTab
+                ? "Tasky AI"
+                : `#${item.order_number || item.id}`}
+            </Text>
           </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        );
+      }}
+    />
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral.gray[50], // Slightly off-white background
+    backgroundColor: "#F8FAFC",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: Spacing.md,
-    backgroundColor: Colors.neutral.white,
-    ...Shadows.sm,
-    zIndex: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   backButton: {
-    marginRight: Spacing.sm,
-    padding: Spacing.xs,
+    padding: 4,
+    marginRight: 8,
   },
-  headerAvatarContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.themes.customer.primary,
+  avatarWrapper: {
+    position: "relative",
+    marginRight: 10,
+  },
+  avatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: Spacing.md,
-    position: "relative",
   },
-  headerAvatarIcon: {
-    marginLeft: 2,
+  avatarImg: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
   },
-  onlineIndicator: {
+  onlineBadge: {
     position: "absolute",
     bottom: 0,
-    right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.success,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#22C55E",
     borderWidth: 2,
-    borderColor: Colors.neutral.white,
+    borderColor: "#FFFFFF",
   },
-  headerInfo: {
+  headerTextContainer: {
     flex: 1,
+  },
+  headerTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   headerTitle: {
-    fontSize: Typography.sizes.lg,
-    fontWeight: Typography.weights.bold,
-    color: Colors.text.primary,
-    marginBottom: 2,
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#0F172A",
   },
-  headerStatus: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.text.secondary,
-  },
-  headerActionButton: {
-    padding: Spacing.sm,
-  },
-  listContent: {
-    padding: Spacing.sm,
-    paddingBottom: Spacing.lg,
-  },
-  messageRow: {
-    marginBottom: Spacing.sm,
+  statusRow: {
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
   },
-  myMessageRow: {
-    justifyContent: "flex-end",
+  statusDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: "#22C55E",
   },
-  supportMessageRow: {
-    justifyContent: "flex-start",
+  headerSubtitle: {
+    fontSize: 11,
+    color: "#64748B",
+    fontWeight: "500",
   },
-  avatarContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.themes.customer.primaryLight,
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginLeft: 6,
+  },
+  actionBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: Spacing.sm,
-  },
-  bubble: {
-    maxWidth: "80%",
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.lg,
-    ...Shadows.sm,
-  },
-  imageBubble: {
-    padding: Spacing.xs,
-  },
-  myBubble: {
-    backgroundColor: Colors.themes.customer.primary,
-    borderBottomRightRadius: 4,
-  },
-  supportBubble: {
-    backgroundColor: Colors.neutral.white,
-    borderBottomLeftRadius: 4,
-  },
-  messageImage: {
-    width: 220,
-    height: 220,
-    borderRadius: BorderRadius.lg,
-  },
-  messageText: {
-    fontSize: Typography.sizes.sm,
-    lineHeight: 20,
-  },
-  myMessageText: {
-    color: Colors.neutral.white,
-  },
-  supportMessageText: {
-    color: Colors.text.primary,
-  },
-  timeText: {
-    fontSize: 10,
-    marginTop: 4,
-    alignSelf: "flex-end",
-  },
-  myTimeText: {
-    color: Colors.neutral.white,
-    opacity: 0.7,
-  },
-  supportTimeText: {
-    color: Colors.text.tertiary,
-  },
-  inputArea: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    padding: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.neutral.white,
-    ...Shadows.sm,
-  },
-  quickOptionsWrap: {
-    backgroundColor: Colors.neutral.gray[50],
-    paddingBottom: Spacing.xs,
-  },
-  quickOptionsScroll: {
-    paddingHorizontal: Spacing.md,
-    gap: Spacing.sm,
-  },
-  quickOptionChip: {
-    backgroundColor: Colors.themes.customer.background,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full,
     borderWidth: 1,
-    borderColor: Colors.themes.customer.primaryLight,
   },
-  quickOptionText: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.themes.customer.primaryDark,
-    fontWeight: Typography.weights.medium,
+  callBtn: {
+    backgroundColor: "#F0FDF4",
+    borderColor: "#DCFCE7",
   },
-  attachButton: {
-    padding: Spacing.sm,
-    marginRight: Spacing.xs,
-    marginBottom: 2,
+  whatsappBtn: {
+    backgroundColor: "#F0FDF4",
+    borderColor: "#DCFCE7",
   },
-  textInputContainer: {
-    flex: 1,
-    backgroundColor: Colors.neutral.gray[100],
-    borderRadius: BorderRadius.xl,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Platform.OS === "ios" ? 12 : Spacing.sm,
-    marginRight: Spacing.sm,
-    maxHeight: 120,
+  selectorBar: {
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+    paddingVertical: 8,
   },
-  textInput: {
-    fontSize: Typography.sizes.sm,
-    color: Colors.text.primary,
-    maxHeight: 100,
+  selectorContent: {
+    paddingHorizontal: 12,
+    gap: 8,
   },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.themes.customer.primary,
-    justifyContent: "center",
+  selectorChip: {
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 1,
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 18,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  selectorChipSelected: {
+    backgroundColor: Colors.themes.customer.primary,
+    borderColor: Colors.themes.customer.primary,
+  },
+  selectorText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  selectorTextSelected: {
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
 });

@@ -33,9 +33,9 @@ export default function TrendingServiceCard({ item }: Props) {
       : null;
   const discountEndText = discountEnd
     ? discountEnd.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      })
+      month: "short",
+      day: "numeric",
+    })
     : null;
   return (
     <TouchableOpacity
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     width: 280,
     height: 120,
     borderRadius: BorderRadius.sm,
-    backgroundColor: Colors.neutral.white,
+    backgroundColor: Colors.background.tertiary,
     borderWidth: 0.3,
     borderColor: Colors.border.light,
     flexDirection: "row",

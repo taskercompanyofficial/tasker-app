@@ -4,30 +4,39 @@ import ServicesCard from '@/components/home/services-card'
 import Loader from '@/components/Loader'
 import TrendingServicesCarousel from '@/components/services/TrendingServicesCarousel'
 import Colors from '@/constants/Colors'
-import { Spacing, Typography, BorderRadius, Shadows } from '@/constants/Styles'
+import { BorderRadius, Shadows, Spacing, Typography } from '@/constants/Styles'
 import { useFetchTrendingParentServices } from '@/hooks/useFetchTrendingParentServices'
 import { GET_CATEGORIES_URL } from '@/lib/api-endpoints'
 import myAxios from '@/lib/axios.config'
 import { Category } from '@/types/category'
+import { FontAwesome, Ionicons } from '@expo/vector-icons'
 import { router, useLocalSearchParams } from 'expo-router'
-import React, { useEffect, useState } from 'react'
-import { RefreshControl, ScrollView, StyleSheet, View, Text, TouchableOpacity } from 'react-native'
+import { useEffect, useState } from 'react'
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Ionicons, FontAwesome } from '@expo/vector-icons'
+
+let lastKnownSlug: string | null = null;
 
 export default function Index() {
-    const { slug } = useLocalSearchParams<{ slug: string }>()
-    
+    const params = useLocalSearchParams<{ slug: string }>();
+    const slug = params.slug || lastKnownSlug;
+
+    useEffect(() => {
+        if (params.slug) {
+            lastKnownSlug = params.slug;
+        }
+    }, [params.slug]);
+
     useEffect(() => {
         if (!slug) {
-            router.replace('/customer/index')
+            router.replace('/customer/index');
         }
-    }, [slug])
+    }, [slug]);
 
     const [category, setCategory] = useState<Category | null>(null)
     const [loading, setLoading] = useState(true)
     const { data: trending, loading: trendingLoading } = useFetchTrendingParentServices(10)
-    
+
     const refresh = () => {
         setLoading(true)
         fetchCategory()
@@ -70,7 +79,7 @@ export default function Index() {
                 style={styles.scrollView}
                 contentContainerStyle={styles.scrollContent}
             >
-                <PromotionalCarousel />
+                {!isComingSoon && <PromotionalCarousel />}
 
                 {isComingSoon ? (
                     <View style={styles.comingSoonContainer}>
@@ -82,7 +91,7 @@ export default function Index() {
                             <Text style={styles.comingSoonSubtitle}>
                                 We are working hard to bring {category?.name || 'this category'} to your doorstep. Stay tuned for updates!
                             </Text>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={styles.notifyButton}
                                 onPress={() => router.push('/customer/(tabs)/services')}
                             >
@@ -94,16 +103,17 @@ export default function Index() {
                 ) : (
                     <ServicesCard data={category || undefined} />
                 )}
-
-                <TrendingServicesCarousel
-                    items={trending || []}
-                    loading={trendingLoading}
-                    onViewAll={() => router.push('/customer/(tabs)/services')}
-                />
+                {!isComingSoon &&
+                    <TrendingServicesCarousel
+                        items={trending || []}
+                        loading={trendingLoading}
+                        onViewAll={() => router.push('/customer/(tabs)/services')}
+                    />
+                }
             </ScrollView>
 
             {/* Floating Support Button */}
-            <TouchableOpacity 
+            <TouchableOpacity
                 style={styles.floatingButton}
                 onPress={() => router.push('/customer/support-chat')}
             >
@@ -117,7 +127,7 @@ export default function Index() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.neutral.gray[100],
+        backgroundColor: Colors.background.primary,
     },
     scrollView: {
         flex: 1,
@@ -130,11 +140,11 @@ const styles = StyleSheet.create({
         paddingVertical: Spacing.xl,
     },
     comingSoonCard: {
-        backgroundColor: Colors.neutral.white,
+        backgroundColor: Colors.background.secondary,
         borderRadius: BorderRadius.md,
         padding: Spacing.xl,
         alignItems: 'center',
-        borderWidth: 1,
+        borderWidth: 0.4,
         borderColor: Colors.border.light,
         gap: Spacing.md,
     },

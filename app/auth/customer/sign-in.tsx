@@ -1,21 +1,23 @@
-import Button from "@/components/Button";
-import Input from "@/components/Input";
-import BackButtonHeader from "@/components/auth/BackButtonHeader";
-import LoginHeader from "@/components/auth/LoginHeader";
 import Colors from "@/constants/Colors";
-import { Spacing, Shadows } from "@/constants/Styles";
+import { BorderRadius, Shadows, Spacing } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
 import useForm from "@/hooks/use-form";
 import { OTP_URL, OTP_VERIFY_URL } from "@/lib/api-endpoints";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -28,29 +30,51 @@ export default function Signin() {
   const { signIn } = useSession();
   const router = useRouter();
   const [step, setStep] = useState<Step>("phone");
+  const [sendMethod, setSendMethod] = useState<"sms" | "whatsapp">("whatsapp");
+  const [resendTimer, setResendTimer] = useState(0);
 
   const { data, setData, processing, errors, post } = useForm({
     phone: "",
     source: "tasker-app",
     otp: "",
     intent: "login",
+    channel: "whatsapp",
   });
 
-  // Phone stored in 0302 format in database - send as-is
-  const formattedPhone = data.phone.replace(/\D/g, "");
-  const isValidPhone = /^03\d{9}$/.test(data.phone) || /^\+92[0-9]{10}$/.test(data.phone);
+  const handlePhoneChange = (text: string) => {
+    // Only allow digits and a single leading '+'
+    let cleaned = text.replace(/[^\d+]/g, "").replace(/(?!^)\+/g, "");
+
+    // If Android SIM suggestion returns 923... without '+', auto prepend '+'
+    if (cleaned.startsWith("923") && !cleaned.startsWith("+")) {
+      cleaned = "+" + cleaned;
+    }
+
+    // Max length: 13 if starts with '+', otherwise 11 digits
+    const maxLen = cleaned.startsWith("+") ? 13 : 11;
+    if (cleaned.length > maxLen) {
+      cleaned = cleaned.slice(0, maxLen);
+    }
+
+    setData((prev) => ({ ...prev, phone: cleaned }));
+  };
+
+  const isValidPhone =
+    /^03\d{9}$/.test(data.phone) || /^\+92\d{10}$/.test(data.phone);
   const isValidOtp = /^\d{6}$/.test(data.otp);
 
-  const handleSendOtp = () => {
-    // Send phone as-is (0302 format stored in database)
-    const phoneToSend = data.phone.replace(/\D/g, "");
-    setData((prev) => ({ ...prev, phone: phoneToSend }));
+  const handleSendOtp = (channel: "sms" | "whatsapp" = "whatsapp") => {
+    setSendMethod(channel);
+    const phoneToSend = data.phone.trim();
+    setData((prev) => ({ ...prev, phone: phoneToSend, channel }));
+
     post(OTP_URL, {
       onSuccess: (response) => {
         setStep("otp");
+        setResendTimer(90);
         Toast.show({
           type: "success",
-          text1: response?.message || "OTP sent successfully",
+          text1: response?.message || "OTP sent via WhatsApp successfully",
         });
       },
       onError: (error) => {
@@ -71,10 +95,13 @@ export default function Signin() {
       }) => {
         setStep("success");
         await signIn(response.token, "customer");
-        router.replace("/customer");
+        if (response.isNew) {
+          router.replace("/auth/customer/complete-profile");
+        } else {
+          router.replace("/customer");
+        }
       },
       onError: (error) => {
-        // Clear OTP to prevent auto-submit useEffect from re-triggering
         setData((prev) => ({ ...prev, otp: "" }));
         Toast.show({
           type: "error",
@@ -82,6 +109,25 @@ export default function Signin() {
         });
       },
     });
+  };
+
+  // Countdown timer for resend OTP (90 seconds)
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (step === "otp" && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [step, resendTimer]);
+
+  const formatTimer = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
   // Auto-submit OTP when 6 digits entered
@@ -94,165 +140,266 @@ export default function Signin() {
   const handleBackPress = () => {
     if (step === "otp") {
       setStep("phone");
+      setResendTimer(0);
       setData((prev) => ({ ...prev, otp: "" }));
     } else {
       router.replace("/auth/role-selection");
     }
   };
 
-  const getTitle = () => {
-    if (step === "phone") return "Welcome Back!";
-    if (step === "otp") return "Verify OTP";
-    return "Success";
-  };
-
-  const getSubtitle = () => {
-    if (step === "phone") return "Enter your WhatsApp number to continue";
-    if (step === "otp") return `We sent a 6-digit code to ${data.phone}`;
-    return "Redirecting to your dashboard...";
+  const openUrl = (url: string) => {
+    Linking.openURL(url).catch(() => { });
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* Background Accent */}
-      <View style={styles.backgroundAccent} />
+    <LinearGradient
+      colors={[
+        Colors.themes.customer.primaryLight,
+        Colors.themes.customer.primary,
+        Colors.themes.customer.accent,
+      ]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.container}
+    >
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-      {/* Header - Transparent */}
-      <BackButtonHeader
-        title="Customer Login"
-        onBackPress={handleBackPress}
-        backgroundColor="transparent"
-      />
+      <SafeAreaView edges={["top"]} style={styles.topSafeArea}>
+        {/* Nav Icons with Center Logo */}
+        <View style={styles.navRow}>
+          <TouchableOpacity
+            onPress={handleBackPress}
+            style={styles.circleIconButton}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={22} color="#18181B" />
+          </TouchableOpacity>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Login Header - No Icon */}
-          <LoginHeader
-            title={getTitle()}
-            subtitle={getSubtitle()}
-            theme="customer"
-            hideIcon
+          <Image
+            source={require("@/assets/images/tasker-logo.png")}
+            style={styles.headerCenterLogo}
+            resizeMode="contain"
           />
 
-          {/* Form */}
-          <View style={styles.formContainer}>
+          <TouchableOpacity
+            onPress={() => openUrl("tel:+923000000000")}
+            style={styles.circleIconButton}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="headset" size={20} color="#18181B" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Brand Header on Left */}
+        <View style={styles.brandRow}>
+          <View style={styles.brandInfo}>
+            <View style={styles.titleBadgeRow}>
+              <View style={styles.licensedPill}>
+                <Ionicons
+                  name="shield-checkmark"
+                  size={12}
+                  color={Colors.themes.customer.primaryDark}
+                />
+                <Text style={styles.licensedText}>Verified Experts</Text>
+              </View>
+            </View>
+            <Text style={styles.brandSubtitle}>Get your service in minutes</Text>
+          </View>
+        </View>
+      </SafeAreaView>
+
+      {/* Customer Illustration Positioned on Right Overlapping Sheet */}
+      <Image
+        source={require("@/assets/images/customer-booking-hero.png")}
+        style={styles.heroIllustrationRight}
+        resizeMode="contain"
+      />
+
+      {/* Main Content White Sheet with Smooth Rounded Top */}
+      <View style={styles.sheetContainer}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             {step === "phone" && (
-              <>
-                <Input
-                  label="WhatsApp Number"
-                  placeholder="03XXXXXXXXX"
-                  value={data.phone}
-                  onChangeText={(text) =>
-                    setData((prev) => ({ ...prev, phone: text }))
-                  }
-                  keyboardType="phone-pad"
-                  error={errors.phone}
-                  leftIcon={
-                    <Ionicons
-                      name="logo-whatsapp"
-                      size={20}
-                      color={Colors.themes.customer.primary}
-                    />
-                  }
-                />
-
-                <Button
-                  title={processing ? "Sending OTP..." : "Continue with WhatsApp"}
-                  onPress={handleSendOtp}
-                  fullWidth
-                  loading={processing}
-                  disabled={!isValidPhone}
-                  theme="customer"
-                />
-
-                {/* Divider */}
-                <View style={styles.dividerContainer}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>OR</Text>
-                  <View style={styles.dividerLine} />
+              <View style={styles.formSection}>
+                {/* Active Tab Heading (OTP Login only) */}
+                <View style={styles.tabContainer}>
+                  <View style={styles.activeTabWrapper}>
+                    <Text style={styles.tabTitle}>Sign in</Text>
+                    <View style={styles.tabUnderline} />
+                  </View>
                 </View>
 
-                {/* Social Login Buttons - Row Layout */}
-                <View style={styles.socialRow}>
-                  <TouchableOpacity
-                    style={styles.socialButtonRow}
-                    onPress={() => console.log("Google sign in")}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.socialIcon, { backgroundColor: "#EA4335" }]}>
-                      <Ionicons name="logo-google" size={22} color="#FFFFFF" />
-                    </View>
-                    <Text style={styles.socialTextRow}>Google</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.socialButtonRow}
-                    onPress={() => console.log("Facebook sign in")}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.socialIcon, { backgroundColor: "#1877F2" }]}>
-                      <Ionicons name="logo-facebook" size={22} color="#FFFFFF" />
-                    </View>
-                    <Text style={styles.socialTextRow}>Facebook</Text>
-                  </TouchableOpacity>
+                {/* Phone Input Box */}
+                <View style={styles.inputContainer}>
+                  <Ionicons name="call-outline" size={20} color="#6B7280" />
+                  <View style={styles.inputDivider} />
+                  <TextInput
+                    style={styles.phoneInput}
+                    placeholder="Enter phone number"
+                    placeholderTextColor="#9CA3AF"
+                    value={data.phone}
+                    onChangeText={handlePhoneChange}
+                    keyboardType="phone-pad"
+                    autoComplete="tel"
+                    textContentType="telephoneNumber"
+                    importantForAutofill="yes"
+                    autoCorrect={false}
+                    maxLength={data.phone.startsWith("+") ? 13 : 11}
+                    autoFocus={false}
+                  />
                 </View>
-              </>
+                {errors.phone && (
+                  <Text style={styles.errorText}>{errors.phone}</Text>
+                )}
+
+                {/* Send via WhatsApp Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.smsButton,
+                    (!isValidPhone || processing) && styles.buttonDisabled,
+                  ]}
+                  activeOpacity={0.88}
+                  disabled={!isValidPhone || processing}
+                  onPress={() => handleSendOtp("whatsapp")}
+                >
+                  {processing && sendMethod === "whatsapp" ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons
+                        name="logo-whatsapp"
+                        size={21}
+                        color="#25D366"
+                      />
+                      <Text style={styles.smsButtonText}>
+                        Send via WhatsApp
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                {/* Terms and Privacy Policy */}
+                <Text style={styles.termsText}>
+                  By proceeding you agree to{" "}
+                  <Text
+                    style={styles.termsLink}
+                    onPress={() =>
+                      openUrl("https://taskercompany.com/privacy-policy")
+                    }
+                  >
+                    Privacy Policy
+                  </Text>{" "}
+                  and{" "}
+                  <Text
+                    style={styles.termsLink}
+                    onPress={() =>
+                      openUrl("https://taskercompany.com/terms")
+                    }
+                  >
+                    Terms & Conditions
+                  </Text>
+                  .
+                </Text>
+              </View>
             )}
 
             {step === "otp" && (
-              <>
-                {/* WhatsApp Icon */}
-                <View style={styles.whatsappIconContainer}>
-                  <Ionicons name="logo-whatsapp" size={48} color="#25D366" />
+              <View style={styles.formSection}>
+                <View style={styles.tabContainer}>
+                  <View style={styles.activeTabWrapper}>
+                    <Text style={styles.tabTitle}>Verify OTP</Text>
+                    <View style={styles.tabUnderline} />
+                  </View>
                 </View>
 
-                <Input
-                  label="Enter 6-Digit Code"
-                  placeholder="000000"
-                  value={data.otp}
-                  onChangeText={(text) =>
-                    setData((prev) => ({ ...prev, otp: text }))
-                  }
-                  keyboardType="number-pad"
-                  maxLength={6}
-                  error={errors.otp}
-                  textContentType="oneTimeCode"
-                  autoComplete="sms-otp"
-                  style={styles.otpInput}
-                />
+                <Text style={styles.otpSubtitle}>
+                  Enter the 6-digit code sent to{" "}
+                  <Text style={styles.boldPhone}>{data.phone}</Text>
+                </Text>
 
-                <Button
-                  title={processing ? "Verifying..." : "Verify & Continue"}
-                  onPress={handleVerifyOtp}
-                  fullWidth
-                  loading={processing}
-                  disabled={!isValidOtp}
-                />
+                {/* OTP Input */}
+                <View style={[styles.inputContainer, styles.otpContainer]}>
+                  <TextInput
+                    style={styles.otpInput}
+                    placeholder="• • • • • •"
+                    placeholderTextColor="#D1D5DB"
+                    value={data.otp}
+                    onChangeText={(text) =>
+                      setData((prev) => ({
+                        ...prev,
+                        otp: text.replace(/\D/g, ""),
+                      }))
+                    }
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    autoFocus
+                  />
+                </View>
+                {errors.otp && (
+                  <Text style={styles.errorText}>{errors.otp}</Text>
+                )}
 
+                {/* Verify Button */}
                 <TouchableOpacity
-                  onPress={handleSendOtp}
-                  style={styles.resendButton}
+                  style={[
+                    styles.smsButton,
+                    (!isValidOtp || processing) && styles.buttonDisabled,
+                  ]}
+                  activeOpacity={0.88}
+                  disabled={!isValidOtp || processing}
+                  onPress={handleVerifyOtp}
                 >
-                  <Text style={styles.resendText}>Resend Code</Text>
+                  {processing ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Text style={styles.smsButtonText}>Verify & Continue</Text>
+                  )}
                 </TouchableOpacity>
+
+                {/* Resend Options */}
+                {resendTimer > 0 ? (
+                  <View style={styles.resendRow}>
+                    <Ionicons name="time-outline" size={15} color="#6B7280" />
+                    <Text style={styles.resendTimerText}>
+                      Resend code in{" "}
+                      <Text style={styles.resendTimerHighlight}>
+                        {formatTimer(resendTimer)}
+                      </Text>
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.resendRow}>
+                    <TouchableOpacity
+                      onPress={() => handleSendOtp("whatsapp")}
+                      disabled={processing}
+                      style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                    >
+                      <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
+                      <Text style={styles.resendActionText}>
+                        Resend via WhatsApp
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
 
                 <TouchableOpacity
                   onPress={() => {
                     setStep("phone");
+                    setResendTimer(0);
                     setData((prev) => ({ ...prev, otp: "" }));
                   }}
-                  style={styles.changeNumberButton}
+                  style={styles.changeNumberBtn}
                 >
-                  <Text style={styles.changeNumberText}>Change number</Text>
+                  <Text style={styles.changeNumberText}>Change phone number</Text>
                 </TouchableOpacity>
-              </>
+              </View>
             )}
 
             {step === "success" && (
@@ -260,8 +407,8 @@ export default function Signin() {
                 <View style={styles.successIcon}>
                   <Ionicons
                     name="checkmark-circle"
-                    size={80}
-                    color={Colors.success}
+                    size={72}
+                    color={Colors.themes.customer.primary}
                   />
                 </View>
                 <Text style={styles.successTitle}>Welcome Back!</Text>
@@ -270,132 +417,288 @@ export default function Signin() {
                 </Text>
               </View>
             )}
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral.white,
   },
-  backgroundAccent: {
+  topSafeArea: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Platform.OS === "android" ? 12 : 0,
+    paddingBottom: 28,
+  },
+  navRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.sm,
+  },
+  circleIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerCenterLogo: {
+    width: 140,
+    height: 38,
+  },
+  brandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingRight: 110,
+    marginBottom: Spacing.xs,
+  },
+  brandInfo: {
+    maxWidth: "100%",
+  },
+  titleBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 4,
+  },
+  brandLogoBox: {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    backgroundColor: "transparent",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  brandTitle: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: "#18181B",
+    letterSpacing: 0.5,
+  },
+  licensedPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.88)",
+    borderWidth: 1,
+    borderColor: Colors.themes.customer.accent,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: BorderRadius.full,
+    gap: 3,
+  },
+  licensedText: {
+    fontSize: 9.5,
+    fontWeight: "700",
+    color: Colors.themes.customer.primaryDark,
+  },
+  brandSubtitle: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#374151",
+    marginTop: 1,
+  },
+  heroIllustrationRight: {
     position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 200,
-    backgroundColor: Colors.themes.customer.primary + "10",
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    right: -10,
+    top: Platform.OS === "android" ? 45 : 40,
+    width: 170,
+    height: 260,
+    zIndex: 10,
+  },
+  sheetContainer: {
+    flex: 1,
+    backgroundColor: Colors.neutral.white,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    overflow: "hidden",
+    ...Shadows.lg,
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: Spacing.lg,
-    paddingTop: 80, // Space for header
+    paddingTop: Spacing.xl,
     paddingBottom: Spacing.xl,
-    gap: Spacing.lg,
   },
-  formContainer: {
-    gap: Spacing.md,
+  formSection: {
     width: "100%",
   },
-  otpInput: {
-    textAlign: "center",
-    fontSize: 24,
-    letterSpacing: 8,
-  },
-  whatsappIconContainer: {
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  socialRow: {
+  tabContainer: {
     flexDirection: "row",
-    gap: Spacing.md,
-    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: Spacing.lg,
   },
-  socialButtonRow: {
+  activeTabWrapper: {
+    alignItems: "flex-start",
+  },
+  tabTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#18181B",
+  },
+  tabUnderline: {
+    width: 76,
+    height: 3.5,
+    backgroundColor: Colors.themes.customer.primary,
+    borderRadius: 2,
+    marginTop: 6,
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1.2,
+    borderColor: "#E5E7EB",
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    height: 56,
+    paddingHorizontal: 16,
+    marginBottom: Spacing.md,
+  },
+  inputDivider: {
+    width: 1,
+    height: 22,
+    backgroundColor: "#E5E7EB",
+    marginHorizontal: 12,
+  },
+  phoneInput: {
     flex: 1,
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#18181B",
+    letterSpacing: 0.5,
+    paddingVertical: 0,
+  },
+  errorText: {
+    fontSize: 12,
+    color: Colors.error,
+    marginTop: -8,
+    marginBottom: Spacing.sm,
+    marginLeft: 4,
+  },
+  smsButton: {
+    backgroundColor: "#18181B",
+    borderRadius: 14,
+    height: 54,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    padding: Spacing.sm,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border.light,
-    backgroundColor: Colors.neutral.white,
-    gap: Spacing.sm,
+    gap: 10,
+    marginTop: 6,
     ...Shadows.sm,
   },
-  socialIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
+  smsButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
   },
-  socialTextRow: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.text.primary,
-  },
-  dividerContainer: {
+  whatsappButton: {
+    backgroundColor: "#F3F4F6",
+    borderRadius: 14,
+    height: 54,
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: Spacing.sm,
-    gap: Spacing.md,
+    justifyContent: "center",
+    gap: 10,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.border.light,
+  whatsappButtonText: {
+    color: "#18181B",
+    fontSize: 16,
+    fontWeight: "700",
   },
-  dividerText: {
-    fontSize: 12,
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  termsText: {
+    fontSize: 11.5,
+    color: "#6B7280",
+    lineHeight: 18,
+    marginTop: 18,
+  },
+  termsLink: {
+    color: Colors.themes.customer.primaryDark,
+    textDecorationLine: "underline",
     fontWeight: "600",
-    color: Colors.text.tertiary,
-    textTransform: "uppercase",
-    letterSpacing: 1,
   },
-  changeNumberButton: {
-    alignSelf: "center",
-    paddingVertical: Spacing.sm,
+  otpSubtitle: {
+    fontSize: 13,
+    color: "#6B7280",
+    marginBottom: Spacing.md,
   },
-  changeNumberText: {
-    color: Colors.themes.customer.primary,
-    fontSize: 14,
+  boldPhone: {
+    fontWeight: "700",
+    color: "#18181B",
+  },
+  otpContainer: {
+    justifyContent: "center",
+  },
+  otpInput: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 22,
+    fontWeight: "700",
+    letterSpacing: 8,
+    color: "#18181B",
+  },
+  resendRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: Spacing.lg,
+  },
+  resendTimerText: {
+    fontSize: 13,
+    color: "#6B7280",
     fontWeight: "500",
   },
-  resendButton: {
-    alignSelf: "center",
-    paddingVertical: Spacing.sm,
+  resendTimerHighlight: {
+    color: Colors.themes.customer.primaryDark,
+    fontWeight: "700",
   },
-  resendText: {
-    color: Colors.themes.customer.primary,
-    fontSize: 14,
+  resendActionText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: Colors.themes.customer.primaryDark,
+  },
+  resendDot: {
+    color: "#9CA3AF",
+  },
+  changeNumberBtn: {
+    alignSelf: "center",
+    marginTop: Spacing.sm,
+    paddingVertical: 6,
+  },
+  changeNumberText: {
+    fontSize: 13,
+    color: "#6B7280",
     fontWeight: "500",
   },
   successContainer: {
     alignItems: "center",
-    paddingVertical: Spacing.xxl,
+    paddingVertical: Spacing.xl,
   },
   successIcon: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   successTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: Colors.text.primary,
-    marginBottom: Spacing.sm,
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#18181B",
+    marginBottom: 4,
   },
   successText: {
     fontSize: 13,
-    color: Colors.text.secondary,
-    textAlign: "center",
-    lineHeight: 20,
-    maxWidth: 280,
+    color: "#6B7280",
   },
 });
+
+

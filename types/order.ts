@@ -5,8 +5,11 @@ export interface Order {
   order_number: string;
   order_date: string;
   notes: string | null;
-  payment_method: "cash" | "card" | "wallet";
-  payment_status: "pending" | "paid" | "partially_paid" | "refunded" | "failed";
+  extra_number?: string | null;
+  reminders?: string | null;
+  attachments?: string[] | null;
+  payment_method: "cash" | "card" | "wallet" | "online" | string;
+  payment_status: "pending" | "paid" | "partially_paid" | "refunded" | "failed" | string;
   total_amount: number;
   paid_amount: number;
   discount_amount: number;

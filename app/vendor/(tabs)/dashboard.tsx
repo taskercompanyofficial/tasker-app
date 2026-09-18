@@ -9,7 +9,7 @@ import {
 } from "@/lib/api-endpoints";
 import axios from "@/lib/axios.config";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {

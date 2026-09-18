@@ -1,5 +1,5 @@
 import Colors from "@/constants/Colors";
-import { Spacing, BorderRadius, Typography, Shadows } from "@/constants/Styles";
+import { BorderRadius, Spacing, Typography } from "@/constants/Styles";
 import { BACKEND_URL, GET_CATEGORIES_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
 import { Category } from "@/types/category";
@@ -14,8 +14,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Loader from "../Loader";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Loader from "../Loader";
 
 const { width } = Dimensions.get("window");
 const CARD_GAP = Spacing.sm;
@@ -45,7 +45,63 @@ export default function CategoriesCards() {
     const imageUrl = item.image ? `${BACKEND_URL}/storage/${item.image}` : null;
     const tagCount = Array.isArray(item.tags) ? item.tags.length : 0;
     const cardWidth = isFullWidth ? SINGLE_CARD_WIDTH : DOUBLE_CARD_WIDTH;
-    const isComingSoon = (item.status || "").toLowerCase() === "comming-soon";
+
+    if (isFullWidth) {
+      return (
+        <TouchableOpacity
+          key={item.id}
+          style={[styles.card, styles.cardFullWidth, { width: cardWidth }]}
+          activeOpacity={0.8}
+          onPress={() => router.push(`/customer/(tabs)/${item.slug}` as any)}
+        >
+          {/* Background decorative elements */}
+          <View style={styles.decoCircle1} />
+          <View style={styles.decoCircle2} />
+
+          {/* Left Content */}
+          <View style={styles.contentFullWidth}>
+            <Text style={styles.categoryNameFull} numberOfLines={1}>
+              {item.name}
+            </Text>
+            {item.description && (
+              <Text style={styles.description} numberOfLines={2}>
+                {item.description}
+              </Text>
+            )}
+
+            {/* Tags Badge */}
+            {tagCount > 0 && (
+              <View style={styles.tagBadge}>
+                <Ionicons name="pricetag" size={8} color={Colors.themes.customer.primary} />
+                <Text style={styles.tagCount}>{tagCount} services</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Right Image */}
+          <View style={styles.imageContainerFull}>
+            {imageUrl ? (
+              <Image
+                source={{ uri: imageUrl }}
+                style={styles.image}
+                resizeMode="contain"
+              />
+            ) : (
+              <View style={[styles.image, styles.placeholderImage]}>
+                <Ionicons
+                  name="image-outline"
+                  size={24}
+                  color={Colors.text.tertiary}
+                />
+              </View>
+            )}
+          </View>
+
+          {/* Status Indicator */}
+          {item.status === "active" && <View style={styles.activeIndicator} />}
+        </TouchableOpacity>
+      );
+    }
 
     return (
       <TouchableOpacity
@@ -54,13 +110,12 @@ export default function CategoriesCards() {
         activeOpacity={0.8}
         onPress={() => router.push(`/customer/(tabs)/${item.slug}` as any)}
       >
+        {/* Background decorative elements */}
+        <View style={styles.decoCircle1} />
+        <View style={styles.decoCircle2} />
+
         {/* Image */}
-        <View
-          style={[
-            styles.imageContainer,
-            isFullWidth && styles.imageContainerFull,
-          ]}
-        >
+        <View style={styles.imageContainer}>
           {imageUrl ? (
             <Image
               source={{ uri: imageUrl }}
@@ -71,7 +126,7 @@ export default function CategoriesCards() {
             <View style={[styles.image, styles.placeholderImage]}>
               <Ionicons
                 name="image-outline"
-                size={isFullWidth ? 32 : 20}
+                size={20}
                 color={Colors.text.tertiary}
               />
             </View>
@@ -80,23 +135,12 @@ export default function CategoriesCards() {
 
         {/* Content */}
         <View style={styles.content}>
-          <Text
-            style={[
-              styles.categoryName,
-              isFullWidth && styles.categoryNameFull,
-            ]}
-            numberOfLines={1}
-          >
+          <Text style={styles.categoryName} numberOfLines={1}>
             {item.name}
           </Text>
           {item.description && (
-            <Text
-              style={styles.description}
-              numberOfLines={isFullWidth ? 2 : 1}
-            >
-              {isFullWidth
-                ? item.description
-                : item.description.slice(0, 20).concat("...")}
+            <Text style={styles.description} numberOfLines={1}>
+              {item.description.slice(0, 20).concat("...")}
             </Text>
           )}
 
@@ -108,8 +152,6 @@ export default function CategoriesCards() {
             </View>
           )}
         </View>
-
-        
 
         {/* Status Indicator */}
         {item.status === "active" && <View style={styles.activeIndicator} />}
@@ -125,9 +167,6 @@ export default function CategoriesCards() {
     );
   }
 
-  // Smart grid: 1 category = full width, 2+ = 2 per row
-  const isSingleCategory = categories.length === 1;
-
   return (
     <View style={styles.container}>
       {categories.length === 0 ? (
@@ -139,23 +178,29 @@ export default function CategoriesCards() {
           />
           <Text style={styles.emptyText}>No categories available</Text>
         </View>
-      ) : isSingleCategory ? (
-        // Single category - full width
-        <View style={styles.listContent}>
-          {renderCategoryCard(categories[0], true)}
-        </View>
       ) : (
-        // Multiple categories - 2 per row grid
         <View style={styles.listContent}>
           {categories.reduce((rows: React.ReactElement[], category, index) => {
             if (index % 2 === 0) {
               // Start a new row
-              const rowItems = categories.slice(index, index + 2);
-              rows.push(
-                <View key={`row-${index}`} style={styles.row}>
-                  {rowItems.map((item) => renderCategoryCard(item, false))}
-                </View>,
-              );
+              const isLastItem = index === categories.length - 1;
+
+              if (isLastItem) {
+                // If it's the last item and odd, render it full width
+                rows.push(
+                  <View key={`row-${index}`} style={styles.row}>
+                    {renderCategoryCard(category, true)}
+                  </View>
+                );
+              } else {
+                // Normal pair of items
+                const rowItems = categories.slice(index, index + 2);
+                rows.push(
+                  <View key={`row-${index}`} style={styles.row}>
+                    {rowItems.map((item) => renderCategoryCard(item, false))}
+                  </View>
+                );
+              }
             }
             return rows;
           }, [])}
@@ -169,7 +214,6 @@ const styles = StyleSheet.create({
   container: {
     marginTop: Spacing.sm,
     flex: 1,
-    height: "100%",
   },
   listContent: {
     paddingHorizontal: Spacing.md,
@@ -181,12 +225,49 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   card: {
-    backgroundColor: Colors.neutral.white,
-    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.background.tertiary,
+    borderRadius: BorderRadius.md,
     overflow: "hidden",
-    ...Shadows.sm,
     position: "relative",
     paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+  },
+  cardFullWidth: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    minHeight: 85,
+  },
+  contentFullWidth: {
+    flex: 1,
+    paddingRight: Spacing.sm,
+  },
+  imageContainerFull: {
+    width: 65,
+    height: 65,
+    borderRadius: BorderRadius.sm,
+  },
+  decoCircle1: {
+    position: "absolute",
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "rgba(0,0,0,0.03)",
+    top: -20,
+    right: -20,
+  },
+  decoCircle2: {
+    position: "absolute",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(0,0,0,0.02)",
+    bottom: -15,
+    right: 40,
   },
   cardDisabled: {
     opacity: 0.75,
@@ -195,11 +276,7 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 60,
     position: "relative",
-    // backgroundColor: Colors.neutral.gray[100],
     borderRadius: BorderRadius.sm,
-  },
-  imageContainerFull: {
-    height: 100,
   },
   image: {
     width: "100%",
@@ -211,38 +288,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  comingSoonOverlay: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    backgroundColor: Colors.neutral.white,
-    opacity: 0.6,
-  },
-  comingSoonTag: {
-    position: "absolute",
-    left: Spacing.sm,
-    right: Spacing.sm,
-    bottom: Spacing.xs,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.sm,
-    backgroundColor: Colors.neutral.gray[100],
-    borderWidth: 1,
-    borderColor: Colors.border.light,
-  },
-  comingSoonTagText: {
-    fontSize: Typography.sizes.xs,
-    fontWeight: Typography.weights.semibold,
-    color: Colors.text.primary,
-  },
   content: {
-    padding: Spacing.xs,
+    paddingTop: Spacing.xs,
   },
   categoryName: {
     fontSize: Typography.sizes.xs,
@@ -252,18 +299,21 @@ const styles = StyleSheet.create({
   },
   categoryNameFull: {
     fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.bold,
+    color: Colors.text.primary,
+    marginBottom: 2,
   },
   description: {
     fontSize: 10,
     color: Colors.text.tertiary,
-    lineHeight: 12,
+    lineHeight: 13,
     marginBottom: Spacing.xs,
   },
   tagBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 2,
-    backgroundColor: Colors.themes.customer.primary + "10",
+    gap: 3,
+    backgroundColor: Colors.themes.customer.primary + "15",
     paddingHorizontal: Spacing.xs,
     paddingVertical: 2,
     borderRadius: BorderRadius.sm,

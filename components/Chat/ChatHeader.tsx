@@ -1,6 +1,6 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { View, Text, StyleSheet, TouchableOpacity, Image, Linking } from "react-native";
+import { Ionicons, MaterialCommunityIcons, FontAwesome } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Colors from "@/constants/Colors";
 import { AppConversationParticipant } from "@/types/chat";
@@ -8,30 +8,66 @@ import { AppConversationParticipant } from "@/types/chat";
 interface ChatHeaderProps {
   partner: AppConversationParticipant | null;
   onPressProfile?: () => void;
+  isSupport?: boolean;
 }
 
-export function ChatHeader({ partner, onPressProfile }: ChatHeaderProps) {
-  if (!partner) return null;
+export function ChatHeader({ partner, onPressProfile, isSupport = false }: ChatHeaderProps) {
+  const displayName = isSupport
+    ? "Tasky • AI Assistant"
+    : partner?.display_name || "Tasker Support";
+
+  const subtitle = isSupport
+    ? "⚡ Instant AI Support • 24/7"
+    : "Online • Tasker Company";
+
+  const handleCall = () => {
+    Linking.openURL("tel:03041112717").catch((err) =>
+      console.warn("Cannot dial phone:", err)
+    );
+  };
+
+  const handleWhatsApp = () => {
+    Linking.openURL("https://wa.me/923041112717").catch((err) =>
+      console.warn("Cannot open WhatsApp:", err)
+    );
+  };
 
   return (
     <View style={styles.header}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+      <TouchableOpacity
+        onPress={() => router.back()}
+        style={styles.backButton}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
         <Ionicons name="chevron-back" size={24} color={Colors.text.primary} />
       </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={styles.profileContainer} 
+      <TouchableOpacity
+        style={styles.profileContainer}
         onPress={onPressProfile}
         activeOpacity={0.7}
       >
         <View style={styles.avatarWrapper}>
-          {partner.avatar_url ? (
+          {isSupport ? (
+            <Image
+              source={require("@/assets/images/tasker-ai-avatar.jpg")}
+              style={styles.avatar}
+            />
+          ) : partner?.avatar_url ? (
             <Image source={{ uri: partner.avatar_url }} style={styles.avatar} />
           ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <Text style={styles.avatarText}>
-                {partner.display_name?.charAt(0).toUpperCase()}
-              </Text>
+            <View
+              style={[
+                styles.avatar,
+                styles.avatarPlaceholder,
+                { backgroundColor: Colors.themes.customer.primary },
+              ]}
+            >
+              <Ionicons
+                name="construct"
+                size={18}
+                color="#FFFFFF"
+              />
             </View>
           )}
           <View style={styles.onlineBadge} />
@@ -40,25 +76,36 @@ export function ChatHeader({ partner, onPressProfile }: ChatHeaderProps) {
         <View style={styles.infoContainer}>
           <View style={styles.nameRow}>
             <Text style={styles.name} numberOfLines={1}>
-              {partner.display_name}
+              {displayName}
             </Text>
-            {partner.is_verified && (
-              <MaterialCommunityIcons name="check-decagram" size={16} color="#3B82F6" style={styles.verifiedIcon} />
-            )}
+            <MaterialCommunityIcons
+              name="check-decagram"
+              size={15}
+              color={Colors.themes.customer.primary}
+              style={styles.verifiedIcon}
+            />
           </View>
           <View style={styles.statusRow}>
             <View style={styles.statusDot} />
-            <Text style={styles.statusText}>Online</Text>
+            <Text style={styles.statusText}>{subtitle}</Text>
           </View>
         </View>
       </TouchableOpacity>
 
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="call-outline" size={20} color={Colors.text.secondary} />
+        <TouchableOpacity
+          style={[styles.actionButton, styles.callButton]}
+          onPress={handleCall}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="call" size={16} color={Colors.themes.customer.primary} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="ellipsis-vertical" size={20} color={Colors.text.secondary} />
+        <TouchableOpacity
+          style={[styles.actionButton, styles.whatsappButton]}
+          onPress={handleWhatsApp}
+          activeOpacity={0.7}
+        >
+          <FontAwesome name="whatsapp" size={17} color="#25D366" />
         </TouchableOpacity>
       </View>
     </View>
@@ -69,19 +116,19 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-    elevation: 1,
+    borderBottomColor: "#F1F5F9",
+    elevation: 2,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 1.5,
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   backButton: {
-    padding: 3,
+    padding: 4,
     marginRight: 6,
   },
   profileContainer: {
@@ -93,71 +140,82 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#F3F4F6",
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#F1F5F9",
   },
   avatarPlaceholder: {
-    alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.themes.customer.primary + "15",
-  },
-  avatarText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: Colors.themes.customer.primary,
+    alignItems: "center",
   },
   onlineBadge: {
     position: "absolute",
-    bottom: 1,
-    right: 1,
+    bottom: 0,
+    right: 0,
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#10B981",
+    backgroundColor: "#22C55E",
     borderWidth: 2,
     borderColor: "#FFFFFF",
   },
   infoContainer: {
     marginLeft: 10,
+    flex: 1,
   },
   nameRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 4,
   },
   name: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
-    color: Colors.text.primary,
-    maxWidth: 170,
+    color: "#0F172A",
   },
   verifiedIcon: {
-    marginLeft: 4,
+    marginTop: 1,
   },
   statusRow: {
-    marginTop: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    marginTop: 2,
+    gap: 4,
   },
   statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#10B981",
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: "#22C55E",
   },
   statusText: {
-    fontSize: 10,
-    color: Colors.text.tertiary,
+    fontSize: 11,
+    color: "#64748B",
     fontWeight: "500",
   },
   actions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
   },
   actionButton: {
-    padding: 3,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#F8FAFC",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  callButton: {
+    backgroundColor: "#F0FDF4",
+    borderColor: "#DCFCE7",
+  },
+  whatsappButton: {
+    backgroundColor: "#F0FDF4",
+    borderColor: "#DCFCE7",
   },
 });
+

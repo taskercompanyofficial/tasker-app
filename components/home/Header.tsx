@@ -1,27 +1,27 @@
 import Colors from "@/constants/Colors";
 import { Spacing, Typography } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
-import { useEcho } from "@/context/EchoProvider";
 import { ADDRESS_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
 import getImageUrl from "@/lib/utils";
 import { Ionicons } from "@expo/vector-icons";
+import {
+  BottomSheetBackdrop,
+  BottomSheetFlatList,
+  BottomSheetModal,
+} from "@gorhom/bottom-sheet";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  FlatList,
-  Modal,
-  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import NotificationBell from "../common/NotificationBell";
 import AddAddressForm from "./AddAddressForm";
-
 interface Address {
   id: number;
   customer_id: number;
@@ -44,13 +44,27 @@ interface Address {
 
 export default function HomeHeader() {
   const { session } = useSession();
-  const { isConnected, connectionState } = useEcho();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [userAddresses, setUserAddresses] = useState<Address[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
-  const [showAddressSheet, setShowAddressSheet] = useState(false);
-  const [showAddressForm, setShowAddressForm] = useState(false);
+
+  // Bottom Sheet hooks
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const addAddressFormRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ["50%", "75%"], []);
+
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        pressBehavior="close"
+      />
+    ),
+    []
+  );
 
   const fetchAddress = async () => {
     try {
@@ -94,30 +108,11 @@ export default function HomeHeader() {
     }));
     setUserAddresses(updatedAddresses);
     setSelectedAddress(address);
-    setShowAddressSheet(false);
+    bottomSheetModalRef.current?.dismiss();
   };
 
   const handleSaveAddress = () => {
     fetchAddress();
-  };
-
-  const ConnectionStatus = () => {
-    const isLive = isConnected;
-    const isConnecting =
-      connectionState === "connecting" || connectionState === "initialized";
-    const dotColor = isLive
-      ? Colors.success
-      : isConnecting
-        ? "#F59E0B"
-        : Colors.error;
-    const label = isLive ? "Live" : isConnecting ? "..." : "Offline";
-
-    return (
-      <View style={styles.statusBadge}>
-        <View style={[styles.statusDot, { backgroundColor: dotColor }]} />
-        <Text style={[styles.statusText, { color: dotColor }]}>{label}</Text>
-      </View>
-    );
   };
 
   const renderAddressItem = ({ item }: { item: Address }) => (
@@ -210,15 +205,10 @@ export default function HomeHeader() {
 
           {/* User Info */}
           <View style={styles.userInfo}>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-            >
-              <Text style={styles.greeting}>Hi, {firstName}! 👋</Text>
-              <ConnectionStatus />
-            </View>
+            <Text style={styles.greeting}>Hi, {firstName}! 👋</Text>
             <TouchableOpacity
               style={styles.addressRow}
-              onPress={() => setShowAddressSheet(true)}
+              onPress={() => bottomSheetModalRef.current?.present()}
               activeOpacity={0.7}
             >
               <Ionicons
@@ -240,90 +230,66 @@ export default function HomeHeader() {
           </View>
         </View>
         <View style={styles.rightSection}>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => router.push("/customer/support-chat")}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="chatbubbles-outline"
-              size={18}
-              color="#4F46E5"
-            />
-          </TouchableOpacity>
           <NotificationBell />
         </View>
       </View>
 
       {/* Address Bottom Sheet */}
-      <Modal
-        visible={showAddressSheet}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowAddressSheet(false)}
+      <BottomSheetModal
+        ref={bottomSheetModalRef}
+        snapPoints={snapPoints}
+        enableDynamicSizing={false}
+        backdropComponent={renderBackdrop}
+        index={0}
+        backgroundStyle={{ backgroundColor: Colors.neutral.white, borderRadius: 20 }}
+        handleIndicatorStyle={{ backgroundColor: Colors.neutral.gray[300], width: 36 }}
       >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowAddressSheet(false)}
-        >
-          <Pressable
-            style={[
-              styles.bottomSheet,
-              { paddingBottom: Math.max(insets.bottom, 12) },
-            ]}
-            onPress={(e) => e.stopPropagation()}
-          >
-            {/* Handle Bar */}
-            <View style={styles.handleBar} />
-
-            {/* Header */}
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Select Address</Text>
-              <TouchableOpacity
-                onPress={() => setShowAddressSheet(false)}
-                style={styles.closeButton}
-              >
-                <Ionicons name="close" size={20} color={Colors.text.primary} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Address List */}
-            <FlatList
-              data={userAddresses}
-              renderItem={renderAddressItem}
-              keyExtractor={(item) => item.id.toString()}
-              contentContainerStyle={[
-                styles.addressList,
-                { paddingBottom: Math.max(insets.bottom, Spacing.xl) },
-              ]}
-              ListEmptyComponent={
-                <Text style={styles.emptyAddressText}>No addresses found</Text>
-              }
-            />
-
-            {/* Add New Address */}
+        <View style={{ flex: 1, paddingBottom: Math.max(insets.bottom, 12) }}>
+          {/* Header */}
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>Select Address</Text>
             <TouchableOpacity
-              style={styles.addAddressButton}
-              onPress={() => {
-                setShowAddressSheet(false);
-                setTimeout(() => setShowAddressForm(true), 300);
-              }}
+              onPress={() => bottomSheetModalRef.current?.dismiss()}
+              style={styles.closeButton}
             >
-              <Ionicons
-                name="add-circle"
-                size={18}
-                color={Colors.themes.customer.primary}
-              />
-              <Text style={styles.addAddressText}>Add New Address</Text>
+              <Ionicons name="close" size={20} color={Colors.text.primary} />
             </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
+          </View>
+
+          {/* Address List */}
+          <BottomSheetFlatList
+            data={userAddresses}
+            renderItem={renderAddressItem as any}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={[
+              styles.addressList,
+              { paddingBottom: Math.max(insets.bottom, Spacing.xl) },
+            ]}
+            ListEmptyComponent={
+              <Text style={styles.emptyAddressText}>No addresses found</Text>
+            }
+            ListFooterComponent={
+              <TouchableOpacity
+                style={styles.addAddressButton}
+                onPress={() => {
+                  addAddressFormRef.current?.present();
+                }}
+              >
+                <Ionicons
+                  name="add-circle"
+                  size={18}
+                  color={Colors.themes.customer.primary}
+                />
+                <Text style={styles.addAddressText}>Add New Address</Text>
+              </TouchableOpacity>
+            }
+          />
+        </View>
+      </BottomSheetModal>
 
       {/* Add Address Form */}
       <AddAddressForm
-        visible={showAddressForm}
-        onClose={() => setShowAddressForm(false)}
+        ref={addAddressFormRef}
         onSave={handleSaveAddress}
         customer_id={session.user?.id}
       />
@@ -338,9 +304,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    backgroundColor: Colors.neutral.white,
+    backgroundColor: Colors.background.tertiary,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.light,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    marginBottom: Spacing.sm,
   },
   leftSection: {
     flexDirection: "row",
@@ -408,7 +377,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 20,
-    maxHeight: "70%",
   },
   handleBar: {
     width: 36,
@@ -512,24 +480,5 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: Colors.text.primary,
     textAlign: "center",
-  },
-  statusBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#F1F5F9",
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  statusDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-  },
-  statusText: {
-    fontSize: 8,
-    fontWeight: "800",
-    textTransform: "uppercase",
   },
 });

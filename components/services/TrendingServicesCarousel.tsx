@@ -2,7 +2,7 @@ import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import type { ParentService } from "@/types/parent-service";
 import React from "react";
-import { FlatList, StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import TrendingServiceCard from "./TrendingServiceCard";
 
 type Props = {

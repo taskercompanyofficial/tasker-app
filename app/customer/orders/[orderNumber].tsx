@@ -2,9 +2,10 @@ import Loader from "@/components/Loader";
 import { FloatingChatButton } from "@/components/Chat/FloatingChatButton";
 import CancelOrderModal from "@/components/orders/CancelOrderModal";
 import ContactSupportModal from "@/components/orders/ContactSupportModal";
+import RescheduleModal from "@/components/orders/RescheduleModal";
 import ReviewModal from "@/components/orders/ReviewModal";
 import Colors from "@/constants/Colors";
-import { Spacing, BorderRadius, Shadows, Typography } from "@/constants/Styles";
+import { Spacing } from "@/constants/Styles";
 import { WORK_ORDER_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
 import { Order, OrderItem } from "@/types/order";
@@ -13,6 +14,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  Image,
+  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -31,7 +34,9 @@ export default function OrderDetailsPage() {
   const [cancelling, setCancelling] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [reviewPrompted, setReviewPrompted] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (orderNumber) {
@@ -41,12 +46,23 @@ export default function OrderDetailsPage() {
 
   const fetchOrderDetails = async () => {
     try {
-      const res = await myAxios.get(`${WORK_ORDER_URL}/${orderNumber}`);
-      const data = res.data.data;
-      setOrder(data);
-      if (data.status === "completed" && !data.has_review && !reviewPrompted) {
-        setReviewPrompted(true);
-        setTimeout(() => setShowReviewModal(true), 500);
+      let data = null;
+      try {
+        const res = await myAxios.get(`${WORK_ORDER_URL}/${orderNumber}`);
+        data = res.data?.data;
+      } catch (e) {
+        // Fallback for numeric ID / order number mismatch
+        const res = await myAxios.get(`${WORK_ORDER_URL}?search=${orderNumber}`);
+        const items = res.data?.data?.data || res.data?.data || [];
+        data = items.find((o: Order) => o.order_number === orderNumber || o.id === Number(orderNumber)) || items[0] || null;
+      }
+
+      if (data) {
+        setOrder(data);
+        if (data.status === "completed" && !data.has_review && !reviewPrompted) {
+          setReviewPrompted(true);
+          setTimeout(() => setShowReviewModal(true), 500);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch order details:", error);
@@ -61,25 +77,39 @@ export default function OrderDetailsPage() {
     fetchOrderDetails();
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusTheme = (status: string) => {
     switch (status) {
       case "completed":
-        return "#10B981";
+        return { color: "#059669", bg: "#ECFDF5", icon: "checkmark-circle" as const };
       case "in_progress":
-        return "#3B82F6";
+        return { color: "#2563EB", bg: "#EFF6FF", icon: "time" as const };
       case "pending":
-        return "#F59E0B";
+        return { color: "#D97706", bg: "#FEF3C7", icon: "hourglass" as const };
       case "cancelled":
-        return Colors.error;
+        return { color: Colors.error, bg: "#FEF2F2", icon: "close-circle" as const };
       default:
-        return Colors.text.secondary;
+        return { color: Colors.text.secondary, bg: Colors.neutral.gray[100], icon: "information-circle" as const };
+    }
+  };
+
+  const getStatusStepIndex = (status: string) => {
+    if (status === "cancelled") return -1;
+    switch (status) {
+      case "pending":
+        return 0;
+      case "in_progress":
+        return 1;
+      case "completed":
+        return 2;
+      default:
+        return 0;
     }
   };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
       case "pending":
-        return "Allocated";
+        return "Order Placed";
       case "in_progress":
         return "In Progress";
       case "completed":
@@ -92,6 +122,7 @@ export default function OrderDetailsPage() {
   };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return "";
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
       month: "short",
@@ -101,11 +132,25 @@ export default function OrderDetailsPage() {
   };
 
   const formatTime = (timeString: string) => {
+    if (!timeString) return "";
     const [hours, minutes] = timeString.split(":");
     const hour = parseInt(hours);
     const ampm = hour >= 12 ? "PM" : "AM";
     const displayHour = hour % 12 || 12;
     return `${displayHour}:${minutes} ${ampm}`;
+  };
+
+  const getPaymentMethodLabel = (method?: string) => {
+    switch (method?.toLowerCase()) {
+      case "card":
+        return "Debit / Credit Card";
+      case "wallet":
+        return "Tasker Wallet";
+      case "online":
+        return "Online Bank Transfer";
+      default:
+        return "Cash on Delivery";
+    }
   };
 
   const handleCancelOrder = async (reason: string) => {
@@ -153,209 +198,318 @@ export default function OrderDetailsPage() {
     return (
       <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color={Colors.text.tertiary} />
           <Text style={styles.errorText}>Order not found</Text>
+          <TouchableOpacity style={styles.backHomeBtn} onPress={() => router.back()}>
+            <Text style={styles.backHomeText}>Go Back</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
+  const statusTheme = getStatusTheme(order.status);
+  const currentStep = getStatusStepIndex(order.status);
+  const steps = [
+    { label: "Booked", icon: "document-text-outline" },
+    { label: "In Progress", icon: "construct-outline" },
+    { label: "Completed", icon: "checkmark-circle-outline" },
+  ];
+
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      {/* App Bar */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+          <Ionicons name="chevron-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Order Details</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Order #{order.order_number}</Text>
+          <Text style={styles.headerSubtitle}>
+            {formatDate(order.order_date)}
+          </Text>
+        </View>
         <TouchableOpacity
           onPress={() => router.push(`/customer/order-chat/${order.id}`)}
           style={styles.headerChatButton}
         >
-          <FontAwesome name="whatsapp" size={24} color="#25D366" />
+          <FontAwesome name="whatsapp" size={22} color="#25D366" />
         </TouchableOpacity>
       </View>
 
       <ScrollView
         style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <View style={styles.statusCard}>
-          <View style={styles.statusHeader}>
+        {/* Status Hero Card */}
+        <View style={styles.heroCard}>
+          <View style={styles.heroTopRow}>
             <View>
-              <Text style={styles.orderNumberLabel}>Order Number</Text>
-              <Text style={styles.orderNumber}>{order.order_number}</Text>
-            </View>
-            <View
-              style={[
-                styles.statusBadge,
-                { backgroundColor: getStatusColor(order.status) + "15" },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.statusText,
-                  { color: getStatusColor(order.status) },
-                ]}
-              >
+              <Text style={styles.heroLabel}>STATUS</Text>
+              <Text style={[styles.heroStatusTitle, { color: statusTheme.color }]}>
                 {getStatusLabel(order.status)}
               </Text>
             </View>
+            <View style={[styles.statusBadge, { backgroundColor: statusTheme.bg }]}>
+              <Ionicons name={statusTheme.icon} size={16} color={statusTheme.color} />
+              <Text style={[styles.statusText, { color: statusTheme.color }]}>
+                {order.status.toUpperCase()}
+              </Text>
+            </View>
           </View>
-          <View style={styles.dateRow}>
-            <Ionicons
-              name="calendar-outline"
-              size={16}
-              color={Colors.text.tertiary}
-            />
-            <Text style={styles.dateText}>
-              Placed on {formatDate(order.order_date)}
-            </Text>
-          </View>
+
+          {/* Stepper Timeline (if not cancelled) */}
+          {order.status !== "cancelled" && (
+            <View style={styles.stepperContainer}>
+              {steps.map((step, idx) => {
+                const isActive = idx <= currentStep;
+                const isCurrent = idx === currentStep;
+                return (
+                  <React.Fragment key={idx}>
+                    <View style={styles.stepItem}>
+                      <View
+                        style={[
+                          styles.stepCircle,
+                          isActive && styles.stepCircleActive,
+                          isCurrent && styles.stepCircleCurrent,
+                        ]}
+                      >
+                        <Ionicons
+                          name={isActive ? "checkmark" : (step.icon as any)}
+                          size={14}
+                          color={isActive ? Colors.neutral.white : Colors.text.tertiary}
+                        />
+                      </View>
+                      <Text
+                        style={[
+                          styles.stepLabel,
+                          isActive && styles.stepLabelActive,
+                        ]}
+                      >
+                        {step.label}
+                      </Text>
+                    </View>
+                    {idx < steps.length - 1 && (
+                      <View
+                        style={[
+                          styles.stepConnector,
+                          idx < currentStep && styles.stepConnectorActive,
+                        ]}
+                      />
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </View>
+          )}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Services ({order.items?.length || 0})
-          </Text>
-          {order.items?.map((item: OrderItem) => (
-            <View key={item.id} style={styles.serviceCard}>
-              <View style={styles.serviceHeader}>
-                <View style={styles.serviceInfo}>
-                  <Text style={styles.serviceName}>
+        {/* Services List Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="build-outline" size={18} color={Colors.themes.customer.primary} />
+            <Text style={styles.cardTitle}>Booked Services ({order.items?.length || 0})</Text>
+          </View>
+
+          {order.items?.map((item: OrderItem, index: number) => (
+            <View
+              key={item.id}
+              style={[
+                styles.serviceItem,
+                index === (order.items?.length || 0) - 1 && { borderBottomWidth: 0 },
+              ]}
+            >
+              <View style={styles.serviceItemHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.serviceItemName}>
                     {item.parentService?.name || "Service"}
                   </Text>
-                  <Text style={styles.serviceQuantity}>
-                    Quantity: {item.quantity}
-                  </Text>
+                  <Text style={styles.serviceItemQty}>Quantity: {item.quantity}</Text>
                 </View>
-                <View
-                  style={[
-                    styles.itemStatusBadge,
-                    { backgroundColor: getStatusColor(item.status) + "15" },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.itemStatusText,
-                      { color: getStatusColor(item.status) },
-                    ]}
-                  >
-                    {getStatusLabel(item.status)}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.scheduleRow}>
-                <Ionicons
-                  name="time-outline"
-                  size={14}
-                  color={Colors.text.tertiary}
-                />
-                <Text style={styles.scheduleText}>
-                  {formatDate(item.scheduled_date)} at{" "}
-                  {formatTime(item.scheduled_time)}
-                </Text>
-              </View>
-              <View style={styles.priceRow}>
-                <Text style={styles.priceLabel}>Subtotal</Text>
-                <Text style={styles.priceValue}>
+                <Text style={styles.serviceItemPrice}>
                   ₨{Math.round(item.subtotal)}
                 </Text>
               </View>
+
+              {item.scheduled_date ? (
+                <View style={styles.scheduleBadge}>
+                  <Ionicons name="calendar-outline" size={12} color={Colors.themes.customer.primary} />
+                  <Text style={styles.scheduleBadgeText}>
+                    {formatDate(item.scheduled_date)}
+                    {item.scheduled_time ? ` • ${formatTime(item.scheduled_time)}` : ""}
+                  </Text>
+                </View>
+              ) : null}
             </View>
           ))}
         </View>
 
+        {/* Address Card */}
         {order.address && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Service Address</Text>
-            <View style={styles.addressCard}>
-              <View style={styles.addressHeader}>
-                <Ionicons
-                  name={
-                    order.address.address_type === "home" ? "home" : "briefcase"
-                  }
-                  size={20}
-                  color={Colors.themes.customer.primary}
-                />
-                <Text style={styles.addressType}>
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="location-outline" size={18} color={Colors.themes.customer.primary} />
+              <Text style={styles.cardTitle}>Service Address</Text>
+            </View>
+            <View style={styles.addressBody}>
+              <View style={styles.addressBadge}>
+                <Text style={styles.addressBadgeText}>
                   {order.address.address_type.toUpperCase()}
                 </Text>
               </View>
-              <Text style={styles.addressText}>
-                {order.address.address_line_1}
-              </Text>
-              <Text style={styles.addressText}>
-                {order.address.city}, {order.address.state}{" "}
-                {order.address.zip_code}
+              <Text style={styles.addressLineBold}>{order.address.address_line_1}</Text>
+              {order.address.address_line_2 ? (
+                <Text style={styles.addressLine}>{order.address.address_line_2}</Text>
+              ) : null}
+              <Text style={styles.addressLine}>
+                {order.address.city}, {order.address.state} {order.address.zip_code}
               </Text>
             </View>
           </View>
         )}
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Payment Details</Text>
-          <View style={styles.paymentCard}>
-            <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>Method</Text>
-              <Text style={styles.paymentValue}>{order.payment_method}</Text>
+        {/* Notes & Extra Info Card */}
+        {(order.notes || order.extra_number || order.reminders) && (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="information-circle-outline" size={18} color={Colors.themes.customer.primary} />
+              <Text style={styles.cardTitle}>Booking Details & Instructions</Text>
             </View>
-            <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>Status</Text>
-              <Text
-                style={[
-                  styles.paymentValue,
-                  { color: getStatusColor(order.payment_status) },
-                ]}
-              >
-                {order.payment_status}
+
+            {order.extra_number ? (
+              <View style={styles.paymentDetailRow}>
+                <Text style={styles.paymentDetailLabel}>Contact Phone</Text>
+                <Text style={styles.paymentDetailValue}>{order.extra_number}</Text>
+              </View>
+            ) : null}
+
+            {order.reminders ? (
+              <View style={styles.paymentDetailRow}>
+                <Text style={styles.paymentDetailLabel}>Reminder</Text>
+                <View style={[styles.miniBadge, { backgroundColor: Colors.themes.customer.primary + "15" }]}>
+                  <Text style={[styles.miniBadgeText, { color: Colors.themes.customer.primary }]}>
+                    {order.reminders === "1h" ? "1 hour before" : order.reminders === "2h" ? "2 hours before" : order.reminders === "1d" ? "1 day before" : order.reminders}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+
+            {order.notes ? (
+              <View style={{ marginTop: Spacing.xs }}>
+                <Text style={[styles.paymentDetailLabel, { marginBottom: 4 }]}>Notes / Special Instructions</Text>
+                <View style={styles.notesBox}>
+                  <Text style={styles.notesText}>{order.notes}</Text>
+                </View>
+              </View>
+            ) : null}
+          </View>
+        )}
+
+        {/* Attachments Card */}
+        {order.attachments && order.attachments.length > 0 && (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="images-outline" size={18} color={Colors.themes.customer.primary} />
+              <Text style={styles.cardTitle}>Attached Photos ({order.attachments.length})</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.attachmentList}>
+              {order.attachments.map((imgUri, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  activeOpacity={0.8}
+                  onPress={() => setSelectedImage(imgUri)}
+                  style={styles.attachmentThumbContainer}
+                >
+                  <Image source={{ uri: imgUri }} style={styles.attachmentThumb} resizeMode="cover" />
+                  <View style={styles.zoomBadge}>
+                    <Ionicons name="expand-outline" size={12} color="#FFFFFF" />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Payment & Summary Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="card-outline" size={18} color={Colors.themes.customer.primary} />
+            <Text style={styles.cardTitle}>Payment Summary</Text>
+          </View>
+
+          <View style={styles.paymentDetailRow}>
+            <Text style={styles.paymentDetailLabel}>Payment Method</Text>
+            <Text style={styles.paymentDetailValue}>{getPaymentMethodLabel(order.payment_method)}</Text>
+          </View>
+
+          <View style={styles.paymentDetailRow}>
+            <Text style={styles.paymentDetailLabel}>Payment Status</Text>
+            <View style={[styles.miniBadge, { backgroundColor: getStatusTheme(order.payment_status).bg }]}>
+              <Text style={[styles.miniBadgeText, { color: getStatusTheme(order.payment_status).color }]}>
+                {order.payment_status.toUpperCase()}
               </Text>
             </View>
-            <View style={styles.divider} />
-            <View style={styles.paymentRow}>
-              <Text style={styles.totalLabel}>Total</Text>
-              <Text style={styles.totalValue}>
-                ₨{Math.round(order.total_amount)}
-              </Text>
-            </View>
+          </View>
+
+          <View style={styles.cardDivider} />
+
+          <View style={styles.paymentDetailRow}>
+            <Text style={styles.totalRowLabel}>Total Amount</Text>
+            <Text style={styles.totalRowValue}>
+              ₨{Math.round(order.total_amount).toLocaleString()}
+            </Text>
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Actions</Text>
-          <View style={styles.actionsContainer}>
-            {canCancelOrder() && (
-              <TouchableOpacity
-                style={styles.cancelOrderButton}
-                onPress={() => setShowCancelModal(true)}
-              >
-                <Ionicons
-                  name="close-circle-outline"
-                  size={20}
-                  color={Colors.error}
-                />
-                <Text style={styles.cancelOrderButtonText}>Cancel Order</Text>
-              </TouchableOpacity>
-            )}
+        {/* Action Buttons */}
+        <View style={styles.actionsGroup}>
+          {order.status !== "completed" && order.status !== "cancelled" && (
             <TouchableOpacity
-              style={styles.whatsappButton}
-              onPress={() => router.push(`/customer/order-chat/${order.id}`)}
+              style={styles.rescheduleActionBtn}
+              onPress={() => setShowRescheduleModal(true)}
             >
-              <FontAwesome
-                name="whatsapp"
-                size={20}
-                color="#FFFFFF"
-              />
-              <Text style={styles.whatsappButtonText}>Chat on WhatsApp</Text>
+              <Ionicons name="calendar-outline" size={18} color={Colors.themes.customer.primary} />
+              <Text style={styles.rescheduleActionText}>Reschedule / Set Reminder</Text>
             </TouchableOpacity>
-          </View>
+          )}
+
+          <TouchableOpacity
+            style={styles.whatsappActionBtn}
+            onPress={() => router.push(`/customer/order-chat/${order.id}`)}
+          >
+            <FontAwesome name="whatsapp" size={20} color="#FFFFFF" />
+            <Text style={styles.whatsappActionText}>Contact Tasker via WhatsApp</Text>
+          </TouchableOpacity>
+
+          {canCancelOrder() && (
+            <TouchableOpacity
+              style={styles.cancelActionBtn}
+              onPress={() => setShowCancelModal(true)}
+            >
+              <Ionicons name="close-circle-outline" size={18} color={Colors.error} />
+              <Text style={styles.cancelActionText}>Cancel Order</Text>
+            </TouchableOpacity>
+          )}
         </View>
-        <View style={{ height: 40 }} />
       </ScrollView>
 
+      {/* Modals */}
+      <RescheduleModal
+        visible={showRescheduleModal}
+        onClose={() => setShowRescheduleModal(false)}
+        orderNumber={orderNumber}
+        currentDate={order.items?.[0]?.scheduled_date || undefined}
+        currentTime={order.items?.[0]?.scheduled_time || undefined}
+        currentReminder={order.reminders || undefined}
+        onSuccess={fetchOrderDetails}
+      />
       <CancelOrderModal
         visible={showCancelModal}
         onClose={() => setShowCancelModal(false)}
@@ -373,13 +527,40 @@ export default function OrderDetailsPage() {
         orderNumber={orderNumber}
       />
 
+      {/* Attachment Image Fullscreen Preview Modal */}
+      <Modal
+        visible={!!selectedImage}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedImage(null)}
+      >
+        <View style={styles.imagePreviewOverlay}>
+          <TouchableOpacity
+            style={styles.imagePreviewCloseBtn}
+            onPress={() => setSelectedImage(null)}
+          >
+            <Ionicons name="close" size={28} color="#FFFFFF" />
+          </TouchableOpacity>
+          {selectedImage ? (
+            <Image
+              source={{ uri: selectedImage }}
+              style={styles.fullImagePreview}
+              resizeMode="contain"
+            />
+          ) : null}
+        </View>
+      </Modal>
+
       {isAssigned && <FloatingChatButton workOrderId={order.id} />}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.neutral.gray[50] },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.neutral.gray[50],
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -391,181 +572,386 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border.light,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: Colors.neutral.gray[100],
     justifyContent: "center",
     alignItems: "center",
   },
-  headerTitle: { fontSize: 16, fontWeight: "700", color: Colors.text.primary },
-  headerChatButton: { width: 40, alignItems: "flex-end" },
-  scrollView: { flex: 1 },
-  statusCard: {
-    backgroundColor: Colors.neutral.white,
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.light,
+  headerCenter: {
+    alignItems: "center",
   },
-  statusHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: Spacing.sm,
-  },
-  orderNumberLabel: {
-    fontSize: 11,
-    color: Colors.text.tertiary,
-    marginBottom: 4,
-  },
-  orderNumber: { fontSize: 12, fontWeight: "700", color: Colors.text.primary },
-  statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  statusText: { fontSize: 10, fontWeight: "600", textTransform: "capitalize" },
-  dateRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  dateText: { fontSize: 11, color: Colors.text.secondary },
-  section: {
-    backgroundColor: Colors.neutral.white,
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: 13,
+  headerTitle: {
+    fontSize: 16,
     fontWeight: "700",
     color: Colors.text.primary,
-    marginBottom: Spacing.sm,
   },
-  serviceCard: {
-    backgroundColor: Colors.neutral.gray[50],
-    borderRadius: 10,
-    padding: Spacing.sm,
-    marginBottom: Spacing.sm,
+  headerSubtitle: {
+    fontSize: 11,
+    color: Colors.text.tertiary,
+    marginTop: 2,
+  },
+  headerChatButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#25D36615",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: Spacing.md,
+    gap: Spacing.md,
+    paddingBottom: Spacing.xl * 2,
+  },
+  heroCard: {
+    backgroundColor: Colors.neutral.white,
+    borderRadius: 16,
+    padding: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.border.light,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
-  serviceHeader: {
+  heroTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: Spacing.xs,
+    alignItems: "center",
   },
-  serviceInfo: { flex: 1 },
-  serviceName: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: Colors.text.primary,
-    marginBottom: 2,
-  },
-  serviceQuantity: { fontSize: 11, color: Colors.text.secondary },
-  itemStatusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  itemStatusText: {
+  heroLabel: {
     fontSize: 10,
-    fontWeight: "600",
-    textTransform: "capitalize",
+    fontWeight: "700",
+    color: Colors.text.tertiary,
+    letterSpacing: 0.8,
   },
-  scheduleRow: {
+  heroStatusTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    marginTop: 2,
+  },
+  statusBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    marginBottom: Spacing.xs,
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
-  scheduleText: { fontSize: 11, color: Colors.text.secondary },
-  priceRow: {
+  statusText: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  stepperContainer: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "center",
-    paddingTop: Spacing.xs,
+    marginTop: Spacing.lg,
+    paddingTop: Spacing.md,
     borderTopWidth: 1,
     borderTopColor: Colors.border.light,
   },
-  priceLabel: { fontSize: 10, color: Colors.text.tertiary },
-  priceValue: { fontSize: 12, fontWeight: "700", color: Colors.text.primary },
-  addressCard: {
-    backgroundColor: Colors.neutral.gray[50],
-    borderRadius: 10,
-    padding: Spacing.sm,
+  stepItem: {
+    alignItems: "center",
+    gap: 4,
+  },
+  stepCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.neutral.gray[100],
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: Colors.border.light,
   },
-  addressHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: Spacing.xs,
+  stepCircleActive: {
+    backgroundColor: Colors.themes.customer.primary,
+    borderColor: Colors.themes.customer.primary,
   },
-  addressType: { fontSize: 12, fontWeight: "600", color: Colors.text.primary },
-  addressText: { fontSize: 11, color: Colors.text.secondary, lineHeight: 18 },
-  paymentCard: {
-    backgroundColor: Colors.neutral.gray[50],
-    borderRadius: 10,
-    padding: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.border.light,
-  },
-  paymentRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: Spacing.xs,
-  },
-  paymentLabel: { fontSize: 11, color: Colors.text.secondary },
-  paymentValue: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: Colors.text.primary,
-    textTransform: "capitalize",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.border.light,
-    marginVertical: Spacing.xs,
-  },
-  totalLabel: { fontSize: 12, fontWeight: "700", color: Colors.text.primary },
-  totalValue: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: Colors.themes.customer.primary,
-  },
-  actionsContainer: { gap: Spacing.sm },
-  cancelOrderButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: Colors.error + "10",
-    paddingVertical: 13,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.error,
-  },
-  cancelOrderButtonText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: Colors.error,
-  },
-  whatsappButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#25D366",
-    paddingVertical: 13,
-    borderRadius: 10,
-    shadowColor: "#25D366",
+  stepCircleCurrent: {
+    elevation: 3,
+    shadowColor: Colors.themes.customer.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
-    elevation: 4,
   },
-  whatsappButtonText: {
-    fontSize: 12,
+  stepLabel: {
+    fontSize: 11,
+    color: Colors.text.tertiary,
+    fontWeight: "600",
+  },
+  stepLabelActive: {
+    color: Colors.text.primary,
     fontWeight: "700",
-    color: "#FFFFFF",
   },
-  errorContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  errorText: { fontSize: 12, color: Colors.text.secondary },
+  stepConnector: {
+    flex: 1,
+    height: 2,
+    backgroundColor: Colors.border.light,
+    marginBottom: 16,
+  },
+  stepConnectorActive: {
+    backgroundColor: Colors.themes.customer.primary,
+  },
+  card: {
+    backgroundColor: Colors.neutral.white,
+    borderRadius: 16,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: Spacing.md,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.text.primary,
+  },
+  serviceItem: {
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.light,
+  },
+  serviceItemHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  serviceItemName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.text.primary,
+  },
+  serviceItemQty: {
+    fontSize: 12,
+    color: Colors.text.tertiary,
+    marginTop: 2,
+  },
+  serviceItemPrice: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.text.primary,
+  },
+  scheduleBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: Colors.themes.customer.primary + "10",
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginTop: Spacing.xs,
+  },
+  scheduleBadgeText: {
+    fontSize: 11,
+    color: Colors.themes.customer.primary,
+    fontWeight: "600",
+  },
+  addressBody: {
+    gap: 4,
+  },
+  addressBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: Colors.neutral.gray[100],
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+  addressBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: Colors.text.secondary,
+  },
+  addressLineBold: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.text.primary,
+  },
+  addressLine: {
+    fontSize: 13,
+    color: Colors.text.secondary,
+  },
+  paymentDetailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginVertical: 4,
+  },
+  paymentDetailLabel: {
+    fontSize: 13,
+    color: Colors.text.secondary,
+  },
+  paymentDetailValue: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.text.primary,
+  },
+  miniBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  miniBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  cardDivider: {
+    height: 1,
+    backgroundColor: Colors.border.light,
+    marginVertical: Spacing.sm,
+  },
+  totalRowLabel: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: Colors.text.primary,
+  },
+  totalRowValue: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: Colors.themes.customer.primary,
+  },
+  actionsGroup: {
+    gap: Spacing.sm,
+  },
+  rescheduleActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.themes.customer.primary + "12",
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: Colors.themes.customer.primary + "40",
+  },
+  rescheduleActionText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.themes.customer.primary,
+  },
+  whatsappActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#25D366",
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+    elevation: 3,
+    shadowColor: "#25D366",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+  },
+  whatsappActionText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.neutral.white,
+  },
+  cancelActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.error + "10",
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: Colors.error + "40",
+  },
+  cancelActionText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: Colors.error,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  errorText: {
+    fontSize: 16,
+    color: Colors.text.secondary,
+    fontWeight: "600",
+  },
+  backHomeBtn: {
+    backgroundColor: Colors.themes.customer.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  backHomeText: {
+    color: Colors.neutral.white,
+    fontWeight: "700",
+  },
+  notesBox: {
+    backgroundColor: Colors.neutral.gray[50],
+    padding: Spacing.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+  },
+  notesText: {
+    fontSize: 13,
+    color: Colors.text.primary,
+    lineHeight: 18,
+  },
+  attachmentList: {
+    gap: 10,
+    paddingVertical: 4,
+  },
+  attachmentThumbContainer: {
+    position: "relative",
+    borderRadius: 10,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+  },
+  attachmentThumb: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+  },
+  zoomBadge: {
+    position: "absolute",
+    bottom: 4,
+    right: 4,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    borderRadius: 10,
+    padding: 3,
+  },
+  imagePreviewOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.92)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  imagePreviewCloseBtn: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    padding: 8,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 20,
+  },
+  fullImagePreview: {
+    width: "92%",
+    height: "80%",
+  },
 });

@@ -6,6 +6,7 @@ export { default as ScheduleModal } from "./ScheduleModal";
 export { default as ServiceHeaderCard } from "./ServiceHeaderCard";
 export { default as ServiceInfoSection } from "./ServiceInfoSection";
 export { default as WorkOrderHeader } from "./WorkOrderHeader";
+export { default as AddressNavigationModal } from "./AddressNavigationModal";
 
 // Styles
 export * from "./styles";

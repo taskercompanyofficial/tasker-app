@@ -13,6 +13,9 @@ export interface AppMessage {
   media_url?: string | null;
   metadata: any | null;
   is_read: boolean;
+  status?: "sending" | "sent" | "delivered" | "read";
+  delivered_at?: string | null;
+  read_at?: string | null;
   created_at: string;
   updated_at: string;
   sender?: User;

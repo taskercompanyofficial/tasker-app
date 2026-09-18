@@ -153,7 +153,13 @@ export default function NotificationsPage() {
     }
 
     // 2. Order/Work Order Notifications
-    const orderRef = data.work_order_id || notification.data?.work_order_id;
+    const orderRef =
+      data.order_number ||
+      data.work_order_number ||
+      data.work_order_id ||
+      notification.order_id ||
+      data.order_id ||
+      data.id;
     if (orderRef) {
       router.push(`/customer/orders/${orderRef}`);
       return;

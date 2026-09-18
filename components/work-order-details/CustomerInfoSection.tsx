@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import AddressNavigationModal from "./AddressNavigationModal";
 import { fieldStyles, sectionStyles } from "./styles";
 
 interface CustomerInfoSectionProps {
@@ -23,6 +24,11 @@ interface CustomerInfoSectionProps {
     address_line_1: string;
     city: string;
     state: string;
+    zip_code?: string;
+    latitude?: number | string;
+    longitude?: number | string;
+    lat?: number | string;
+    lng?: number | string;
   };
   extraNumber?: string;
 }
@@ -33,20 +39,16 @@ export default function CustomerInfoSection({
   extraNumber,
 }: CustomerInfoSectionProps) {
   const [expanded, setExpanded] = useState(true);
+  const [showNavModal, setShowNavModal] = useState(false);
+
+  const rawLat = address?.latitude ?? address?.lat;
+  const rawLng = address?.longitude ?? address?.lng;
+  const hasGps = rawLat !== undefined && rawLng !== undefined && rawLat !== null && rawLng !== null;
 
   const handleCallCustomer = () => {
     if (customer.phone) {
       Linking.openURL(`tel:${customer.phone}`);
     }
-  };
-
-  const handleNavigateToAddress = () => {
-    const fullAddress = `${address.address_line_1}, ${address.city}, ${address.state}`;
-    Linking.openURL(
-      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-        fullAddress,
-      )}`,
-    );
   };
 
   const handleWhatsAppClick = () => {
@@ -132,19 +134,33 @@ export default function CustomerInfoSection({
 
           {/* Address */}
           <View style={fieldStyles.fieldGroup}>
-            <Text style={fieldStyles.fieldLabel}>Address</Text>
+            <View style={styles.addressHeaderRow}>
+              <Text style={fieldStyles.fieldLabel}>Address</Text>
+              {hasGps && (
+                <View style={styles.gpsBadge}>
+                  <Ionicons name="navigate-circle" size={12} color="#10B981" />
+                  <Text style={styles.gpsBadgeText}>GPS Available</Text>
+                </View>
+              )}
+            </View>
+
             <TouchableOpacity
-              onPress={handleNavigateToAddress}
-              style={styles.actionRow}
+              onPress={() => setShowNavModal(true)}
+              style={styles.addressActionRow}
+              activeOpacity={0.7}
             >
               <Text style={[fieldStyles.fieldValue, { flex: 1 }]}>
                 {address.address_line_1}, {address.city}, {address.state}
               </Text>
-              <Ionicons
-                name="location"
-                size={14}
-                color={Colors.themes.provider.primary}
-              />
+              
+              <View style={styles.mapIconButton}>
+                <Ionicons
+                  name="navigate"
+                  size={12}
+                  color={Colors.neutral.white}
+                />
+                <Text style={styles.mapIconButtonText}>Map & Nav</Text>
+              </View>
             </TouchableOpacity>
           </View>
 
@@ -157,6 +173,15 @@ export default function CustomerInfoSection({
           )}
         </View>
       )}
+
+      {/* Map Navigation Modal */}
+      <AddressNavigationModal
+        visible={showNavModal}
+        onClose={() => setShowNavModal(false)}
+        customerName={customer.name}
+        customerPhone={customer.phone}
+        address={address}
+      />
     </View>
   );
 }
@@ -172,6 +197,50 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+  },
+  addressHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  addressActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: Colors.background.secondary,
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    marginTop: 2,
+  },
+  gpsBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "#10B98115",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  gpsBadgeText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "#10B981",
+  },
+  mapIconButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: Colors.themes.provider.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  mapIconButtonText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: Colors.neutral.white,
   },
   badge: {
     backgroundColor: "#FEF3C7",

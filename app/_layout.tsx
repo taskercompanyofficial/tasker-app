@@ -1,51 +1,75 @@
-import Splash from "@/components/splash";
+import AlertModal from "@/components/common/AlertModal";
 import DebugPanel from "@/components/common/DebugPanel";
+import OTAUpdateManager from "@/components/common/OTAUpdateManager";
+import NetworkStatus from "@/components/NetworkStatus";
+import Splash from "@/components/splash";
+import Colors from "@/constants/Colors";
 import { useAuthStore } from "@/context/auth-store";
 import { EchoProvider } from "@/context/EchoProvider";
 import { addDebugLog, initRemoteLogging } from "@/lib/debug-monitor";
+import { Observe, ObserveRoot, useObserve } from "@/lib/observe";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Stack, usePathname, useRouter } from "expo-router";
-import Toast from "react-native-toast-message";
-import { StatusBar } from "expo-status-bar";
+import { usePreventScreenCapture } from "expo-screen-capture";
 import * as SystemUI from "expo-system-ui";
-import Colors from "@/constants/Colors";
-import React, { useEffect, useRef } from "react";
-import AlertModal from "@/components/common/AlertModal";
-import OTAUpdateManager from "@/components/common/OTAUpdateManager";
-import NetworkStatus from "@/components/NetworkStatus";
-import { useNotificationDeepLink } from "@/hooks/use-notification-deep-link";
-import * as Linking from "expo-linking";
+import { useEffect, useRef, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import Toast from "react-native-toast-message";
 
-export default function RootLayout() {
+
+// Configure EAS Observe safely
+try {
+  Observe.configure({
+    dispatchInDebug: true,
+    integrations: {
+      "expo-router": {
+        filteredParams: ["token", "customerToken", "vendorToken", "password"],
+      },
+    },
+  });
+} catch (e) {
+  console.warn("[Observe] Failed to configure Observe:", e);
+}
+
+function RootLayout() {
+  // Prevent screenshots and screen recording across the entire application
+  usePreventScreenCapture();
+
   const router = useRouter();
   const pathname = usePathname();
   const isLoading = useAuthStore((state) => state.isLoading);
   const appMode = useAuthStore((state) => state.appMode);
-  const shouldUseEcho = appMode !== "vendor" && appMode !== "vendor_staff";
   const renderCountRef = useRef(0);
   const lastRenderDebugAtRef = useRef(0);
+
+  // EAS Observe metric hook (safely handled by lib/observe)
+  const { markInteractive } = useObserve();
 
   renderCountRef.current += 1;
 
   useEffect(() => {
     initRemoteLogging();
-    // Wait for auth-store persistence to finish rehydrating from AsyncStorage,
-    // THEN call initialize() — all from within React's lifecycle so
-    // store mutations don't cause useSyncExternalStore tearing.
     const runInit = () => {
       useAuthStore.getState().initialize();
     };
 
     if (useAuthStore.persist.hasHydrated()) {
-      // Already hydrated (e.g. on hot-reload)
       runInit();
     } else {
-      // Subscribe to hydration completion
       const unsub = useAuthStore.persist.onFinishHydration(() => {
         unsub();
         runInit();
       });
     }
   }, []);
+
+  // Mark app interactive once auth initialization completes
+  useEffect(() => {
+    if (!isLoading) {
+      markInteractive();
+    }
+  }, [isLoading, markInteractive]);
 
   useEffect(() => {
     const now = Date.now();
@@ -61,10 +85,9 @@ export default function RootLayout() {
       hasCustomerToken: !!state.customerToken,
       hasVendorToken: !!state.vendorToken,
       hasVendorStaffToken: !!state.vendorStaffToken,
-      shouldUseEcho,
       path: pathname,
     });
-  }, [isLoading, appMode, shouldUseEcho, pathname]);
+  }, [isLoading, appMode, pathname]);
 
   useEffect(() => {
     const state = useAuthStore.getState();
@@ -96,189 +119,18 @@ export default function RootLayout() {
     }
   }, []);
 
-  // Handle deep links from website - Unified route matching
-  useEffect(() => {
-    if (isLoading) return;
-
-    const handleDeepLink = (url: string) => {
-      console.log("[DeepLink] Received URL:", url);
-      const { path, queryParams } = Linking.parse(url);
-      console.log("[DeepLink] Path:", path, "Params:", queryParams);
-
-      const state = useAuthStore.getState();
-      const activeMode = state.appMode;
-      const hasActiveSession = !!state.token;
-
-      // Deep-link map below is customer-centric. Avoid hijacking vendor/staff sessions.
-      if (hasActiveSession && activeMode && activeMode !== "customer") {
-        return;
-      }
-
-      if (!path) return;
-
-      const customerToken = useAuthStore.getState().customerToken;
-      const isAuthRoute = (targetPath: string) => {
-        if (customerToken) {
-          router.push(targetPath as any);
-        } else {
-          router.push({
-            pathname: "/auth/customer/sign-in",
-            params: { redirect: targetPath },
-          });
-        }
-      };
-
-      // ==================== ORDERS ROUTES ====================
-      // Website: /orders/{number} -> App: /customer/orders/{number}
-      // Website: /track?order={number} -> App: /customer/orders/{number}
-      if (path.includes("orders/")) {
-        const orderNumber = path.split("orders/")[1]?.split("/")[0];
-        if (orderNumber) {
-          isAuthRoute(`/customer/orders/${orderNumber}`);
-          return;
-        }
-      }
-
-      // Handle /track?order=XXX query param
-      if (path === "track" || path === "/track") {
-        const orderNumber = queryParams?.order || queryParams?.orderNumber;
-        if (orderNumber) {
-          isAuthRoute(`/customer/orders/${orderNumber}`);
-          return;
-        }
-        // If no order number, go to orders list
-        isAuthRoute("/customer/orders/index");
-        return;
-      }
-
-      // ==================== SERVICES ROUTES ====================
-      // Website: /services/{slug} -> App: /customer/services/[slug]
-      if (path.includes("services/")) {
-        const slug = path.split("services/")[1]?.split("/")[0];
-        if (slug && slug !== "index") {
-          router.push(`/customer/services/${slug}`);
-          return;
-        }
-      }
-
-      // Website: /categories/{slug} -> App: /(tabs)/services (with slug param)
-      if (path.includes("categories/")) {
-        const slug = path.split("categories/")[1]?.split("/")[0];
-        if (slug) {
-          // Navigate to services tab with category filter
-          router.push({
-            pathname: "/customer",
-            params: { categorySlug: slug },
-          });
-          return;
-        }
-      }
-
-      // ==================== CHAT ROUTES ====================
-      // Website: /chat/{workOrderId} -> App: /customer/order-chat/{workOrderId}
-      if (path.includes("chat/")) {
-        const workOrderId = path.split("chat/")[1]?.split("/")[0];
-        if (workOrderId) {
-          isAuthRoute(`/customer/order-chat/${workOrderId}`);
-          return;
-        }
-      }
-
-      // ==================== SCHEDULE/CART ROUTES ====================
-      // Website: /schedule -> App: /customer/shop/schedule
-      if (path === "schedule" || path === "/schedule") {
-        isAuthRoute("/customer/shop/schedule");
-        return;
-      }
-
-      // Website: /cart -> App: /customer/shop/cart
-      if (path === "cart" || path === "/cart") {
-        isAuthRoute("/customer/shop/cart");
-        return;
-      }
-
-      // Website: /checkout -> App: /customer/shop/checkout
-      if (path === "checkout" || path === "/checkout") {
-        isAuthRoute("/customer/shop/checkout");
-        return;
-      }
-
-      // ==================== AUTH ROUTES ====================
-      // Website: /auth/login -> App: /auth/customer/sign-in
-      if (path.includes("auth/login") || path.includes("login")) {
-        router.push("/auth/customer/sign-in");
-        return;
-      }
-
-      // ==================== CUSTOM SCHEME ====================
-      // tasker-company://{route}
-      if (url.startsWith("tasker-company://")) {
-        const route = url.replace("tasker-company://", "");
-
-        if (route.startsWith("orders/")) {
-          const orderNumber = route.split("orders/")[1];
-          isAuthRoute(`/customer/orders/${orderNumber}`);
-          return;
-        }
-
-        if (route.startsWith("chat/")) {
-          const workOrderId = route.split("chat/")[1];
-          isAuthRoute(`/customer/order-chat/${workOrderId}`);
-          return;
-        }
-
-        if (route.startsWith("services/")) {
-          const slug = route.split("services/")[1];
-          router.push(`/customer/services/${slug}`);
-          return;
-        }
-
-        if (route === "schedule" || route === "cart" || route === "checkout") {
-          isAuthRoute(`/customer/shop/${route}`);
-          return;
-        }
-      }
-
-      console.log("[DeepLink] No matching route found for:", path);
-    };
-
-    // Get initial URL (app opened from deep link)
-    Linking.getInitialURL().then((url) => {
-      if (url) handleDeepLink(url);
-    });
-
-    // Listen for URL events (app already open)
-    const subscription = Linking.addEventListener("url", (event) => {
-      if (event.url) handleDeepLink(event.url);
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, [isLoading, router]);
-
   return (
-    <>
-      {shouldUseEcho ? (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <BottomSheetModalProvider>
         <EchoProvider>
-          <StatusBar style="dark" backgroundColor={Colors.background.primary} />
           <OTAUpdateManager />
           <NetworkStatus />
           <RootNavigator />
           <Toast />
           <DebugPanel />
         </EchoProvider>
-      ) : (
-        <>
-          <StatusBar style="dark" backgroundColor={Colors.background.primary} />
-          <OTAUpdateManager />
-          <NetworkStatus />
-          <RootNavigator />
-          <Toast />
-          <DebugPanel />
-        </>
-      )}
-    </>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -292,8 +144,14 @@ function RootNavigator() {
   const vendorToken = useAuthStore((state) => state.vendorToken);
   const vendorStaffToken = useAuthStore((state) => state.vendorStaffToken);
 
-  // Enable notification deep linking
-  useNotificationDeepLink();
+  const [splashTimerEnded, setSplashTimerEnded] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSplashTimerEnded(true);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const showFetchError =
     !isLoading &&
@@ -301,7 +159,7 @@ function RootNavigator() {
     !user &&
     !!fetchError;
 
-  if (isLoading) {
+  if (isLoading || !splashTimerEnded) {
     return <Splash />;
   }
 
@@ -315,7 +173,7 @@ function RootNavigator() {
         type="error"
         title="Connection Issue"
         message="We couldn't load your account. Please check your internet and try again."
-        onClose={() => {}}
+        onClose={() => { }}
         primaryButton={{
           text: "Retry",
           onPress: () => {
@@ -330,5 +188,45 @@ function RootNavigator() {
         }}
       />
     </>
+  );
+}
+
+function DefaultErrorFallback() {
+  return (
+    <View style={errorStyles.container}>
+      <Text style={errorStyles.title}>Something went wrong</Text>
+      <Text style={errorStyles.subtitle}>
+        An unexpected error occurred. Please restart the app.
+      </Text>
+    </View>
+  );
+}
+
+const errorStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+    backgroundColor: "#ffffff",
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#1e293b",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#64748b",
+    textAlign: "center",
+  },
+});
+
+export default function ObserveWrappedRootLayout() {
+  return (
+    <ObserveRoot errorBoundaryFallback={<DefaultErrorFallback />}>
+      <RootLayout />
+    </ObserveRoot>
   );
 }

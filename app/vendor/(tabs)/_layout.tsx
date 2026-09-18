@@ -1,45 +1,15 @@
 import Colors from "@/constants/Colors";
-import { Typography } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
-import { Ionicons } from "@expo/vector-icons";
-import { Redirect, Tabs } from "expo-router";
-import React, { useRef } from "react";
-import { StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-const bellStyles = StyleSheet.create({
-  wrap: {
-    position: "relative",
-  },
-  badge: {
-    position: "absolute",
-    top: -4,
-    right: -6,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: Colors.error,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 3,
-    borderWidth: 1.5,
-    borderColor: "#fff",
-  },
-  badgeText: {
-    fontSize: 9,
-    fontWeight: "800",
-    color: "#fff",
-    lineHeight: 12,
-  },
-});
+import { Redirect } from "expo-router";
+import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { useRef } from "react";
 
 export default function VendorTabsLayout() {
-  const insets = useSafeAreaInsets();
   const { session } = useSession();
   const renderCountRef = useRef(0);
+
   renderCountRef.current += 1;
   if (renderCountRef.current <= 20) {
-    // #region agent log
     fetch("http://127.0.0.1:7789/ingest/e7df05fe-e28b-4c90-971d-c6d804cac73a", {
       method: "POST",
       headers: {
@@ -59,10 +29,9 @@ export default function VendorTabsLayout() {
         },
         timestamp: Date.now(),
       }),
-    }).catch(() => {});
-    // #endregion
+    }).catch(() => { });
   }
-  // #region agent log
+
   fetch("http://127.0.0.1:7789/ingest/e7df05fe-e28b-4c90-971d-c6d804cac73a", {
     method: "POST",
     headers: {
@@ -82,8 +51,7 @@ export default function VendorTabsLayout() {
       },
       timestamp: Date.now(),
     }),
-  }).catch(() => {});
-  // #endregion
+  }).catch(() => { });
 
   if (!session.isAuthenticated || (session.appMode !== "vendor" && session.appMode !== "vendor_staff")) {
     return <Redirect href="/" />;
@@ -92,108 +60,35 @@ export default function VendorTabsLayout() {
   const isStaff = session.appMode === "vendor_staff" || (session.user as any)?.user_type === "vendor_staff";
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: Colors.themes.provider.primary,
-        tabBarInactiveTintColor: Colors.text.tertiary,
-        tabBarStyle: {
-          backgroundColor: Colors.neutral.white,
-          borderTopWidth: 1,
-          borderTopColor: Colors.border.light,
-          height: 50 + insets.bottom,
-          paddingBottom: insets.bottom + 4,
-          paddingTop: 4,
-          elevation: 2,
-          shadowColor: Colors.neutral.black,
-          shadowOffset: { width: 0, height: -1 },
-          shadowOpacity: 0.06,
-          shadowRadius: 2,
-        },
-        tabBarLabelStyle: {
-          fontSize: 9,
-          fontWeight: Typography.weights.semibold,
-          marginTop: 1,
-        },
-        tabBarIconStyle: {
-          marginTop: 1,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="dashboard"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "home" : "home-outline"} size={20} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="jobs"
-        options={{
-          title: "Jobs",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "briefcase" : "briefcase-outline"}
-              size={20}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="chat"
-        options={{
-          title: "Chat",
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ position: 'relative' }}>
-              <Ionicons
-                name={focused ? "chatbubbles" : "chatbubbles-outline"}
-                size={20}
-                color={color}
-              />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="ledger"
-        options={{
-          title: "Rates",
-          href: isStaff ? null : undefined,
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "list-circle" : "list-circle-outline"}
-              size={22}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="earnings"
-        options={{
-          title: "Account",
-          href: isStaff ? null : undefined,
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "wallet" : "wallet-outline"} size={20} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: "Settings",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "settings" : "settings-outline"}
-              size={20}
-              color={color}
-            />
-          ),
-        }}
-      />
-    </Tabs>
+    <NativeTabs backgroundColor={Colors.background.tertiary}>
+      <NativeTabs.Trigger name="dashboard">
+        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="jobs">
+        <NativeTabs.Trigger.Label>Jobs</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="briefcase.fill" md="work" />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="chat">
+        <NativeTabs.Trigger.Label>Chat</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="bubble.left.and.bubble.right.fill" md="forum" />
+      </NativeTabs.Trigger>
+      {!isStaff && (
+        <NativeTabs.Trigger name="ledger">
+          <NativeTabs.Trigger.Label>Rates</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Icon sf="list.bullet.circle.fill" md="format_list_bulleted" />
+        </NativeTabs.Trigger>
+      )}
+      {!isStaff && (
+        <NativeTabs.Trigger name="earnings">
+          <NativeTabs.Trigger.Label>Account</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Icon sf="creditcard.fill" md="account_balance_wallet" />
+        </NativeTabs.Trigger>
+      )}
+      <NativeTabs.Trigger name="settings">
+        <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="gearshape.fill" md="settings" />
+      </NativeTabs.Trigger>
+    </NativeTabs>
   );
 }

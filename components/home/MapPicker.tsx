@@ -1,29 +1,30 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  Pressable,
-  ActivityIndicator,
-  Alert,
-  Platform,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import * as Location from "expo-location";
+import Button from "@/components/Button";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
-import Button from "@/components/Button";
+import { Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
+import { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  ScrollView,
+  Keyboard,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Conditionally import react-native-maps only on native platforms
 let MapView: any = null;
-let Marker: any = null;
 
 if (Platform.OS !== "web") {
   const Maps = require("react-native-maps");
   MapView = Maps.default;
-  Marker = Maps.Marker;
 }
 
 type Region = {
@@ -47,6 +48,28 @@ interface MapPickerProps {
   }) => void;
 }
 
+const formatFullAddress = (addr: Location.LocationGeocodedAddress | null): string => {
+  if (!addr) return "Unknown Location";
+
+  let streetPart = addr.name || "";
+  // If the street name isn't in the 'name' property, construct it
+  if (addr.street && !streetPart.includes(addr.street)) {
+    const constructedStreet = addr.streetNumber ? `${addr.streetNumber} ${addr.street}` : addr.street;
+    streetPart = streetPart ? `${streetPart}, ${constructedStreet}` : constructedStreet;
+  }
+
+  const parts = [
+    streetPart,
+    addr.district,
+    addr.city || addr.subregion,
+    addr.region,
+    addr.postalCode,
+    addr.country,
+  ];
+
+  return parts.filter(Boolean).join(", ");
+};
+
 export default function MapPicker({
   visible,
   onClose,
@@ -59,12 +82,16 @@ export default function MapPicker({
     latitudeDelta: 0.01,
     longitudeDelta: 0.01,
   });
-  const [markerPosition, setMarkerPosition] = useState({
-    latitude: 37.78825,
-    longitude: -122.4324,
-  });
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
+  const [isMoving, setIsMoving] = useState(false);
+  const [currentAddressObj, setCurrentAddressObj] = useState<Location.LocationGeocodedAddress | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const searchDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (visible) {
@@ -72,10 +99,30 @@ export default function MapPicker({
     }
   }, [visible]);
 
+  const fetchAddress = async (lat: number, lon: number) => {
+    try {
+      const address = await Location.reverseGeocodeAsync({
+        latitude: lat,
+        longitude: lon,
+      });
+      if (address && address.length > 0) {
+        setCurrentAddressObj(address[0]);
+      } else {
+        setCurrentAddressObj(null);
+      }
+    } catch (error) {
+      console.log("Geocoding error", error);
+      setCurrentAddressObj(null);
+    }
+  };
+
   const getUserLocation = async () => {
     try {
+      setLoading(true);
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
+        Alert.alert("Permission Denied", "Default location will be used. You can pan to select your address manually.");
+        fetchAddress(region.latitude, region.longitude);
         setLoading(false);
         return;
       }
@@ -92,52 +139,127 @@ export default function MapPicker({
       };
 
       setRegion(newRegion);
-      setMarkerPosition({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
+      fetchAddress(newRegion.latitude, newRegion.longitude);
     } catch (error) {
       console.error("Error getting location:", error);
+      fetchAddress(region.latitude, region.longitude);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleMapPress = (e: any) => {
-    setMarkerPosition(e.nativeEvent.coordinate);
+  const handleRegionChange = () => {
+    setIsMoving(true);
   };
 
-  const handleConfirm = async () => {
+  const handleRegionChangeComplete = (newRegion: Region) => {
+    setRegion(newRegion);
+    setIsMoving(false);
+
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      fetchAddress(newRegion.latitude, newRegion.longitude);
+    }, 600);
+  };
+
+  const fetchSuggestions = async (text: string) => {
+    if (!text.trim()) {
+      setSuggestions([]);
+      return;
+    }
     try {
-      setConfirming(true);
-
-      const address = await Location.reverseGeocodeAsync({
-        latitude: markerPosition.latitude,
-        longitude: markerPosition.longitude,
+      setSearching(true);
+      // Using Nominatim API for free OpenStreetMap autocomplete
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&addressdetails=1&limit=5`, {
+        headers: {
+          'User-Agent': 'TaskerCompanyApp/1.0'
+        }
       });
+      const data = await response.json();
+      setSuggestions(data);
+    } catch (error) {
+      console.log("Autocomplete error", error);
+    } finally {
+      setSearching(false);
+    }
+  };
 
-      if (address && address.length > 0) {
-        const addr = address[0];
+  const handleSearchTextChange = (text: string) => {
+    setSearchQuery(text);
+    if (searchDebounceTimer.current) clearTimeout(searchDebounceTimer.current);
+    searchDebounceTimer.current = setTimeout(() => {
+      fetchSuggestions(text);
+    }, 500);
+  };
 
-        onSelectLocation({
-          latitude: markerPosition.latitude,
-          longitude: markerPosition.longitude,
-          street:
-            `${addr.street || ""} ${addr.streetNumber || ""}`.trim() ||
-            "Selected Location",
-          city: addr.city || addr.subregion || "",
-          state: addr.region || "",
-          zip: addr.postalCode || "",
-          country: addr.country || "",
-        });
-        onClose();
+  const handleSelectSuggestion = (item: any) => {
+    Keyboard.dismiss();
+    setSearchQuery(item.name || item.display_name.split(',')[0]);
+    setSuggestions([]);
+    
+    const newRegion = {
+      latitude: parseFloat(item.lat),
+      longitude: parseFloat(item.lon),
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    };
+    setRegion(newRegion);
+    fetchAddress(newRegion.latitude, newRegion.longitude);
+  };
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    try {
+      setSearching(true);
+      const results = await Location.geocodeAsync(searchQuery);
+      if (results && results.length > 0) {
+        const newRegion = {
+          latitude: results[0].latitude,
+          longitude: results[0].longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        };
+        setRegion(newRegion);
+        setSuggestions([]);
+        fetchAddress(newRegion.latitude, newRegion.longitude);
+      } else {
+        Alert.alert("Not Found", "Could not find that location.");
       }
     } catch (error) {
-      Alert.alert("Error", "Unable to get address for this location");
-      console.error("Geocoding error:", error);
+      Alert.alert("Error", "Failed to search location. Please try again.");
     } finally {
-      setConfirming(false);
+      setSearching(false);
     }
+  };
+
+  const handleConfirm = () => {
+    setConfirming(true);
+    setTimeout(() => {
+      let streetVal = "Selected Location";
+      if (currentAddressObj) {
+        // Construct a highly detailed street string including name, street, and district
+        let streetPart = currentAddressObj.name || "";
+        if (currentAddressObj.street && !streetPart.includes(currentAddressObj.street)) {
+          streetPart = currentAddressObj.streetNumber
+            ? `${currentAddressObj.streetNumber} ${currentAddressObj.street}`
+            : currentAddressObj.street;
+        }
+        const fullStreet = [streetPart, currentAddressObj.district].filter(Boolean).join(", ");
+        streetVal = fullStreet || "Selected Location";
+      }
+
+      onSelectLocation({
+        latitude: region.latitude,
+        longitude: region.longitude,
+        street: streetVal,
+        city: currentAddressObj?.city || currentAddressObj?.subregion || "",
+        state: currentAddressObj?.region || "",
+        zip: currentAddressObj?.postalCode || "",
+        country: currentAddressObj?.country || "",
+      });
+      setConfirming(false);
+      onClose();
+    }, 200);
   };
 
   return (
@@ -148,29 +270,13 @@ export default function MapPicker({
       onRequestClose={onClose}
     >
       <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 0) }]}>
-        {/* Header */}
-        <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}>
-          <View>
-            <Text style={styles.title}>Select Location</Text>
-            <Text style={styles.subtitle}>Tap on map to select location</Text>
-          </View>
-          <Pressable onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={Colors.text.primary} />
-          </Pressable>
-        </View>
 
-        {/* Map */}
-        <View style={styles.mapContainer}>
+        {/* Full Screen Map Container */}
+        <View style={StyleSheet.absoluteFill}>
           {Platform.OS === "web" ? (
             <View style={styles.loadingContainer}>
-              <Ionicons
-                name="map-outline"
-                size={64}
-                color={Colors.text.tertiary}
-              />
-              <Text style={styles.loadingText}>
-                Map selection is only available on mobile app
-              </Text>
+              <Ionicons name="map-outline" size={64} color={Colors.text.tertiary} />
+              <Text style={styles.loadingText}>Map selection is only available on mobile app</Text>
               <Button title="Close" onPress={onClose} variant="outline" />
             </View>
           ) : loading ? (
@@ -179,71 +285,115 @@ export default function MapPicker({
               <Text style={styles.loadingText}>Loading map...</Text>
             </View>
           ) : (
-            <>
+            <View style={StyleSheet.absoluteFill}>
               <MapView
-                style={styles.map}
+                style={StyleSheet.absoluteFill}
+                initialRegion={region}
                 region={region}
-                onPress={handleMapPress}
+                onRegionChange={handleRegionChange}
+                onRegionChangeComplete={handleRegionChangeComplete}
                 showsUserLocation
-                showsMyLocationButton
-              >
-                <Marker
-                  coordinate={markerPosition}
-                  draggable
-                  onDragEnd={(e: { nativeEvent: { coordinate: { latitude: number; longitude: number } } }) =>
-                    setMarkerPosition(e.nativeEvent.coordinate)}
-                >
-                  <View style={styles.markerContainer}>
-                    <View style={styles.markerPin}>
-                      <Ionicons
-                        name="location"
-                        size={32}
-                        color={Colors.themes.customer.primary}
-                      />
-                    </View>
-                  </View>
-                </Marker>
-              </MapView>
+                showsMyLocationButton={false}
+              />
 
-              {/* Center Location Button */}
-              <Pressable style={styles.centerButton} onPress={getUserLocation}>
-                <Ionicons
-                  name="navigate"
-                  size={20}
-                  color={Colors.themes.customer.primary}
-                />
-              </Pressable>
-            </>
+              {/* Enhanced Fixed Center Marker */}
+              <View style={styles.centerMarkerContainer} pointerEvents="none">
+                <View style={[styles.pulseRing, isMoving && styles.pulseRingHidden]} />
+                <View style={[styles.markerPin, isMoving && styles.markerPinMoving]}>
+                  <Ionicons
+                    name="location"
+                    size={52}
+                    color={Colors.themes.customer.primary}
+                  />
+                </View>
+                <View style={[styles.markerShadow, isMoving && styles.markerShadowMoving]} />
+              </View>
+            </View>
           )}
         </View>
 
-        {/* Footer */}
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-          <View style={styles.instructionCard}>
-            <Ionicons
-              name="information-circle"
-              size={16}
-              color={Colors.themes.customer.primary}
-            />
-            <Text style={styles.instructionText}>
-              Drag the marker or tap anywhere on the map to select your location
-            </Text>
+        {/* Floating Header & Search */}
+        <View style={[styles.floatingHeader, { paddingTop: Math.max(insets.top, 16) }]} pointerEvents="box-none">
+          <View style={styles.headerTop}>
+            <Text style={styles.title}>Select Location</Text>
+            <Pressable onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={24} color={Colors.text.primary} />
+            </Pressable>
           </View>
 
-          <Button
-            title="Confirm Location"
-            onPress={handleConfirm}
-            fullWidth
-            loading={confirming}
-            icon={
-              <Ionicons
-                name="checkmark"
-                size={20}
-                color={Colors.neutral.white}
-              />
-            }
-          />
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color={Colors.text.tertiary} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search city, area, or street..."
+              placeholderTextColor={Colors.text.tertiary}
+              value={searchQuery}
+              onChangeText={handleSearchTextChange}
+              onSubmitEditing={handleSearch}
+              returnKeyType="search"
+            />
+            {searching && <ActivityIndicator size="small" color={Colors.themes.customer.primary} style={{ marginLeft: 8 }} />}
+          </View>
+          
+          {/* Autocomplete Suggestions */}
+          {suggestions.length > 0 && (
+            <View style={styles.suggestionsContainer}>
+              <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 200 }}>
+                {suggestions.map((item, index) => (
+                  <Pressable 
+                    key={index} 
+                    style={styles.suggestionItem}
+                    onPress={() => handleSelectSuggestion(item)}
+                  >
+                    <Ionicons name="location-outline" size={16} color={Colors.text.secondary} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.suggestionTitle} numberOfLines={1}>
+                        {item.name || item.display_name.split(',')[0]}
+                      </Text>
+                      <Text style={styles.suggestionSubtitle} numberOfLines={1}>
+                        {item.display_name}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          )}
         </View>
+
+        {/* Floating Footer */}
+        <View style={[styles.floatingFooter, { paddingBottom: Math.max(insets.bottom, 24) }]} pointerEvents="box-none">
+          <Pressable style={styles.centerButton} onPress={getUserLocation}>
+            <Ionicons name="navigate" size={22} color={Colors.themes.customer.primary} />
+          </Pressable>
+
+          <View style={styles.footerCard}>
+            <View style={styles.addressPreviewCard}>
+              <Ionicons
+                name="location-outline"
+                size={24}
+                color={Colors.themes.customer.primary}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.addressPreviewTitle}>
+                  {isMoving ? "Locating..." : "Selected Address"}
+                </Text>
+                <Text style={styles.addressPreviewText} numberOfLines={2}>
+                  {isMoving ? "Move map to pin location" : formatFullAddress(currentAddressObj)}
+                </Text>
+              </View>
+            </View>
+
+            <Button
+              title="Confirm Location"
+              onPress={handleConfirm}
+              fullWidth
+              loading={confirming}
+              icon={<Ionicons name="checkmark" size={20} color={Colors.neutral.white} />}
+            />
+          </View>
+        </View>
+
       </View>
     </Modal>
   );
@@ -254,34 +404,87 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.neutral.white,
   },
-  header: {
+  floatingHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
+  },
+  headerTop: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    marginBottom: Spacing.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    padding: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: 12,
+    shadowColor: Colors.neutral.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.neutral.white,
+    paddingHorizontal: Spacing.md,
+    height: 48,
+    borderRadius: 24,
+    shadowColor: Colors.neutral.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: Colors.text.primary,
+  },
+  suggestionsContainer: {
+    backgroundColor: Colors.neutral.white,
+    marginTop: 8,
+    borderRadius: 12,
+    shadowColor: Colors.neutral.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.light,
-    paddingTop: 50,
+  },
+  suggestionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.text.primary,
+  },
+  suggestionSubtitle: {
+    fontSize: 11,
+    color: Colors.text.secondary,
+    marginTop: 2,
   },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
     color: Colors.text.primary,
-    marginBottom: 2,
-  },
-  subtitle: {
-    fontSize: 12,
-    color: Colors.text.tertiary,
   },
   closeButton: {
     padding: 4,
-  },
-  mapContainer: {
-    flex: 1,
-  },
-  map: {
-    flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -293,23 +496,60 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.text.secondary,
   },
-  markerContainer: {
+  centerMarkerContainer: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    marginLeft: -26,
+    marginTop: -52,
     alignItems: "center",
+    justifyContent: "center",
+    zIndex: 2,
+  },
+  pulseRing: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.themes.customer.primary + '20',
+    borderWidth: 1,
+    borderColor: Colors.themes.customer.primary + '40',
+  },
+  pulseRingHidden: {
+    opacity: 0,
   },
   markerPin: {
-    backgroundColor: Colors.neutral.white,
-    padding: 4,
-    borderRadius: 20,
     shadowColor: Colors.neutral.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  markerPinMoving: {
+    transform: [{ translateY: -15 }],
+  },
+  markerShadow: {
+    width: 14,
+    height: 4,
+    borderRadius: 7,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    marginTop: 4,
+    transform: [{ scaleX: 2 }],
+  },
+  markerShadowMoving: {
+    transform: [{ scaleX: 1.2 }],
+    opacity: 0.3,
+  },
+  floatingFooter: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: Spacing.lg,
+    zIndex: 10,
   },
   centerButton: {
-    position: "absolute",
-    bottom: 20,
-    right: 20,
+    alignSelf: 'flex-end',
     width: 48,
     height: 48,
     borderRadius: 24,
@@ -317,29 +557,41 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     shadowColor: Colors.neutral.black,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowRadius: 8,
+    elevation: 6,
+    marginBottom: Spacing.md,
   },
-  footer: {
+  footerCard: {
+    backgroundColor: Colors.neutral.white,
     padding: Spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border.light,
+    borderRadius: 20,
+    shadowColor: Colors.neutral.black,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 10,
     gap: Spacing.md,
   },
-  instructionCard: {
+  addressPreviewCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 12,
     padding: 12,
     backgroundColor: Colors.themes.customer.primary + "10",
-    borderRadius: 8,
+    borderRadius: 12,
     borderLeftWidth: 3,
     borderLeftColor: Colors.themes.customer.primary,
   },
-  instructionText: {
-    flex: 1,
+  addressPreviewTitle: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: Colors.text.primary,
+    marginBottom: 2,
+    textTransform: 'uppercase',
+  },
+  addressPreviewText: {
     fontSize: 11,
     color: Colors.text.secondary,
     lineHeight: 16,
