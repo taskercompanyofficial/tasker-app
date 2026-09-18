@@ -22,7 +22,7 @@
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
     "axios": "^1.13.2",
-    "expo": "~57.0.24",
+    "expo": "^57.0.24",
     "expo-asset": "~57.0.17",
     "expo-audio": "~57.0.5",
     "expo-battery": "~57.0.3",
