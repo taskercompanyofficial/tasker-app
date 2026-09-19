@@ -9,7 +9,6 @@ import { PermanentFloatingChatBubble } from "@/components/Chat/PermanentFloating
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import VendorLocationGateModal from "@/components/vendor/VendorLocationGateModal";
 import VendorSilentModeBanner from "@/components/vendor/VendorSilentModeBanner";
 
 export default function VendorLayout() {
@@ -18,123 +17,118 @@ export default function VendorLayout() {
   const { expoPushToken } = usePushNotifications();
 
   useEffect(() => {
-    async function checkProfileAndOnboarding() {
+    async function checkProfileStatus() {
       if (
         session.isAuthenticated &&
         session.appMode === "vendor" &&
         session.token
       ) {
+        // If vendor is actively in the complete-profile flow, allow them to proceed uninterrupted
+        if (pathname.includes("/complete-profile")) {
+          return;
+        }
+
         try {
-          // Request call to backend to verify if profile is completed
-          const res = await axios.get(`${API_URL}/vendor/me`, {
-            headers: { Authorization: `Bearer ${session.token}` },
-          });
-          const isComplete = res.data?.is_profile_complete;
-          const user = res.data?.user;
+          // Use vendorUser from session if available, or fetch fresh
+          let user: any = session.vendorUser;
+          let isComplete = user?.is_profile_complete;
+
+          if (!user) {
+            const res = await axios.get(`${API_URL}/vendor/me`, {
+              headers: { Authorization: `Bearer ${session.token}` },
+            });
+            isComplete = res.data?.is_profile_complete;
+            user = res.data?.user;
+          }
 
           const step2Completed = Boolean(user?.cnic_front_image);
           const step3Completed = Boolean(
             user?.cnic &&
-              user?.name &&
-              !String(user.name).startsWith("Partner ") &&
-              user?.father_name &&
-              user?.dob &&
-              user?.address &&
-              user?.current_address
+            user?.name &&
+            !String(user.name).startsWith("Partner ") &&
+            user?.father_name &&
+            user?.dob &&
+            user?.address &&
+            user?.current_address
           );
           const step4Completed = Boolean(user?.profile_image);
           const refs = user?.references;
           const step5Completed = Boolean(
             refs &&
-              Array.isArray(refs) &&
-              refs.length >= 2 &&
-              refs[0]?.name &&
-              refs[0]?.phone &&
-              refs[1]?.name &&
-              refs[1]?.phone
+            Array.isArray(refs) &&
+            refs.length >= 2 &&
+            refs[0]?.name &&
+            refs[0]?.phone &&
+            refs[1]?.name &&
+            refs[1]?.phone
           );
           const step6Completed = Boolean(user?.education && user?.marital_status);
 
           const isProfileComplete = Boolean(
             isComplete ??
-              (step2Completed &&
-                step3Completed &&
-                step4Completed &&
-                step5Completed &&
-                step6Completed)
+            (step2Completed &&
+              step3Completed &&
+              step4Completed &&
+              step5Completed &&
+              step6Completed)
           );
 
           if (!isProfileComplete) {
-            if (
-              !pathname.includes("/complete-profile") &&
-              !pathname.includes("/onboarding")
-            ) {
-              if (!step2Completed) {
-                router.replace("/vendor/complete-profile/step-2" as any);
-              } else if (!step3Completed) {
-                router.replace("/vendor/complete-profile/step-3" as any);
-              } else if (!step4Completed) {
-                router.replace("/vendor/complete-profile/step-4" as any);
-              } else if (!step5Completed) {
-                router.replace("/vendor/complete-profile/step-5" as any);
-              } else if (!step6Completed) {
-                router.replace("/vendor/complete-profile/step-6" as any);
-              } else {
-                router.replace("/vendor/complete-profile" as any);
-              }
-              return;
-            }
-          } else {
-            // Profile is 100% complete: check admin activation status
-            const isApproved = user?.status === "active";
-
-            if (!isApproved) {
-              // If account is not active (e.g. pending review), block access to dashboard and tabs
-              if (
-                !pathname.includes("/pending-approval") &&
-                !pathname.includes("/onboarding")
-              ) {
-                router.replace("/vendor/pending-approval" as any);
-                return;
-              }
+            if (!step2Completed) {
+              router.replace("/vendor/complete-profile/step-2" as any);
+            } else if (!step3Completed) {
+              router.replace("/vendor/complete-profile/step-3" as any);
+            } else if (!step4Completed) {
+              router.replace("/vendor/complete-profile/step-4" as any);
+            } else if (!step5Completed) {
+              router.replace("/vendor/complete-profile/step-5" as any);
+            } else if (!step6Completed) {
+              router.replace("/vendor/complete-profile/step-6" as any);
             } else {
-              // Account is active & approved: redirect out of pending-approval and complete-profile
-              if (
-                pathname.includes("/complete-profile") ||
-                pathname.includes("/pending-approval")
-              ) {
-                router.replace("/vendor/(tabs)" as any);
-                return;
-              }
+              router.replace("/vendor/complete-profile" as any);
             }
+            return;
+          }
+
+          // Profile is 100% complete: check admin activation status
+          const isApproved = user?.status === "active";
+
+          if (!isApproved) {
+            if (!pathname.includes("/pending-approval")) {
+              router.replace("/vendor/pending-approval" as any);
+            }
+            return;
+          }
+
+          // Account is active & approved: check if device permissions setup is completed
+          const permissionsDone = await AsyncStorage.getItem(
+            "@vendor_permissions_completed"
+          );
+          if (!permissionsDone && !pathname.includes("/permissions")) {
+            router.replace("/vendor/permissions" as any);
+            return;
+          }
+
+          // If on pending-approval or permissions (when already done), redirect to dashboard
+          if (
+            pathname.includes("/pending-approval") ||
+            (permissionsDone && pathname.includes("/permissions"))
+          ) {
+            router.replace("/vendor/(tabs)" as any);
           }
         } catch (e) {
           console.error("[VendorLayout] Error checking profile status:", e);
         }
       }
-
-      if (
-        session.isAuthenticated &&
-        (session.appMode === "vendor" || session.appMode === "vendor_staff")
-      ) {
-        try {
-          const completed = await AsyncStorage.getItem(
-            "@vendor_onboarding_completed"
-          );
-          if (!completed) {
-            router.replace("/vendor/onboarding");
-          }
-        } catch (e) {}
-      }
     }
 
-    checkProfileAndOnboarding();
+    checkProfileStatus();
   }, [session.isAuthenticated, session.appMode, session.token, pathname]);
 
   useEffect(() => {
     const registerToken = async () => {
       // Vendors and Staff share this layout, but we need correct endpoint mapping.
-      if (session.isAuthenticated && expoPushToken) {
+      if (session.isAuthenticated && expoPushToken && session.token) {
         try {
           const endpoint =
             session.appMode === "vendor_staff"
@@ -148,9 +142,10 @@ export default function VendorLayout() {
           );
           console.log(`[Push] Vendor Layout registered token to ${endpoint}`);
         } catch (error: any) {
-          console.error(
-            "[Push] Failed to register push token in Vendor Layout:",
-            error?.response?.data || error.message,
+          // Log softly; push token errors must never interrupt vendor sessions
+          console.log(
+            "[Push] Vendor push token registration notice:",
+            error?.response?.status || error.message,
           );
         }
       }
@@ -172,24 +167,35 @@ export default function VendorLayout() {
   return (
     <View style={{ flex: 1 }}>
       <VendorSilentModeBanner />
-      <VendorLocationGateModal />
       <Stack
         screenOptions={{ headerShown: false, animation: "slide_from_right" }}
       >
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="onboarding" />
+        {/* Protected operational screens for authenticated vendors/staff */}
+        <Stack.Protected
+          guard={
+            Boolean(
+              session.isAuthenticated &&
+              (session.appMode === "vendor" || session.appMode === "vendor_staff")
+            )
+          }
+        >
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="permissions" />
+          <Stack.Screen name="work-order-details/[id]" />
+          <Stack.Screen name="work-order-edit/[id]" />
+          <Stack.Screen name="staff/index" />
+          <Stack.Screen name="staff/add" />
+          <Stack.Screen name="staff/[id]" />
+          <Stack.Screen name="work-order-chat/[id]" />
+        </Stack.Protected>
+
+        {/* Lifecycle & Public screens within vendor section */}
         <Stack.Screen name="complete-profile" />
         <Stack.Screen name="pending-approval" />
-        <Stack.Screen name="work-order-details/[id]" />
-        <Stack.Screen name="work-order-edit/[id]" />
-        <Stack.Screen name="staff/index" />
-        <Stack.Screen name="staff/add" />
-        <Stack.Screen name="staff/[id]" />
         <Stack.Screen
           name="support-chat"
           options={{ animation: "slide_from_bottom" }}
         />
-        <Stack.Screen name="work-order-chat/[id]" />
       </Stack>
       <PermanentFloatingChatBubble />
     </View>

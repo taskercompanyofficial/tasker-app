@@ -13,6 +13,7 @@ export interface AppMessage {
   media_url?: string | null;
   metadata: any | null;
   is_read: boolean;
+  client_message_id?: string | null;
   status?: "sending" | "sent" | "delivered" | "read";
   delivered_at?: string | null;
   read_at?: string | null;
@@ -30,6 +31,7 @@ export interface AppConversationParticipant {
   avatar_url: string | null;
   is_verified: boolean;
   role: string;
+  phone?: string | null;
 }
 
 export interface AppConversation {

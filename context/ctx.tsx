@@ -18,7 +18,7 @@ interface Session {
 }
 
 const AuthContext = createContext<{
-  signIn: (token: string, mode?: AppMode) => Promise<void>;
+  signIn: (token: string, mode?: AppMode, initialUser?: User | null) => Promise<void>;
   signOut: () => Promise<void>;
   signOutMode: (mode: AppMode) => Promise<void>;
   refetchUser: (mode?: AppMode) => Promise<void>;

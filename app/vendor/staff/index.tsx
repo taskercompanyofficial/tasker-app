@@ -23,6 +23,7 @@ import {
   VENDOR_STAFF_DELETE_URL,
   VENDOR_STAFF_RESET_PASSWORD_URL,
 } from "@/lib/api-endpoints";
+import getImageUrl from "@/lib/utils";
 import Toast from "react-native-toast-message";
 
 interface StaffMember {
@@ -55,32 +56,6 @@ export default function VendorStaffList() {
   const fetchStaff = async () => {
     try {
       const res = await myAxios.get(VENDOR_STAFF_URL);
-      // #region agent log
-      fetch("http://127.0.0.1:7789/ingest/e7df05fe-e28b-4c90-971d-c6d804cac73a", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "54d0b8",
-        },
-        body: JSON.stringify({
-          sessionId: "54d0b8",
-          runId: "initial",
-          hypothesisId: "H5_staff_payload_shape",
-          location: "app/vendor/staff/index.tsx:62",
-          message: "Fetched staff list payload shape",
-          data: {
-            isArray: Array.isArray(res.data?.data),
-            size: Array.isArray(res.data?.data) ? res.data.data.length : -1,
-            invalidNameCount: Array.isArray(res.data?.data)
-              ? res.data.data.filter(
-                  (m: any) => !m || typeof m.name !== "string" || m.name.length === 0,
-                ).length
-              : -1,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       setStaff(res.data?.data || []);
     } catch (e) {
       console.log("Error fetching staff:", e);
@@ -177,7 +152,7 @@ export default function VendorStaffList() {
               {item.image ? (
                 <Image
                   source={{
-                    uri: `${process.env.EXPO_PUBLIC_STORAGE_URL}/${item.image}`,
+                    uri: getImageUrl(item.image),
                   }}
                   style={styles.avatarImage}
                 />

@@ -1,15 +1,11 @@
 import React from "react";
-import { Stack, useLocalSearchParams } from "expo-router";
-import { ChatRoom } from "@/components/Chat/ChatRoom";
-import { SafeAreaView } from "react-native-safe-area-context";
+import CustomerSupportChatHub from "@/app/customer/support-chat";
 
+/**
+ * OrderChatScreen delegates directly to the unified CustomerSupportChatHub
+ * so order-level technician chats share the exact same rich, real-time
+ * support interface, header actions, and quick-switch capabilities.
+ */
 export default function OrderChatScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={["bottom"]}>
-      <Stack.Screen options={{ headerShown: false }} />
-      <ChatRoom workOrderId={id} />
-    </SafeAreaView>
-  );
+  return <CustomerSupportChatHub />;
 }

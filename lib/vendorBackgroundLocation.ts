@@ -6,10 +6,10 @@ import Toast from "react-native-toast-message";
 
 export const VENDOR_BG_LOCATION_TASK = "TASKER_VENDOR_BG_LOCATION_TASK";
 
-export const isDevOrExpoGo =
-  __DEV__ ||
+export const isExpoGo =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
   (Constants as any).appOwnership === "expo";
+export const isDevOrExpoGo = isExpoGo;
 
 /**
  * Request Notification Permissions (for Foreground Service Banner and Job Alerts)
@@ -36,17 +36,14 @@ export async function requestVendorNotificationPermissions(): Promise<boolean> {
 export async function requestVendorOverlayPermission(): Promise<void> {
   if (Platform.OS !== "android") return;
   try {
-    // Open Android "Display over other apps" special access settings for this package
-    const url = "package:com.taskercompany.company";
-    const supported = await Linking.canOpenURL(url).catch(() => false);
-    if (supported) {
-      await Linking.openURL(url);
-    } else {
-      await Linking.openSettings();
-    }
+    // Open Android "Display over other apps" special access settings directly
+    await Linking.sendIntent("android.settings.action.MANAGE_OVERLAY_PERMISSION");
   } catch (err) {
-    console.warn("[VendorBGLocation] Overlay settings open error:", err);
-    await Linking.openSettings().catch(() => {});
+    try {
+      await Linking.openSettings();
+    } catch (e) {
+      console.warn("[VendorBGLocation] Overlay settings open error:", e);
+    }
   }
 }
 

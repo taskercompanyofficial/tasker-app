@@ -58,31 +58,5 @@ export default function Index() {
     href = hasVendorStaff ? "/vendor/(tabs)/dashboard" : "/auth/vendor/sign-in";
   }
 
-  // #region agent log
-  fetch("http://127.0.0.1:7789/ingest/e7df05fe-e28b-4c90-971d-c6d804cac73a", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "54d0b8",
-    },
-    body: JSON.stringify({
-      sessionId: "54d0b8",
-      runId: "initial",
-      hypothesisId: "H1_mode_redirect_mismatch",
-      location: "app/index.tsx:61",
-      message: "Computed root redirect target",
-      data: {
-        appMode,
-        effectiveMode,
-        hasCustomer,
-        hasVendor,
-        hasVendorStaff,
-        href,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => { });
-  // #endregion
-
   return <Redirect href={href as any} />;
 }

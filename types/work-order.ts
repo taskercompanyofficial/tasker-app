@@ -106,6 +106,9 @@ export interface WorkOrder {
     id: number;
     name: string;
     phone: string;
+    image?: string;
+    active_avatar_url?: string;
+    daily_selfie_image?: string;
   };
   assigned_at?: string;
   accepted_at?: string;

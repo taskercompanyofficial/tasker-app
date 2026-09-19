@@ -16,6 +16,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useColorScheme,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -295,9 +296,18 @@ export default function Onboarding() {
     );
   };
 
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={
+          isDark ? "rgba(0, 0, 0, 0.40)" : "rgba(255, 255, 255, 0.40)"
+        }
+        translucent
+      />
 
       <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
         {/* Minimal Header */}

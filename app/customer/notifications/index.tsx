@@ -147,7 +147,10 @@ export default function NotificationsPage() {
       if (data.chat_type === 'support') {
         router.push('/customer/support-chat');
       } else if (data.chat_type === 'order' && data.work_order_id) {
-        router.push(`/customer/order-chat/${data.work_order_id}`);
+        router.push({
+          pathname: '/customer/support-chat',
+          params: { initialWorkOrderId: data.work_order_id },
+        } as any);
       }
       return;
     }

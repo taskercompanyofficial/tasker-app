@@ -7,28 +7,17 @@
     "icon": "./assets/icons/adaptive-icon.png",
     "scheme": "tasker-company",
     "userInterfaceStyle": "automatic",
+    "androidStatusBar": {
+      "barStyle": "dark-content",
+      "backgroundColor": "#ffffff66",
+      "translucent": true
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.taskercompany.company",
       "config": {
         "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
       },
-      "associatedDomains": [
-        "applinks:taskercompany.com",
-        "applinks:www.taskercompany.com",
-        "applinks:taskercompany.com/orders/*",
-        "applinks:www.taskercompany.com/orders/*",
-        "applinks:taskercompany.com/services/*",
-        "applinks:www.taskercompany.com/services/*",
-        "applinks:taskercompany.com/categories/*",
-        "applinks:www.taskercompany.com/categories/*",
-        "applinks:taskercompany.com/schedule",
-        "applinks:www.taskercompany.com/schedule",
-        "applinks:taskercompany.com/track",
-        "applinks:www.taskercompany.com/track",
-        "applinks:taskercompany.com/chat/*",
-        "applinks:www.taskercompany.com/chat/*"
-      ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Tasker requires camera access to scan your CNIC identity documents and capture biometric selfie photos for verification.",
@@ -37,6 +26,7 @@
         "NSLocationWhenInUseUsageDescription": "Tasker requires access to your location to find nearby customer service requests and provide turn-by-turn navigation.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Tasker requires background location access to share live real-time location updates with customers while you are on the way to a job.",
         "NSLocationAlwaysUsageDescription": "Tasker requires background location access to update customers on your arrival status even when the app is in background.",
+        "NSMicrophoneUsageDescription": "Tasker requires microphone access so you can speak directly with customers and service technicians on voice calls.",
         "UIBackgroundModes": [
           "location",
           "fetch",
@@ -59,116 +49,6 @@
       "googleServicesFile": "./google-services.json",
       "predictiveBackGestureEnabled": false,
       "package": "com.taskercompany.company",
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            {
-              "scheme": "https",
-              "host": "taskercompany.com",
-              "pathPrefix": "/orders"
-            },
-            {
-              "scheme": "https",
-              "host": "www.taskercompany.com",
-              "pathPrefix": "/orders"
-            },
-            {
-              "scheme": "https",
-              "host": "taskercompany.com",
-              "pathPrefix": "/services"
-            },
-            {
-              "scheme": "https",
-              "host": "www.taskercompany.com",
-              "pathPrefix": "/services"
-            },
-            {
-              "scheme": "https",
-              "host": "taskercompany.com",
-              "pathPrefix": "/categories"
-            },
-            {
-              "scheme": "https",
-              "host": "www.taskercompany.com",
-              "pathPrefix": "/categories"
-            },
-            {
-              "scheme": "https",
-              "host": "taskercompany.com",
-              "pathPrefix": "/schedule"
-            },
-            {
-              "scheme": "https",
-              "host": "www.taskercompany.com",
-              "pathPrefix": "/schedule"
-            },
-            {
-              "scheme": "https",
-              "host": "taskercompany.com",
-              "pathPrefix": "/track"
-            },
-            {
-              "scheme": "https",
-              "host": "www.taskercompany.com",
-              "pathPrefix": "/track"
-            },
-            {
-              "scheme": "https",
-              "host": "taskercompany.com",
-              "pathPattern": "/chat/*"
-            },
-            {
-              "scheme": "https",
-              "host": "www.taskercompany.com",
-              "pathPattern": "/chat/*"
-            },
-            {
-              "scheme": "tasker-company",
-              "host": "*"
-            }
-          ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
-        },
-        {
-          "action": "VIEW",
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ],
-          "data": [
-            {
-              "scheme": "geo"
-            }
-          ]
-        },
-        {
-          "action": "VIEW",
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ],
-          "data": [
-            {
-              "scheme": "https",
-              "host": "maps.google.com"
-            },
-            {
-              "scheme": "https",
-              "host": "www.google.com",
-              "pathPrefix": "/maps"
-            },
-            {
-              "scheme": "https",
-              "host": "maps.app.goo.gl"
-            }
-          ]
-        }
-      ],
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
@@ -183,7 +63,6 @@
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.WAKE_LOCK",
         "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
         "android.permission.VIBRATE"
       ]
     },

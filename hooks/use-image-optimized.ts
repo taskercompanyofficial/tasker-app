@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import * as ImageManipulator from "expo-image-manipulator";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import { Platform } from "react-native";
 
 const CACHE_DIR = FileSystem.cacheDirectory + "images/";
@@ -102,7 +102,7 @@ export function useImageOptimized(options: UseImageOptimizedOptions = {}) {
           uri: enableCache ? getCachedPath(uri) : manipResult.uri,
           width: manipResult.width,
           height: manipResult.height,
-          size: optimizedInfo.size || 0,
+          size: optimizedInfo.exists && "size" in optimizedInfo ? (optimizedInfo.size ?? 0) : 0,
         };
       } catch (err: any) {
         console.error("[ImageOptimize] Failed:", err);

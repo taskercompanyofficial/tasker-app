@@ -20,6 +20,7 @@ import {
   VENDOR_STAFF_DETAILS_URL,
   VENDOR_STAFF_WORK_ORDERS_URL_BY_ID,
 } from "@/lib/api-endpoints";
+import getImageUrl from "@/lib/utils";
 
 type TabType = "all" | "active" | "completed";
 
@@ -143,7 +144,7 @@ export default function StaffDetailScreen() {
             <View style={[styles.avatar, isApproved ? styles.avatarActive : styles.avatarInactive]}>
               {staff.image ? (
                 <Image
-                  source={{ uri: `${process.env.EXPO_PUBLIC_STORAGE_URL}/${staff.image}` }}
+                  source={{ uri: getImageUrl(staff.image) }}
                   style={styles.avatarImage}
                 />
               ) : (

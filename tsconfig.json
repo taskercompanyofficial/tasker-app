@@ -4,6 +4,7 @@
     "strict": true,
     "esModuleInterop": true,
     "jsx": "react-jsx",
+    "moduleResolution": "bundler",
     "paths": {
       "@/*": [
         "./*"

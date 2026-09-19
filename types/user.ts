@@ -21,6 +21,11 @@ export type User = {
   profile_image?: string;
   cnic_front_image?: string;
   cnic_back_image?: string;
+  is_online?: boolean;
+  online_status?: 'online' | 'offline' | 'busy' | string;
+  daily_selfie_image?: string | null;
+  daily_selfie_at?: string | null;
+  active_avatar_url?: string | null;
   vendor?: {
     id: number;
     name: string;
@@ -39,6 +44,11 @@ export type VendorStaff = {
   image?: string;
   cnic?: string;
   experience?: string;
+  is_online?: boolean;
+  online_status?: 'online' | 'offline' | 'busy' | string;
+  daily_selfie_image?: string | null;
+  daily_selfie_at?: string | null;
+  active_avatar_url?: string | null;
   created_at: string;
   updated_at: string;
 };

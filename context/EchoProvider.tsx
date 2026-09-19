@@ -86,8 +86,33 @@ export type ConnectionState =
   | "unavailable"
   | "failed";
 
+export interface IncomingVoiceCallEvent {
+  readonly call_id: number;
+  readonly room_name: string;
+  readonly caller_id: number;
+  readonly caller_name: string;
+  readonly caller_avatar: string | null;
+  readonly caller_type: string;
+  readonly receiver_id: number;
+  readonly receiver_type: string;
+  readonly work_order_id: number;
+  readonly work_order_number?: string;
+  readonly status: string;
+}
+
+export interface VoiceCallStatusUpdateEvent {
+  readonly call_id: number;
+  readonly room_name: string;
+  readonly status: "ringing" | "active" | "accepted" | "rejected" | "ended" | "missed";
+  readonly duration_seconds?: number;
+  readonly started_at?: string;
+  readonly ended_at?: string;
+}
+
 type NotificationCallback = (event: NotificationEvent) => void;
 type WorkOrderUpdateCallback = (event: WorkOrderUpdateEvent) => void;
+type IncomingVoiceCallCallback = (event: IncomingVoiceCallEvent) => void;
+type VoiceCallStatusUpdateCallback = (event: VoiceCallStatusUpdateEvent) => void;
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
@@ -97,6 +122,8 @@ interface EchoContextType {
   readonly onNotification: (cb: NotificationCallback) => () => void;
   readonly onWorkOrderUpdate: (cb: WorkOrderUpdateCallback) => () => void;
   readonly onChatMessage: (cb: (event: any) => void) => () => void;
+  readonly onVoiceIncomingCall: (cb: IncomingVoiceCallCallback) => () => void;
+  readonly onVoiceStatusUpdated: (cb: VoiceCallStatusUpdateCallback) => () => void;
   readonly realtimeUnreadCount: number;
   readonly resetRealtimeUnread: () => void;
 }
@@ -107,6 +134,8 @@ const EchoContext = createContext<EchoContextType>({
   onNotification: () => () => { },
   onWorkOrderUpdate: () => () => { },
   onChatMessage: () => () => { },
+  onVoiceIncomingCall: () => () => { },
+  onVoiceStatusUpdated: () => () => { },
   realtimeUnreadCount: 0,
   resetRealtimeUnread: () => { },
 });
@@ -142,6 +171,8 @@ export function EchoProvider({ children }: PropsWithChildren) {
   const notificationCallbacksRef = useRef<Set<NotificationCallback>>(new Set());
   const workOrderCallbacksRef = useRef<Set<WorkOrderUpdateCallback>>(new Set());
   const chatCallbacksRef = useRef<Set<(event: any) => void>>(new Set());
+  const voiceIncomingCallbacksRef = useRef<Set<IncomingVoiceCallCallback>>(new Set());
+  const voiceStatusCallbacksRef = useRef<Set<VoiceCallStatusUpdateCallback>>(new Set());
 
   const applyConnectionState = useCallback((nextState: ConnectionState) => {
     if (nextState === "connecting") {
@@ -202,6 +233,26 @@ export function EchoProvider({ children }: PropsWithChildren) {
       chatCallbacksRef.current.add(cb);
       return () => {
         chatCallbacksRef.current.delete(cb);
+      };
+    },
+    [],
+  );
+
+  const onVoiceIncomingCall = useCallback(
+    (cb: IncomingVoiceCallCallback): (() => void) => {
+      voiceIncomingCallbacksRef.current.add(cb);
+      return () => {
+        voiceIncomingCallbacksRef.current.delete(cb);
+      };
+    },
+    [],
+  );
+
+  const onVoiceStatusUpdated = useCallback(
+    (cb: VoiceCallStatusUpdateCallback): (() => void) => {
+      voiceStatusCallbacksRef.current.add(cb);
+      return () => {
+        voiceStatusCallbacksRef.current.delete(cb);
       };
     },
     [],
@@ -345,7 +396,7 @@ export function EchoProvider({ children }: PropsWithChildren) {
             if (appMode === 'customer') {
               if (type === 'chat') {
                 if (data.chat_type === 'support') router.push('/customer/support-chat');
-                else if (data.order_id) router.push(`/customer/order-chat/${data.order_id}`);
+                else if (data.order_id) router.push({ pathname: '/customer/support-chat', params: { initialWorkOrderId: data.order_id } } as any);
               } else {
                 const orderRef = data.order_number || data.order_id || data.work_order_id;
                 if (orderRef) {
@@ -375,6 +426,14 @@ export function EchoProvider({ children }: PropsWithChildren) {
       .listen(".message.created", (event: any) => {
         console.log(`[Echo] 💬 Message: ${event.message?.text}`);
         chatCallbacksRef.current.forEach((cb) => cb(event));
+      })
+      .listen(".voice.incoming-call", (event: IncomingVoiceCallEvent) => {
+        console.log(`[Echo] 📞 Incoming Voice Call: ${event.caller_name} (Call #${event.call_id})`);
+        voiceIncomingCallbacksRef.current.forEach((cb) => cb(event));
+      })
+      .listen(".voice.status-updated", (event: VoiceCallStatusUpdateEvent) => {
+        console.log(`[Echo] 📞 Voice Call Status: ${event.status} (Call #${event.call_id})`);
+        voiceStatusCallbacksRef.current.forEach((cb) => cb(event));
       });
 
     // Sub to Public Channel (Work Orders)
@@ -417,6 +476,8 @@ export function EchoProvider({ children }: PropsWithChildren) {
       onNotification,
       onWorkOrderUpdate,
       onChatMessage,
+      onVoiceIncomingCall,
+      onVoiceStatusUpdated,
       realtimeUnreadCount,
       resetRealtimeUnread,
     }),
@@ -426,6 +487,8 @@ export function EchoProvider({ children }: PropsWithChildren) {
       onNotification,
       onWorkOrderUpdate,
       onChatMessage,
+      onVoiceIncomingCall,
+      onVoiceStatusUpdated,
       realtimeUnreadCount,
       resetRealtimeUnread,
     ],

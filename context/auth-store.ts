@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 import axios from "axios";
 import { addDebugLog } from "@/lib/debug-monitor";
 import { 
@@ -8,6 +10,39 @@ import {
   VENDOR_STAFF_ME_URL 
 } from "@/lib/api-endpoints";
 import { User } from "@/types/user";
+
+const SECURE_KEY_CUSTOMER_TOKEN = "tasker_sec_customer_token";
+const SECURE_KEY_VENDOR_TOKEN = "tasker_sec_vendor_token";
+const SECURE_KEY_STAFF_TOKEN = "tasker_sec_vendor_staff_token";
+
+const setSecureToken = async (key: string, value: string | null) => {
+  try {
+    if (Platform.OS === "web") {
+      if (value) await AsyncStorage.setItem(key, value);
+      else await AsyncStorage.removeItem(key);
+      return;
+    }
+    if (value) {
+      await SecureStore.setItemAsync(key, value);
+    } else {
+      await SecureStore.deleteItemAsync(key);
+    }
+  } catch (err) {
+    console.warn(`[AuthStore] Failed to write secure token ${key}:`, err);
+  }
+};
+
+const getSecureToken = async (key: string): Promise<string | null> => {
+  try {
+    if (Platform.OS === "web") {
+      return await AsyncStorage.getItem(key);
+    }
+    return await SecureStore.getItemAsync(key);
+  } catch (err) {
+    console.warn(`[AuthStore] Failed to read secure token ${key}:`, err);
+    return null;
+  }
+};
 
 export type AppMode = "customer" | "vendor" | "vendor_staff";
 
@@ -29,7 +64,7 @@ interface AuthState {
   vendorStaffUser: User | null;
 
   // Actions
-  signIn: (token: string, mode?: AppMode) => Promise<void>;
+  signIn: (token: string, mode?: AppMode, initialUser?: User | null) => Promise<void>;
   signOut: () => Promise<void>;
   signOutMode: (mode: AppMode) => Promise<void>;
   setAppMode: (mode: AppMode) => Promise<void>;
@@ -84,22 +119,23 @@ const fetchUser = async (token: string, mode?: AppMode): Promise<User | null> =>
   }
 };
 
-const partialize = (state: AuthState): PersistedAuthState => ({
-  customerToken: state.customerToken,
-  vendorToken: state.vendorToken,
-  vendorStaffToken: state.vendorStaffToken,
-  appMode: state.appMode,
-});
-
 const notify = () => {
   listeners.forEach((listener) => listener());
 };
 
 const persistState = async () => {
   try {
+    await Promise.all([
+      setSecureToken(SECURE_KEY_CUSTOMER_TOKEN, state.customerToken),
+      setSecureToken(SECURE_KEY_VENDOR_TOKEN, state.vendorToken),
+      setSecureToken(SECURE_KEY_STAFF_TOKEN, state.vendorStaffToken),
+    ]);
+
     const payload = {
-      state: partialize(state),
-      version: 0,
+      state: {
+        appMode: state.appMode,
+      },
+      version: 1,
     };
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch (error) {
@@ -198,7 +234,7 @@ const actions: Pick<
     }
   },
 
-  signIn: async (token, mode) => {
+  signIn: async (token, mode, initialUser) => {
     const currentState = getState();
     const resolvedMode = mode ?? (currentState.appMode ?? "customer");
     addDebugLog("auth_sign_in_start", {
@@ -206,7 +242,22 @@ const actions: Pick<
       resolvedMode,
       hadActiveMode: currentState.appMode,
     });
-    const userData = await fetchUser(token, resolvedMode);
+    let userData = initialUser || null;
+    if (!userData) {
+      userData = await fetchUser(token, resolvedMode);
+    } else {
+      // Async refresh user in background to guarantee freshness
+      void fetchUser(token, resolvedMode).then((fresh) => {
+        if (fresh) {
+          const up: Partial<AuthState> = {};
+          if (resolvedMode === "vendor_staff") up.vendorStaffUser = fresh;
+          else if (resolvedMode === "vendor") up.vendorUser = fresh;
+          else up.customerUser = fresh;
+          if (getState().appMode === resolvedMode) up.user = fresh;
+          setState(up);
+        }
+      });
+    }
 
     const updates: Partial<AuthState> = {};
     if (resolvedMode === "vendor_staff") {
@@ -363,27 +414,48 @@ let state: AuthState = {
 
 const hydrateFromStorage = async () => {
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as
-        | { state?: PersistedAuthState }
-        | PersistedAuthState;
+    const [secureCustomer, secureVendor, secureStaff, raw] = await Promise.all([
+      getSecureToken(SECURE_KEY_CUSTOMER_TOKEN),
+      getSecureToken(SECURE_KEY_VENDOR_TOKEN),
+      getSecureToken(SECURE_KEY_STAFF_TOKEN),
+      AsyncStorage.getItem(STORAGE_KEY),
+    ]);
 
-      const persisted =
-        parsed && typeof parsed === "object" && "state" in parsed
-          ? parsed.state
-          : (parsed as PersistedAuthState);
+    let customerToken = secureCustomer;
+    let vendorToken = secureVendor;
+    let vendorStaffToken = secureStaff;
+    let appMode: AppMode | null = null;
+
+    if (raw) {
+      const parsed = JSON.parse(raw) as any;
+      const persisted = parsed?.state ?? parsed;
 
       if (persisted) {
-        state = {
-          ...state,
-          customerToken: persisted.customerToken ?? null,
-          vendorToken: persisted.vendorToken ?? null,
-          vendorStaffToken: persisted.vendorStaffToken ?? null,
-          appMode: persisted.appMode ?? null,
-        };
+        appMode = persisted.appMode ?? null;
+
+        // Legacy migration: if secure storage was empty, grab from AsyncStorage and migrate
+        if (!customerToken && persisted.customerToken) {
+          customerToken = persisted.customerToken;
+          await setSecureToken(SECURE_KEY_CUSTOMER_TOKEN, customerToken);
+        }
+        if (!vendorToken && persisted.vendorToken) {
+          vendorToken = persisted.vendorToken;
+          await setSecureToken(SECURE_KEY_VENDOR_TOKEN, vendorToken);
+        }
+        if (!vendorStaffToken && persisted.vendorStaffToken) {
+          vendorStaffToken = persisted.vendorStaffToken;
+          await setSecureToken(SECURE_KEY_STAFF_TOKEN, vendorStaffToken);
+        }
       }
     }
+
+    state = {
+      ...state,
+      customerToken: customerToken ?? null,
+      vendorToken: vendorToken ?? null,
+      vendorStaffToken: vendorStaffToken ?? null,
+      appMode: appMode ?? null,
+    };
   } catch (error) {
     console.warn("[AuthStore] Failed to hydrate auth state", error);
   } finally {

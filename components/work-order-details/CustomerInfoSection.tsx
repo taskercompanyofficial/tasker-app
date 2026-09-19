@@ -1,5 +1,6 @@
 import Colors from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   Linking,
@@ -10,6 +11,7 @@ import {
 } from "react-native";
 import AddressNavigationModal from "./AddressNavigationModal";
 import { fieldStyles, sectionStyles } from "./styles";
+import { useVoiceCall } from "@/context/VoiceCallContext";
 
 interface CustomerInfoSectionProps {
   customer: {
@@ -31,15 +33,18 @@ interface CustomerInfoSectionProps {
     lng?: number | string;
   };
   extraNumber?: string;
+  workOrderId?: number | string;
 }
 
 export default function CustomerInfoSection({
   customer,
   address,
   extraNumber,
+  workOrderId,
 }: CustomerInfoSectionProps) {
   const [expanded, setExpanded] = useState(true);
   const [showNavModal, setShowNavModal] = useState(false);
+  const { initiateCall } = useVoiceCall();
 
   const rawLat = address?.latitude ?? address?.lat;
   const rawLng = address?.longitude ?? address?.lng;
@@ -131,6 +136,51 @@ export default function CustomerInfoSection({
               </View>
             )}
           </View>
+
+          {/* Direct In-App Chat Action Button */}
+          {workOrderId && (
+            <TouchableOpacity
+              onPress={() => router.push(`/vendor/work-order-chat/${workOrderId}` as any)}
+              style={styles.chatActionBtn}
+              activeOpacity={0.8}
+            >
+              <View style={styles.chatActionLeft}>
+                <View style={styles.chatIconBadge}>
+                  <Ionicons name="chatbubbles" size={16} color="#2563EB" />
+                </View>
+                <View>
+                  <Text style={styles.chatActionTitle}>Chat with Customer</Text>
+                  <Text style={styles.chatActionSubtitle}>Direct messaging inside Tasker app</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color="#2563EB" />
+            </TouchableOpacity>
+          )}
+
+          {/* Direct In-App Voice Call Button */}
+          {workOrderId && (
+            <TouchableOpacity
+              onPress={() => {
+                initiateCall({
+                  workOrderId: Number(workOrderId),
+                  receiverName: customer.name,
+                });
+              }}
+              style={styles.voiceCallActionBtn}
+              activeOpacity={0.8}
+            >
+              <View style={styles.chatActionLeft}>
+                <View style={styles.voiceIconBadge}>
+                  <Ionicons name="call" size={16} color="#059669" />
+                </View>
+                <View>
+                  <Text style={styles.voiceActionTitle}>Voice Call Customer</Text>
+                  <Text style={styles.voiceActionSubtitle}>Free encrypted in-app audio call</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color="#059669" />
+            </TouchableOpacity>
+          )}
 
           {/* Address */}
           <View style={fieldStyles.fieldGroup}>
@@ -259,5 +309,70 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#92400E",
     textTransform: "capitalize",
+  },
+  chatActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  chatActionLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  chatIconBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#DBEAFE",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chatActionTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#1E40AF",
+  },
+  chatActionSubtitle: {
+    fontSize: 10,
+    color: "#3B82F6",
+  },
+  voiceCallActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#ECFDF5",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  voiceIconBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#D1FAE5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  voiceActionTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#065F46",
+  },
+  voiceActionSubtitle: {
+    fontSize: 10,
+    color: "#059669",
   },
 });

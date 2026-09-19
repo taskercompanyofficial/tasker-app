@@ -349,7 +349,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   uploadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: "rgba(255, 255, 255, 0.85)",
     zIndex: 20, // High z-index to cover the section
     borderRadius: 6,

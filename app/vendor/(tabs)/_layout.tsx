@@ -6,52 +6,6 @@ import { useRef } from "react";
 
 export default function VendorTabsLayout() {
   const { session } = useSession();
-  const renderCountRef = useRef(0);
-
-  renderCountRef.current += 1;
-  if (renderCountRef.current <= 20) {
-    fetch("http://127.0.0.1:7789/ingest/e7df05fe-e28b-4c90-971d-c6d804cac73a", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "54d0b8",
-      },
-      body: JSON.stringify({
-        sessionId: "54d0b8",
-        runId: "initial",
-        hypothesisId: "H6_vendor_tabs_rerender_loop",
-        location: "app/vendor/(tabs)/_layout.tsx:43",
-        message: "Vendor tabs layout render count",
-        data: {
-          renderCount: renderCountRef.current,
-          appMode: session.appMode,
-          isAuthenticated: session.isAuthenticated,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => { });
-  }
-
-  fetch("http://127.0.0.1:7789/ingest/e7df05fe-e28b-4c90-971d-c6d804cac73a", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "54d0b8",
-    },
-    body: JSON.stringify({
-      sessionId: "54d0b8",
-      runId: "initial",
-      hypothesisId: "H2_tab_guard_rejects_session",
-      location: "app/vendor/(tabs)/_layout.tsx:40",
-      message: "Vendor tabs guard input state",
-      data: {
-        isAuthenticated: session.isAuthenticated,
-        appMode: session.appMode,
-        userType: (session.user as any)?.user_type ?? null,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => { });
 
   if (!session.isAuthenticated || (session.appMode !== "vendor" && session.appMode !== "vendor_staff")) {
     return <Redirect href="/" />;

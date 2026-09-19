@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity, Linking } from "react-native";
+import * as Clipboard from "expo-clipboard";
+import * as Haptics from "expo-haptics";
 import { AppMessage } from "@/types/chat";
 import { VoiceMessage } from "./VoiceMessage";
 import { VideoMessage } from "./VideoMessage";
@@ -17,10 +19,22 @@ interface MessageBubbleProps {
 }
 
 export function MessageBubble({ message, isSender, onSelectQuickReply }: MessageBubbleProps) {
+  const [copied, setCopied] = useState(false);
   const metadata = message.metadata || {};
   const orderCards = metadata.order_cards || [];
   const quickReplies = metadata.quick_replies || [];
   const isBot = metadata.is_bot === true;
+
+  const handleLongPress = async () => {
+    if (message.content && message.type === "text") {
+      await Clipboard.setStringAsync(message.content);
+      try {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch {}
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    }
+  };
 
   const handleQuickReply = (qr: {
     id: string;
@@ -137,7 +151,10 @@ export function MessageBubble({ message, isSender, onSelectQuickReply }: Message
         </View>
       )}
 
-      <View
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onLongPress={handleLongPress}
+        delayLongPress={300}
         style={[
           styles.bubble,
           isSender ? styles.senderBubble : styles.receiverBubble,
@@ -147,7 +164,7 @@ export function MessageBubble({ message, isSender, onSelectQuickReply }: Message
       >
         {renderContent()}
 
-        {/* Structured Order Cards */}
+        {/* Structured Order Cards (Minimal, Sleek) */}
         {orderCards.length > 0 && (
           <View style={styles.orderCardsContainer}>
             {orderCards.map((card: any, idx: number) => (
@@ -159,13 +176,13 @@ export function MessageBubble({ message, isSender, onSelectQuickReply }: Message
               >
                 <View style={styles.orderCardHeader}>
                   <View style={styles.orderCardTitleRow}>
-                    <Ionicons name="receipt-outline" size={14} color={Colors.themes.customer.primary} />
+                    <Ionicons name="receipt-outline" size={13} color={Colors.themes.customer.primary} />
                     <Text style={styles.orderCardNumber}>#{card.order_number}</Text>
                   </View>
                   <View
                     style={[
                       styles.orderCardStatusBadge,
-                      { backgroundColor: (card.status_color || "#22C55E") + "20" },
+                      { backgroundColor: (card.status_color || "#22C55E") + "18" },
                     ]}
                   >
                     <Text
@@ -183,22 +200,22 @@ export function MessageBubble({ message, isSender, onSelectQuickReply }: Message
 
                 <View style={styles.orderCardMetaRow}>
                   <View style={styles.orderCardMetaItem}>
-                    <Ionicons name="calendar-outline" size={12} color="#64748B" />
+                    <Ionicons name="calendar-outline" size={11} color="#64748B" />
                     <Text style={styles.orderCardMetaText}>
                       {card.date} {card.time ? `• ${card.time}` : ""}
                     </Text>
                   </View>
                   {card.technician && card.technician !== "Pending Assignment" && (
                     <View style={styles.orderCardMetaItem}>
-                      <Ionicons name="person-outline" size={12} color="#64748B" />
+                      <Ionicons name="person-outline" size={11} color="#64748B" />
                       <Text style={styles.orderCardMetaText}>{card.technician}</Text>
                     </View>
                   )}
                 </View>
 
                 <View style={styles.orderCardAction}>
-                  <Text style={styles.orderCardActionText}>Track Order & Details</Text>
-                  <Ionicons name="chevron-forward" size={13} color={Colors.themes.customer.primary} />
+                  <Text style={styles.orderCardActionText}>Track Order</Text>
+                  <Ionicons name="chevron-forward" size={12} color={Colors.themes.customer.primary} />
                 </View>
               </TouchableOpacity>
             ))}
@@ -207,6 +224,12 @@ export function MessageBubble({ message, isSender, onSelectQuickReply }: Message
 
         {/* Timestamp & Status footer */}
         <View style={styles.footer}>
+          {copied && (
+            <View style={styles.copiedPill}>
+              <Text style={styles.copiedPillText}>Copied</Text>
+            </View>
+          )}
+
           <Text style={[styles.time, isSender ? styles.senderTime : styles.receiverTime]}>
             {message.created_at
               ? new Date(message.created_at).toLocaleTimeString([], {
@@ -228,7 +251,7 @@ export function MessageBubble({ message, isSender, onSelectQuickReply }: Message
             </View>
           )}
         </View>
-      </View>
+      </TouchableOpacity>
 
       {/* Quick Reply Action Chips */}
       {quickReplies.length > 0 && (
@@ -251,8 +274,8 @@ export function MessageBubble({ message, isSender, onSelectQuickReply }: Message
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginVertical: 4,
-    maxWidth: "88%",
+    marginVertical: 3,
+    maxWidth: "86%",
   },
   senderWrapper: {
     alignSelf: "flex-end",
@@ -295,44 +318,40 @@ const styles = StyleSheet.create({
   },
   bubble: {
     paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 1,
-    elevation: 1,
+    paddingVertical: 8,
+    borderRadius: 15,
+    borderWidth: 1,
   },
   senderBubble: {
     backgroundColor: Colors.themes.customer.primary,
+    borderColor: Colors.themes.customer.primary,
     borderBottomRightRadius: 3,
   },
   receiverBubble: {
     backgroundColor: "#FFFFFF",
+    borderColor: "#E2E8F0",
     borderBottomLeftRadius: 3,
-    borderWidth: 1,
-    borderColor: "#F1F5F9",
   },
   mediaBubble: {
     paddingHorizontal: 4,
     paddingVertical: 4,
   },
   mediaContainer: {
-    borderRadius: 12,
+    borderRadius: 10,
     overflow: "hidden",
   },
   image: {
     width: 220,
     height: 160,
-    borderRadius: 10,
+    borderRadius: 8,
   },
   caption: {
-    marginTop: 6,
+    marginTop: 5,
     fontSize: 13,
   },
   text: {
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 19,
   },
   senderText: {
     color: "#FFFFFF",
@@ -347,7 +366,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-end",
     gap: 4,
-    marginTop: 4,
+    marginTop: 3,
   },
   time: {
     fontSize: 10,
@@ -361,15 +380,27 @@ const styles = StyleSheet.create({
   statusTicks: {
     marginLeft: 2,
   },
-  // Order Card Styles
+  copiedPill: {
+    backgroundColor: "rgba(0,0,0,0.45)",
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 6,
+    marginRight: 4,
+  },
+  copiedPillText: {
+    fontSize: 9,
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  // Minimal Order Card Styles
   orderCardsContainer: {
-    marginTop: 8,
-    gap: 8,
+    marginTop: 6,
+    gap: 6,
   },
   orderCard: {
     backgroundColor: "#F8FAFC",
-    borderRadius: 10,
-    padding: 10,
+    borderRadius: 8,
+    padding: 8,
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
@@ -377,36 +408,36 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 3,
   },
   orderCardTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 4,
   },
   orderCardNumber: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
     color: "#0F172A",
   },
   orderCardStatusBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
     borderRadius: 4,
   },
   orderCardStatusText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "700",
   },
   orderCardService: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
     color: "#1E293B",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   orderCardMetaRow: {
-    gap: 3,
-    marginBottom: 8,
+    gap: 2,
+    marginBottom: 6,
   },
   orderCardMetaItem: {
     flexDirection: "row",
@@ -414,7 +445,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   orderCardMetaText: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#64748B",
   },
   orderCardAction: {
@@ -423,10 +454,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     borderTopWidth: 1,
     borderTopColor: "#E2E8F0",
-    paddingTop: 6,
+    paddingTop: 4,
   },
   orderCardActionText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
     color: Colors.themes.customer.primary,
   },
@@ -434,16 +465,16 @@ const styles = StyleSheet.create({
   quickRepliesWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
-    marginTop: 6,
+    gap: 5,
+    marginTop: 5,
   },
   quickReplyChip: {
     backgroundColor: "#F0FDF4",
     borderColor: "#BBF7D0",
     borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    borderRadius: 14,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
   },
   quickReplyChipText: {
     fontSize: 11,
@@ -451,4 +482,3 @@ const styles = StyleSheet.create({
     color: Colors.themes.customer.primary,
   },
 });
-

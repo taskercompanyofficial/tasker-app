@@ -1,4 +1,5 @@
 import Header from "@/components/Header";
+import VendorOnlineStatusBar from "@/components/vendor/VendorOnlineStatusBar";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing, Typography } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
@@ -46,32 +47,6 @@ export default function VendorDashboard() {
   const [thisMonthEarnings, setThisMonthEarnings] = useState(0);
   const [todayEarnings, setTodayEarnings] = useState(0);
   const [companyShare, setCompanyShare] = useState(0);
-
-  useEffect(() => {
-    // #region agent log
-    fetch("http://127.0.0.1:7789/ingest/e7df05fe-e28b-4c90-971d-c6d804cac73a", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "54d0b8",
-      },
-      body: JSON.stringify({
-        sessionId: "54d0b8",
-        runId: "initial",
-        hypothesisId: "H3_dashboard_staff_detection",
-        location: "app/vendor/(tabs)/dashboard.tsx:52",
-        message: "Dashboard mounted with session role context",
-        data: {
-          appMode: session.appMode,
-          userType: (session.user as any)?.user_type ?? null,
-          isStaff,
-          hasUser: !!session.user,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-  }, [isStaff, session.appMode, session.user]);
 
   useEffect(() => {
     fetchData();
@@ -218,6 +193,9 @@ export default function VendorDashboard() {
           />
         }
       >
+        {/* Driver / Partner Online Status Bar & 24h Daily Selfie Verification */}
+        <VendorOnlineStatusBar onStatusChanged={() => fetchData()} />
+
         {/* Top Professional Row - Only for vendors */}
         {!isStaff && (
           <View style={styles.statsOverview}>

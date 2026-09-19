@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   StatusBar,
+  useColorScheme,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -33,11 +34,17 @@ export default function BackButtonHeader({
     onBackPress();
   };
 
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
   return (
     <View style={[styles.header, { backgroundColor }]}>
       <StatusBar
-        barStyle="dark-content"
-        backgroundColor={backgroundColor}
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={
+          isDark ? "rgba(0, 0, 0, 0.40)" : "rgba(255, 255, 255, 0.40)"
+        }
+        translucent
       />
       <SafeAreaView style={styles.safeHeader}>
         <View style={styles.headerContent}>

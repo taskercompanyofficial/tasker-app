@@ -1,7 +1,5 @@
-const BACKEND_URL_ENV = "https://lwuhfkkudt.sharedwithexpose.com";
-if (!BACKEND_URL_ENV) {
-  throw new Error("EXPO_PUBLIC_BACKEND_URL is not set");
-}
+const BACKEND_URL_ENV =
+  process.env.EXPO_PUBLIC_BACKEND_URL || "https://api.taskercompany.cloud";
 export const BACKEND_URL = BACKEND_URL_ENV;
 export const API_URL = `${BACKEND_URL}/api`;
 export const APP_URL = `${API_URL}/tasker-app`;
@@ -41,6 +39,25 @@ export const VENDOR_UPDATE_PROFILE_URL = `${API_URL}/vendor/update-profile`;
 export const VENDOR_EXTRACT_CNIC_URL = `${API_URL}/vendor/extract-cnic`;
 export const VENDOR_VERIFY_SELFIE_URL = `${API_URL}/vendor/verify-selfie`;
 export const VENDOR_CHANGE_PASSWORD_URL = `${API_URL}/vendor/change-password`;
+
+// Vendor & Staff Online Status & 24h Daily Selfie
+export const VENDOR_ONLINE_STATUS_URL = (mode: string = "vendor") =>
+  `${API_URL}/${mode === "vendor_staff" || mode === "vendor-staff" ? "vendor-staff" : "vendor"}/status`;
+export const VENDOR_TOGGLE_ONLINE_STATUS_URL = (mode: string = "vendor") =>
+  `${API_URL}/${mode === "vendor_staff" || mode === "vendor-staff" ? "vendor-staff" : "vendor"}/status/toggle`;
+export const VENDOR_SUBMIT_DAILY_SELFIE_URL = (mode: string = "vendor") =>
+  `${API_URL}/${mode === "vendor_staff" || mode === "vendor-staff" ? "vendor-staff" : "vendor"}/daily-selfie`;
+
+// In-App VoIP Voice Calling Endpoints
+export const VOICE_INITIATE_CALL_URL = (mode: string = "customer") =>
+  `${API_URL}/${mode === "vendor" ? "vendor" : mode === "vendor_staff" || mode === "vendor-staff" ? "vendor-staff" : "tasker-app"}/voice/calls/initiate`;
+export const VOICE_ANSWER_CALL_URL = (id: number | string, mode: string = "customer") =>
+  `${API_URL}/${mode === "vendor" ? "vendor" : mode === "vendor_staff" || mode === "vendor-staff" ? "vendor-staff" : "tasker-app"}/voice/calls/${id}/answer`;
+export const VOICE_REJECT_CALL_URL = (id: number | string, mode: string = "customer") =>
+  `${API_URL}/${mode === "vendor" ? "vendor" : mode === "vendor_staff" || mode === "vendor-staff" ? "vendor-staff" : "tasker-app"}/voice/calls/${id}/reject`;
+export const VOICE_END_CALL_URL = (id: number | string, mode: string = "customer") =>
+  `${API_URL}/${mode === "vendor" ? "vendor" : mode === "vendor_staff" || mode === "vendor-staff" ? "vendor-staff" : "tasker-app"}/voice/calls/${id}/end`;
+
 export const VENDOR_OTP_URL = `${API_URL}/vendor/auth/check-credentials`;
 export const VENDOR_OTP_VERIFY_URL = `${API_URL}/vendor/auth/verify-otp`;
 export const VENDOR_QUICK_LOGIN_URL = `${API_URL}/vendor/auth/quick-login`;
@@ -162,6 +179,18 @@ export const CHAT_MESSAGES_URL = (
   return `${API_URL}/${prefix}/chat/conversations/${conversationId}/messages`;
 };
 
+export const CHAT_CONVERSATIONS_URL = (
+  mode: "customer" | "vendor" | "vendor-staff",
+) => {
+  const prefix =
+    mode === "vendor"
+      ? "vendor"
+      : mode === "vendor-staff"
+        ? "vendor-staff"
+        : "tasker-app";
+  return `${API_URL}/${prefix}/chat/conversations`;
+};
+
 export const CHAT_SEND_MESSAGE_URL = (
   mode: "customer" | "vendor" | "vendor-staff",
   conversationId: number | string,
@@ -174,3 +203,4 @@ export const CHAT_SEND_MESSAGE_URL = (
         : "tasker-app";
   return `${API_URL}/${prefix}/chat/conversations/${conversationId}/send`;
 };
+

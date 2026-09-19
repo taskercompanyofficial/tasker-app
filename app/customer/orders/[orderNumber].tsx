@@ -1,5 +1,4 @@
 import Loader from "@/components/Loader";
-import { FloatingChatButton } from "@/components/Chat/FloatingChatButton";
 import CancelOrderModal from "@/components/orders/CancelOrderModal";
 import ContactSupportModal from "@/components/orders/ContactSupportModal";
 import RescheduleModal from "@/components/orders/RescheduleModal";
@@ -9,6 +8,7 @@ import { Spacing } from "@/constants/Styles";
 import { WORK_ORDER_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
 import { Order, OrderItem } from "@/types/order";
+import { useVoiceCall } from "@/context/VoiceCallContext";
 import { Ionicons, FontAwesome } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -37,6 +37,7 @@ export default function OrderDetailsPage() {
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [reviewPrompted, setReviewPrompted] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const { initiateCall } = useVoiceCall();
 
   useEffect(() => {
     if (orderNumber) {
@@ -233,10 +234,10 @@ export default function OrderDetailsPage() {
           </Text>
         </View>
         <TouchableOpacity
-          onPress={() => router.push(`/customer/order-chat/${order.id}`)}
+          onPress={() => router.push(`/customer/support-chat?initialWorkOrderId=${order.id}`)}
           style={styles.headerChatButton}
         >
-          <FontAwesome name="whatsapp" size={22} color="#25D366" />
+          <Ionicons name="chatbubbles" size={22} color={Colors.themes.customer.primary} />
         </TouchableOpacity>
       </View>
 
@@ -481,12 +482,29 @@ export default function OrderDetailsPage() {
           )}
 
           <TouchableOpacity
-            style={styles.whatsappActionBtn}
-            onPress={() => router.push(`/customer/order-chat/${order.id}`)}
+            style={styles.chatActionBtn}
+            onPress={() => router.push(`/customer/support-chat?initialWorkOrderId=${order.id}`)}
           >
-            <FontAwesome name="whatsapp" size={20} color="#FFFFFF" />
-            <Text style={styles.whatsappActionText}>Contact Tasker via WhatsApp</Text>
+            <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
+            <Text style={styles.chatActionText}>Chat with Technician & Support</Text>
           </TouchableOpacity>
+
+          {order.status !== "cancelled" && (
+            <TouchableOpacity
+              style={styles.voiceCallActionBtn}
+              onPress={() => {
+                initiateCall({
+                  workOrderId: order.id,
+                  receiverName: "Assigned Technician",
+                  workOrderNumber: order.order_number,
+                });
+              }}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="call" size={19} color="#FFFFFF" />
+              <Text style={styles.voiceCallActionText}>In-App Voice Call Provider</Text>
+            </TouchableOpacity>
+          )}
 
           {canCancelOrder() && (
             <TouchableOpacity
@@ -550,8 +568,6 @@ export default function OrderDetailsPage() {
           ) : null}
         </View>
       </Modal>
-
-      {isAssigned && <FloatingChatButton workOrderId={order.id} />}
     </SafeAreaView>
   );
 }
@@ -843,21 +859,40 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.themes.customer.primary,
   },
-  whatsappActionBtn: {
+  chatActionBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#25D366",
+    backgroundColor: Colors.themes.customer.primary,
     paddingVertical: 14,
     borderRadius: 12,
     gap: 8,
     elevation: 3,
-    shadowColor: "#25D366",
+    shadowColor: Colors.themes.customer.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
   },
-  whatsappActionText: {
+  chatActionText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.neutral.white,
+  },
+  voiceCallActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#059669",
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+    elevation: 3,
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+  },
+  voiceCallActionText: {
     fontSize: 14,
     fontWeight: "700",
     color: Colors.neutral.white,

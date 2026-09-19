@@ -92,7 +92,7 @@ export default function CustomSwitch({
       accessibilityState={{ checked: value, disabled }}
       accessibilityLabel={accessibilityLabel}
       android_ripple={{ color: Colors.neutral.gray[400] }}
-      onKeyDown={Platform.OS === "web" ? onKeyDown : undefined}
+      {...(Platform.OS === "web" ? ({ onKeyDown } as any) : {})}
     >
       <Animated.View
         style={[

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,29 +8,38 @@ import {
   Platform,
   ActivityIndicator,
   Image,
+  TouchableOpacity,
 } from "react-native";
 import { useAppChat } from "@/hooks/use-app-chat";
 import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
 import { ChatHeader } from "./ChatHeader";
 import { ProfileSummaryModal } from "./ProfileSummaryModal";
+import { ChatWallpaperTexture } from "./ChatWallpaperTexture";
 import { useSession } from "@/context/ctx";
 import Colors from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AppConversationParticipant } from "@/types/chat";
 
 interface ChatRoomProps {
   workOrderId?: number | string;
   conversationId?: number | string;
+  partnerPhone?: string | null;
   hideHeader?: boolean;
   onPressProfile?: () => void;
+  keyboardVerticalOffset?: number;
+  onPartnerResolved?: (partner: AppConversationParticipant | null) => void;
 }
 
 export function ChatRoom({
   workOrderId,
   conversationId,
+  partnerPhone,
   hideHeader = false,
   onPressProfile,
+  keyboardVerticalOffset: customKeyboardOffset,
+  onPartnerResolved,
 }: ChatRoomProps) {
   const insets = useSafeAreaInsets();
   const { session } = useSession();
@@ -39,17 +48,50 @@ export function ChatRoom({
     conversationId,
   });
   const [showProfile, setShowProfile] = useState(false);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const containerRef = useRef<View>(null);
+  const [measuredOffset, setMeasuredOffset] = useState<number | null>(null);
 
   const currentUserId = session.user?.id;
-  const currentUserType = session.appMode === 'vendor' ? 'App\\Models\\Vendor' : session.appMode === 'vendor_staff' ? 'App\\Models\\VendorStaff' : 'App\\Models\\Customer';
+  const currentUserType =
+    session.appMode === "vendor"
+      ? "App\\Models\\Vendor"
+      : session.appMode === "vendor_staff"
+        ? "App\\Models\\VendorStaff"
+        : "App\\Models\\Customer";
   const isSupport = !workOrderId;
 
-  // Calculate dynamic keyboard offset
-  const keyboardOffset = Platform.OS === "ios" ? (hideHeader ? 0 : insets.top) : 0;
+  useEffect(() => {
+    if (onPartnerResolved) {
+      onPartnerResolved(activePartner);
+    }
+  }, [activePartner, onPartnerResolved]);
+
+  // Dynamically measure the exact absolute top coordinate of the chat container in the window
+  const measureOffset = useCallback(() => {
+    containerRef.current?.measureInWindow((_x, y) => {
+      if (typeof y === "number" && !isNaN(y) && y >= 0) {
+        setMeasuredOffset(y);
+      }
+    });
+  }, []);
+
+  // Compute effective keyboard vertical offset
+  const fallbackOffset = hideHeader
+    ? insets.top + (isSupport ? 60 : 50)
+    : Platform.OS === "ios"
+      ? insets.top
+      : 0;
+  const effectiveOffset =
+    customKeyboardOffset ?? (measuredOffset !== null ? measuredOffset : fallbackOffset);
 
   const handleQuickAction = (_actionId: string, label: string) => {
     sendMessage("text", label);
+  };
+
+  const scrollToBottom = () => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
   };
 
   if (loading) {
@@ -70,100 +112,144 @@ export function ChatRoom({
     );
   }
 
+  const isVendor = session.appMode === "vendor" || session.appMode === "vendor_staff";
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={keyboardOffset}
-    >
-      {!hideHeader && (
-        <ChatHeader
-          partner={activePartner}
-          onPressProfile={onPressProfile || (() => setShowProfile(true))}
-          isSupport={isSupport}
-        />
-      )}
+    <View ref={containerRef} style={styles.container} onLayout={measureOffset}>
+      {/* Background Wallpaper Pattern Texture */}
+      <ChatWallpaperTexture />
 
-      {/* Safety Banner for order conversations */}
-      {!isSupport && (
-        <View style={styles.safetyBanner}>
-          <Ionicons name="shield-checkmark" size={14} color="#B45309" />
-          <Text style={styles.safetyText}>
-            Caution: Do not deal outside the app platform for your safety.
-          </Text>
-        </View>
-      )}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={effectiveOffset}
+      >
+        {!hideHeader && (
+          <ChatHeader
+            partner={activePartner}
+            partnerPhone={partnerPhone}
+            onPressProfile={onPressProfile || (() => setShowProfile(true))}
+            isSupport={isSupport}
+          />
+        )}
 
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => {
-          const isSender = item.sender_id === currentUserId && item.sender_type === currentUserType;
-          return (
-            <MessageBubble
-              message={item}
-              isSender={isSender}
-              onSelectQuickReply={handleQuickAction}
-            />
-          );
-        }}
-        ListHeaderComponent={
-          sending && isSupport ? (
-            <View style={styles.typingIndicatorWrapper}>
-              <View style={styles.typingBubble}>
-                <Image
-                  source={require("@/assets/images/tasker-ai-avatar.jpg")}
-                  style={styles.typingAvatar}
-                />
-                <ActivityIndicator size="small" color={Colors.themes.customer.primary} />
-                <Text style={styles.typingText}>Tasky is typing...</Text>
-              </View>
-            </View>
-          ) : null
-        }
-        ListFooterComponent={
-          isSupport ? (
-            <View style={styles.welcomeHeroCard}>
-              <Image
-                source={require("@/assets/images/tasker-ai-avatar.jpg")}
-                style={styles.welcomeHeroAvatar}
+        {/* Minimal Safety Pill Banner for order conversations */}
+        {!isSupport && (
+          <View style={styles.safetyBanner}>
+            <Ionicons name="shield-checkmark" size={13} color="#D97706" />
+            <Text style={styles.safetyText} numberOfLines={1}>
+              {isVendor
+                ? "Deal only via Tasker app for verified commission & warranty protection."
+                : "Deal only via Tasker app for your warranty & security protection."}
+            </Text>
+          </View>
+        )}
+
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(item) => item.id.toString()}
+          onScroll={(e) => {
+            const offsetY = e.nativeEvent.contentOffset.y;
+            setShowScrollToBottom(offsetY > 180);
+          }}
+          scrollEventThrottle={16}
+          renderItem={({ item }) => {
+            const isSender =
+              item.sender_id === currentUserId && item.sender_type === currentUserType;
+            return (
+              <MessageBubble
+                message={item}
+                isSender={isSender}
+                onSelectQuickReply={handleQuickAction}
               />
-              <View style={styles.welcomeHeroTitleRow}>
-                <Text style={styles.welcomeHeroTitle}>Meet Tasky</Text>
-                <View style={styles.aiPillBadge}>
-                  <Text style={styles.aiPillText}>AI ASSISTANT</Text>
+            );
+          }}
+          ListHeaderComponent={
+            sending && isSupport ? (
+              <View style={styles.typingIndicatorWrapper}>
+                <View style={styles.typingBubble}>
+                  <Image
+                    source={require("@/assets/images/tasker-ai-avatar.jpg")}
+                    style={styles.typingAvatar}
+                  />
+                  <ActivityIndicator size="small" color={Colors.themes.customer.primary} />
+                  <Text style={styles.typingText}>
+                    {isVendor ? "Tasker Helpdesk is typing..." : "Tasky is typing..."}
+                  </Text>
                 </View>
               </View>
-              <Text style={styles.welcomeHeroSubtitle}>
-                Hello! I'm here 24/7 to help you book services, track orders, find discounts, or troubleshoot repair problems.
-              </Text>
-              <View style={styles.disclaimerBox}>
-                <Ionicons name="information-circle-outline" size={13} color="#64748B" style={{ marginTop: 1 }} />
-                <Text style={styles.disclaimerBoxText}>
-                  Tasky uses AI and can make mistakes. Verify important info or call our 24/7 helpline anytime.
+            ) : null
+          }
+          ListFooterComponent={
+            isSupport ? (
+              <View style={styles.welcomeMinimalCard}>
+                <Image
+                  source={require("@/assets/images/tasker-ai-avatar.jpg")}
+                  style={styles.welcomeMinimalAvatar}
+                />
+                <View style={styles.aiPillBadge}>
+                  <Text style={styles.aiPillText}>
+                    {isVendor ? "VENDOR PARTNER SUPPORT" : "24/7 AI SUPPORT"}
+                  </Text>
+                </View>
+                <Text style={styles.welcomeMinimalTitle}>
+                  {isVendor ? "Vendor Operations Helpdesk" : "How can we help today?"}
+                </Text>
+                <Text style={styles.welcomeMinimalSubtitle}>
+                  {isVendor
+                    ? "Ask any question about your assigned jobs, commissions, completion steps, or policies."
+                    : "Ask any question about services, active orders, or pricing."}
                 </Text>
               </View>
-            </View>
-          ) : null
-        }
-        contentContainerStyle={styles.listContent}
-        inverted
-      />
+            ) : (
+              <View style={styles.orderStartMinimal}>
+                <View style={styles.orderEncryptedBadge}>
+                  <Ionicons name="lock-closed" size={11} color="#64748B" />
+                  <Text style={styles.orderEncryptedText}>
+                    Order #{workOrderId} • End-to-end encrypted
+                  </Text>
+                </View>
+                <Text style={styles.orderEncryptedHint}>
+                  {isVendor
+                    ? "Tap the top header to view customer profile, call, or open WhatsApp"
+                    : "Tap the top profile header to view technician credentials & call"}
+                </Text>
+              </View>
+            )
+          }
+          contentContainerStyle={styles.listContent}
+          inverted
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        />
 
-      <ChatInput
-        onSendMessage={sendMessage}
-        sending={sending}
-        onQuickAction={handleQuickAction}
-        showSuggestions={isSupport}
-      />
+        {/* Floating Scroll to Bottom Button */}
+        {showScrollToBottom && (
+          <TouchableOpacity
+            style={styles.scrollToBottomBtn}
+            onPress={scrollToBottom}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="arrow-down" size={18} color="#1E293B" />
+          </TouchableOpacity>
+        )}
 
-      <ProfileSummaryModal
-        visible={showProfile}
-        onClose={() => setShowProfile(false)}
-        partner={activePartner}
-      />
-    </KeyboardAvoidingView>
+        <ChatInput
+          onSendMessage={sendMessage}
+          sending={sending}
+          onQuickAction={handleQuickAction}
+          showSuggestions={isSupport}
+        />
+
+        <ProfileSummaryModal
+          visible={showProfile}
+          onClose={() => setShowProfile(false)}
+          partner={activePartner}
+          phone={partnerPhone}
+        />
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -171,6 +257,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F8FAFC",
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
   center: {
     flex: 1,
@@ -192,22 +281,24 @@ const styles = StyleSheet.create({
   safetyBanner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFBEB",
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderBottomWidth: 1,
-    borderBottomColor: "#FEF3C7",
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginHorizontal: 12,
+    marginTop: 6,
+    marginBottom: 4,
+    borderRadius: 8,
     gap: 6,
   },
   safetyText: {
     fontSize: 11,
-    color: "#B45309",
+    color: "#92400E",
     fontWeight: "500",
     flex: 1,
   },
   listContent: {
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   typingIndicatorWrapper: {
     alignSelf: "flex-start",
@@ -219,7 +310,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "#E2E8F0",
@@ -235,48 +326,34 @@ const styles = StyleSheet.create({
     color: "#64748B",
     fontWeight: "500",
   },
-  welcomeHeroCard: {
+  // Minimal Welcome Card for Support
+  welcomeMinimalCard: {
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 16,
-    marginHorizontal: 12,
-    marginTop: 16,
-    marginBottom: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.92)",
+    borderRadius: 14,
+    padding: 14,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
   },
-  welcomeHeroAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    marginBottom: 10,
-    borderWidth: 2,
+  welcomeMinimalAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginBottom: 8,
+    borderWidth: 1.5,
     borderColor: Colors.themes.customer.primary,
-  },
-  welcomeHeroTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 6,
-  },
-  welcomeHeroTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0F172A",
   },
   aiPillBadge: {
     backgroundColor: "#F0FDF4",
-    paddingHorizontal: 6,
+    paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
     borderColor: "#DCFCE7",
+    marginBottom: 6,
   },
   aiPillText: {
     fontSize: 9,
@@ -284,28 +361,63 @@ const styles = StyleSheet.create({
     color: Colors.themes.customer.primary,
     letterSpacing: 0.5,
   },
-  welcomeHeroSubtitle: {
-    fontSize: 13,
-    color: "#475569",
-    textAlign: "center",
-    lineHeight: 18,
-    marginBottom: 12,
+  welcomeMinimalTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 4,
   },
-  disclaimerBox: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: "#F8FAFC",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#F1F5F9",
-    gap: 6,
-  },
-  disclaimerBoxText: {
-    fontSize: 11,
+  welcomeMinimalSubtitle: {
+    fontSize: 12,
     color: "#64748B",
-    flex: 1,
-    lineHeight: 15,
+    textAlign: "center",
+    lineHeight: 16,
+  },
+  // Minimal Order Start Notice
+  orderStartMinimal: {
+    alignItems: "center",
+    marginVertical: 14,
+    gap: 4,
+  },
+  orderEncryptedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  orderEncryptedText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#475569",
+  },
+  orderEncryptedHint: {
+    fontSize: 10,
+    color: "#94A3B8",
+    textAlign: "center",
+  },
+  // Floating Scroll-To-Bottom
+  scrollToBottomBtn: {
+    position: "absolute",
+    right: 14,
+    bottom: 60,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+    zIndex: 20,
   },
 });

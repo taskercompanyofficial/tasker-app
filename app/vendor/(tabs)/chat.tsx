@@ -2,10 +2,13 @@ import Header from "@/components/Header";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing, Typography } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React, { useState } from "react";
+import { CHAT_CONVERSATIONS_URL, VENDOR_WORK_ORDER_URL } from "@/lib/api-endpoints";
+import myAxios from "@/lib/axios.config";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -22,95 +25,205 @@ interface ChatThread {
   lastMessage: string;
   time: string;
   unreadCountCount: number;
-  type: 'support' | 'work_order';
+  type: "support" | "work_order";
   targetId?: string;
+  avatarUrl?: string | null;
 }
+
+const SUPPORT_CARD: ChatThread = {
+  id: "support",
+  title: "Tasker Vendor Helpdesk",
+  subtitle: "⚡ 24/7 AI Operations Support Desk",
+  lastMessage: "Tap to ask about jobs, payouts, completion rules & technician assignment",
+  time: "24/7 Live",
+  unreadCountCount: 0,
+  type: "support",
+};
 
 export default function VendorChatList() {
   const { session } = useSession();
+  const [chats, setChats] = useState<ChatThread[]>([SUPPORT_CARD]);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Mock data for now - will integrate with API later
-  const chats: ChatThread[] = [
-    {
-      id: 'support',
-      title: 'Tasker Support',
-      subtitle: 'Official Support Channel',
-      lastMessage: 'How can we help you today?',
-      time: 'Just now',
-      unreadCountCount: 1,
-      type: 'support',
-    },
-    // Work order chats will be fetched from API
-  ];
+  const mode = (session.appMode?.replace("_", "-") || "vendor") as
+    | "customer"
+    | "vendor"
+    | "vendor-staff";
+
+  const fetchChats = useCallback(async () => {
+    try {
+      // 1. Fetch conversations from chat endpoint
+      let convList: ChatThread[] = [];
+      try {
+        const res = await myAxios.get(CHAT_CONVERSATIONS_URL(mode));
+        const raw = Array.isArray(res.data?.data) ? res.data.data : [];
+        convList = raw.map((c: any) => ({
+          id: String(c.id),
+          title: c.title,
+          subtitle: c.subtitle,
+          lastMessage: c.lastMessage,
+          time: c.time,
+          unreadCountCount: c.unreadCountCount || 0,
+          type: (c.type === "support" ? "support" : "work_order") as "support" | "work_order",
+          targetId: c.targetId ? String(c.targetId) : undefined,
+          avatarUrl: c.avatar_url,
+        }));
+      } catch (convErr) {
+        console.warn("Could not fetch conversations:", convErr);
+      }
+
+      // 2. Fetch active work orders to ensure all assigned complaints have a chat tile
+      let activeWorkOrders: any[] = [];
+      try {
+        const woRes = await myAxios.get(`${VENDOR_WORK_ORDER_URL}?status=active&per_page=20`);
+        activeWorkOrders = Array.isArray(woRes.data?.data) ? woRes.data.data : [];
+      } catch (woErr) {
+        console.warn("Could not fetch active work orders:", woErr);
+      }
+
+      // Merge active work orders that don't have conversation yet
+      const mergedChats: ChatThread[] = [];
+
+      // Support is first
+      const serverSupport = convList.find((c) => c.type === "support");
+      mergedChats.push(serverSupport || SUPPORT_CARD);
+
+      // Add order conversations from chat server
+      const serverOrderChats = convList.filter((c) => c.type === "work_order");
+      mergedChats.push(...serverOrderChats);
+
+      // Add active work orders that don't have a chat thread in serverOrderChats
+      for (const wo of activeWorkOrders) {
+        const exists = serverOrderChats.some((sc) => String(sc.targetId) === String(wo.id));
+        if (!exists) {
+          mergedChats.push({
+            id: `wo_${wo.id}`,
+            title: `${wo.customer?.name || "Customer"} • #${wo.work_order_number || wo.id}`,
+            subtitle: `${wo.service?.name || "Service Job"} • ${wo.status?.name || "In Progress"}`,
+            lastMessage: "Tap to chat directly with customer in-app",
+            time: "Active",
+            unreadCountCount: 0,
+            type: "work_order",
+            targetId: String(wo.id),
+          });
+        }
+      }
+
+      setChats(mergedChats);
+    } catch (err) {
+      console.error("Failed to load vendor chats:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [mode]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchChats();
+    }, [fetchChats])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
-    // Fetch chats logic here
-    setTimeout(() => setRefreshing(false), 1000);
+    fetchChats();
   };
 
-  const renderChatItem = ({ item }: { item: ChatThread }) => (
-    <TouchableOpacity
-      style={styles.chatCard}
-      onPress={() => {
-        if (item.type === 'support') {
-          router.push('/vendor/support-chat');
-        } else {
-          router.push(`/vendor/work-order-chat/${item.targetId}`);
-        }
-      }}
-    >
-      <View style={[
-        styles.avatar,
-        { backgroundColor: item.type === 'support' ? Colors.themes.provider.primary : Colors.neutral.gray[100] }
-      ]}>
-        <Ionicons
-          name={item.type === 'support' ? "headset" : "briefcase"}
-          size={20}
-          color={item.type === 'support' ? Colors.neutral.white : Colors.text.secondary}
-        />
-      </View>
-      <View style={styles.chatInfo}>
-        <View style={styles.chatHeader}>
-          <Text style={styles.chatTitle} numberOfLines={1}>{item.title}</Text>
-          <Text style={styles.chatTime}>{item.time}</Text>
+  const renderChatItem = ({ item }: { item: ChatThread }) => {
+    const isSupport = item.type === "support";
+
+    return (
+      <TouchableOpacity
+        style={[styles.chatCard, isSupport && styles.supportCard]}
+        onPress={() => {
+          if (isSupport) {
+            router.push("/vendor/support-chat");
+          } else if (item.targetId) {
+            router.push(`/vendor/work-order-chat/${item.targetId}`);
+          }
+        }}
+        activeOpacity={0.75}
+      >
+        <View
+          style={[
+            styles.avatar,
+            {
+              backgroundColor: isSupport
+                ? Colors.themes.provider.primary
+                : "#EFF6FF",
+            },
+          ]}
+        >
+          <Ionicons
+            name={isSupport ? "sparkles" : "chatbubbles"}
+            size={20}
+            color={isSupport ? Colors.neutral.white : Colors.themes.provider.primary}
+          />
         </View>
-        <Text style={styles.chatSubtitle} numberOfLines={1}>{item.subtitle}</Text>
-        <View style={styles.messageRow}>
-          <Text style={styles.lastMessage} numberOfLines={1}>{item.lastMessage}</Text>
-          {item.unreadCountCount > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadText}>{item.unreadCountCount}</Text>
+        <View style={styles.chatInfo}>
+          <View style={styles.chatHeader}>
+            <View style={styles.titleRow}>
+              <Text style={styles.chatTitle} numberOfLines={1}>
+                {item.title}
+              </Text>
+              {isSupport && (
+                <MaterialCommunityIcons
+                  name="check-decagram"
+                  size={14}
+                  color={Colors.themes.provider.primary}
+                />
+              )}
             </View>
-          )}
+            <Text style={styles.chatTime}>{item.time}</Text>
+          </View>
+          <Text style={styles.chatSubtitle} numberOfLines={1}>
+            {item.subtitle}
+          </Text>
+          <View style={styles.messageRow}>
+            <Text style={styles.lastMessage} numberOfLines={1}>
+              {item.lastMessage}
+            </Text>
+            {item.unreadCountCount > 0 && (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadText}>{item.unreadCountCount}</Text>
+              </View>
+            )}
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      <Header title="Messages" />
-      <FlatList
-        data={chats}
-        renderItem={renderChatItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[Colors.themes.provider.primary]}
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="chatbubbles-outline" size={64} color={Colors.text.tertiary} />
-            <Text style={styles.emptyText}>No recent messages</Text>
-          </View>
-        }
-      />
+      <Header title="Messages & Support" />
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={Colors.themes.provider.primary} />
+          <Text style={styles.loadingText}>Loading conversations...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={chats}
+          renderItem={renderChatItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[Colors.themes.provider.primary]}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="chatbubbles-outline" size={64} color={Colors.text.tertiary} />
+              <Text style={styles.emptyText}>No active conversations</Text>
+            </View>
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -131,6 +244,28 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     ...Shadows.sm,
     alignItems: 'center',
+  },
+  supportCard: {
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.themes.provider.primary,
+    backgroundColor: '#F0FDF4',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flex: 1,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  loadingText: {
+    marginTop: Spacing.sm,
+    fontSize: 13,
+    color: Colors.text.secondary,
   },
   avatar: {
     width: 50,

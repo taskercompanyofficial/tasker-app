@@ -111,15 +111,6 @@ export default function Index() {
                     />
                 }
             </ScrollView>
-
-            {/* Floating Support Button */}
-            <TouchableOpacity
-                style={styles.floatingButton}
-                onPress={() => router.push('/customer/support-chat')}
-            >
-                <FontAwesome name="whatsapp" size={28} color={Colors.neutral.white} />
-                <View style={styles.unreadDot} />
-            </TouchableOpacity>
         </SafeAreaView>
     )
 }

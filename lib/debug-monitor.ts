@@ -1,5 +1,4 @@
 import { APP_LOGS_INGEST_URL } from "@/lib/api-endpoints";
-import { useAuthStore } from "@/context/auth-store";
 
 type DebugPayload = Record<string, unknown>;
 
@@ -15,8 +14,8 @@ let logs: DebugLogItem[] = [];
 const listeners = new Set<(items: DebugLogItem[]) => void>();
 let remoteLogInitDone = false;
 
-const isPrcodDebugEnabled = process.env.EXPO_PUBLIC_ENABLE_APP_DEBUG === "1";
-export const isDebugMonitorEnabled = __DEV__ || isPrcodDebugEnabled;
+const isProdDebugEnabled = process.env.EXPO_PUBLIC_ENABLE_APP_DEBUG === "1";
+export const isDebugMonitorEnabled = __DEV__ || isProdDebugEnabled;
 
 const emit = () => {
   const snapshot = [...logs];
@@ -33,7 +32,9 @@ const stringifyArg = (value: unknown): string => {
 };
 
 const sendRemoteLog = async (event: string, payload?: DebugPayload, level: string = "info") => {
+  if (!isDebugMonitorEnabled) return;
   try {
+    const { useAuthStore } = await import("@/context/auth-store");
     const session = useAuthStore.getState();
     const { default: myAxios } = await import("@/lib/axios.config");
     await myAxios.post(APP_LOGS_INGEST_URL, {
@@ -66,9 +67,8 @@ export function addDebugLog(event: string, payload?: DebugPayload) {
     };
     logs = [entry, ...logs].slice(0, MAX_LOGS);
     emit();
+    sendRemoteLog(event, basePayload, "info");
   }
-
-  sendRemoteLog(event, basePayload, "info");
 }
 
 export function initRemoteLogging() {

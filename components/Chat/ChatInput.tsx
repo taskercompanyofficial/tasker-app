@@ -12,6 +12,7 @@ import {
   Animated,
   Easing,
   Keyboard,
+  Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, FontAwesome, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -28,12 +29,14 @@ import { MessageType } from "@/types/chat";
 import Colors from "@/constants/Colors";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
+import { useSession } from "@/context/ctx";
 
 interface ChatInputProps {
   onSendMessage: (type: MessageType, content?: string, file?: any, metadata?: any) => Promise<void>;
   sending: boolean;
   onQuickAction?: (actionId: string, label: string) => void;
   showSuggestions?: boolean;
+  suggestions?: Array<{ id: string; label: string; prompt?: string; action?: string }>;
 }
 
 const DEFAULT_SUGGESTIONS = [
@@ -45,12 +48,31 @@ const DEFAULT_SUGGESTIONS = [
   { id: "whatsapp", label: "💬 WhatsApp Support", action: "open_whatsapp" },
 ];
 
-export function ChatInput({ onSendMessage, sending, onQuickAction, showSuggestions = true }: ChatInputProps) {
+const VENDOR_SUGGESTIONS = [
+  { id: "vendor_jobs", label: "📋 My Assigned Jobs", prompt: "Show my assigned complaints and active jobs status" },
+  { id: "vendor_rates", label: "💰 Commission & Payouts", prompt: "How do vendor commission, payouts, and ledger work?" },
+  { id: "vendor_workflow", label: "⚙️ Job Completion Guide", prompt: "What are the rules and steps to complete a service order?" },
+  { id: "vendor_staff", label: "👥 Technician Assignment", prompt: "How do I assign my staff technicians to complaints?" },
+  { id: "helpline", label: "📞 0304-111-2717", action: "call_helpline" },
+  { id: "whatsapp", label: "💬 Vendor Support", action: "open_whatsapp" },
+];
+
+export function ChatInput({
+  onSendMessage,
+  sending,
+  onQuickAction,
+  showSuggestions = true,
+  suggestions: propSuggestions,
+}: ChatInputProps) {
   const insets = useSafeAreaInsets();
+  const { session } = useSession();
+  const isVendor = session.appMode === "vendor" || session.appMode === "vendor_staff";
+  const activeSuggestions = propSuggestions || (isVendor ? VENDOR_SUGGESTIONS : DEFAULT_SUGGESTIONS);
+
   const [text, setText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [showAttachModal, setShowAttachModal] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
@@ -159,10 +181,10 @@ export function ChatInput({ onSendMessage, sending, onQuickAction, showSuggestio
     } catch {}
     onSendMessage("text", text.trim());
     setText("");
-    setShowAttachMenu(false);
+    setShowAttachModal(false);
   };
 
-  const handleSuggestionPress = (sug: typeof DEFAULT_SUGGESTIONS[0]) => {
+  const handleSuggestionPress = (sug: { id: string; label: string; prompt?: string; action?: string }) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {}
@@ -180,39 +202,76 @@ export function ChatInput({ onSendMessage, sending, onQuickAction, showSuggestio
   };
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images", "videos"],
-      allowsEditing: true,
-      quality: 0.8,
-    });
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images", "videos"],
+        allowsEditing: true,
+        quality: 0.8,
+      });
 
-    if (!result.canceled) {
-      const asset = result.assets[0];
-      const type: MessageType = asset.type === "video" ? "video" : "image";
-      onSendMessage(type, "", asset);
-      setShowAttachMenu(false);
+      if (!result.canceled) {
+        const asset = result.assets[0];
+        const type: MessageType = asset.type === "video" ? "video" : "image";
+        onSendMessage(type, "", asset);
+        setShowAttachModal(false);
+      }
+    } catch (e) {
+      console.warn("Pick image error:", e);
+    }
+  };
+
+  const takePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        alert("Camera permission is required to take photos.");
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        const asset = result.assets[0];
+        onSendMessage("image", "", asset);
+        setShowAttachModal(false);
+      }
+    } catch (e) {
+      console.warn("Take photo error:", e);
     }
   };
 
   const pickDocument = async () => {
-    const result = await DocumentPicker.getDocumentAsync({});
-    if (!result.canceled) {
-      const asset = result.assets[0];
-      onSendMessage("document", "", asset, { file_name: asset.name, file_size: asset.size });
-      setShowAttachMenu(false);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({});
+      if (!result.canceled) {
+        const asset = result.assets[0];
+        onSendMessage("document", "", asset, { file_name: asset.name, file_size: asset.size });
+        setShowAttachModal(false);
+      }
+    } catch (e) {
+      console.warn("Pick document error:", e);
     }
   };
 
   const shareLocation = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") return;
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        alert("Location permission is required to share your current location.");
+        return;
+      }
 
-    const location = await Location.getCurrentPositionAsync({});
-    onSendMessage("location", "", undefined, {
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
-    });
-    setShowAttachMenu(false);
+      const location = await Location.getCurrentPositionAsync({});
+      onSendMessage("location", "", undefined, {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+      setShowAttachModal(false);
+    } catch (e) {
+      console.warn("Share location error:", e);
+    }
   };
 
   const startRecording = async () => {
@@ -308,7 +367,7 @@ export function ChatInput({ onSendMessage, sending, onQuickAction, showSuggestio
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.suggestionsContent}
           >
-            {DEFAULT_SUGGESTIONS.map((sug) => (
+            {activeSuggestions.map((sug) => (
               <TouchableOpacity
                 key={sug.id}
                 style={styles.suggestionPill}
@@ -371,54 +430,25 @@ export function ChatInput({ onSendMessage, sending, onQuickAction, showSuggestio
           </View>
         ) : (
           <>
-            {/* Action Buttons: Only show when not typing or when toggle expanded */}
-            {!isTyping || showAttachMenu ? (
-              <View style={styles.actionsLeft}>
-                <TouchableOpacity
-                  style={styles.iconButton}
-                  onPress={pickImage}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="camera-outline" size={20} color="#64748B" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.iconButton}
-                  onPress={pickDocument}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="attach-outline" size={20} color="#64748B" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.iconButton}
-                  onPress={shareLocation}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="location-outline" size={20} color="#64748B" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.expandAttachBtn}
-                onPress={() => setShowAttachMenu(true)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="add-circle-outline" size={24} color="#64748B" />
-              </TouchableOpacity>
-            )}
+            {/* Single Attach Trigger Button */}
+            <TouchableOpacity
+              style={styles.attachButton}
+              onPress={() => {
+                Keyboard.dismiss();
+                setShowAttachModal(true);
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="add" size={24} color="#64748B" />
+            </TouchableOpacity>
 
-            {/* Expanded Text Input Bar */}
+            {/* Clean, Uniform Text Input Bar */}
             <TextInput
-              style={[
-                styles.input,
-                isTyping && !showAttachMenu && styles.expandedInput,
-              ]}
+              style={styles.input}
               placeholder="Type your message here..."
               placeholderTextColor="#94A3B8"
               value={text}
-              onChangeText={(val) => {
-                setText(val);
-                if (val.length === 0) setShowAttachMenu(false);
-              }}
+              onChangeText={setText}
               multiline
               editable={!sending}
             />
@@ -450,11 +480,102 @@ export function ChatInput({ onSendMessage, sending, onQuickAction, showSuggestio
         )}
       </View>
 
+      {/* Attachment Action Sheet Modal */}
+      <Modal
+        visible={showAttachModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAttachModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.attachModalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowAttachModal(false)}
+        >
+          <View style={styles.attachSheet}>
+            <View style={styles.attachSheetHandle} />
+            <Text style={styles.attachSheetTitle}>Share & Attach</Text>
+
+            <View style={styles.attachGrid}>
+              {/* 1. Camera */}
+              <TouchableOpacity
+                style={styles.attachGridItem}
+                onPress={() => {
+                  setShowAttachModal(false);
+                  takePhoto();
+                }}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.attachIconCircle, { backgroundColor: "#EFF6FF" }]}>
+                  <Ionicons name="camera" size={24} color="#2563EB" />
+                </View>
+                <Text style={styles.attachGridLabel}>Camera</Text>
+              </TouchableOpacity>
+
+              {/* 2. Photo / Video Gallery */}
+              <TouchableOpacity
+                style={styles.attachGridItem}
+                onPress={() => {
+                  setShowAttachModal(false);
+                  pickImage();
+                }}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.attachIconCircle, { backgroundColor: "#FDF2F8" }]}>
+                  <Ionicons name="images" size={24} color="#DB2777" />
+                </View>
+                <Text style={styles.attachGridLabel}>Gallery</Text>
+              </TouchableOpacity>
+
+              {/* 3. Document */}
+              <TouchableOpacity
+                style={styles.attachGridItem}
+                onPress={() => {
+                  setShowAttachModal(false);
+                  pickDocument();
+                }}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.attachIconCircle, { backgroundColor: "#F5F3FF" }]}>
+                  <Ionicons name="document-text" size={24} color="#7C3AED" />
+                </View>
+                <Text style={styles.attachGridLabel}>Document</Text>
+              </TouchableOpacity>
+
+              {/* 4. Location */}
+              <TouchableOpacity
+                style={styles.attachGridItem}
+                onPress={() => {
+                  setShowAttachModal(false);
+                  shareLocation();
+                }}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.attachIconCircle, { backgroundColor: "#ECFDF5" }]}>
+                  <Ionicons name="location" size={24} color="#059669" />
+                </View>
+                <Text style={styles.attachGridLabel}>Location</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.attachCancelBtn}
+              onPress={() => setShowAttachModal(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.attachCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Bottom Remarks / AI Accuracy Disclaimer */}
-      {showSuggestions && !isRecording && (
+      {showSuggestions && !isRecording && !isKeyboardOpen && (
         <View style={styles.bottomDisclaimerRow}>
           <Text style={styles.bottomDisclaimerText}>
-            Tasky AI can make mistakes. Verify important details with live support.
+            {isVendor
+              ? "Tasker AI Helpdesk can make mistakes. Verify contract and settlement details with operations support."
+              : "Tasky AI can make mistakes. Verify important details with live support."}
           </Text>
         </View>
       )}
@@ -493,53 +614,38 @@ const styles = StyleSheet.create({
   },
   inputRow: {
     flexDirection: "row",
-    alignItems: "flex-end",
-    paddingHorizontal: 8,
-    paddingTop: 6,
-    gap: 6,
-  },
-  actionsLeft: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: 2,
-    marginBottom: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    gap: 8,
   },
-  expandAttachBtn: {
-    padding: 6,
-    marginBottom: 2,
+  attachButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#F1F5F9",
     justifyContent: "center",
     alignItems: "center",
-  },
-  iconButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F8FAFC",
   },
   input: {
     flex: 1,
     backgroundColor: "#F1F5F9",
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingTop: 8,
-    paddingBottom: 8,
-    maxHeight: 90,
-    fontSize: 14,
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === "ios" ? 10 : 8,
+    paddingBottom: Platform.OS === "ios" ? 10 : 8,
+    minHeight: 40,
+    maxHeight: 110,
+    fontSize: 15,
     color: "#0F172A",
-  },
-  expandedInput: {
-    backgroundColor: "#F1F5F9",
   },
   sendButton: {
     backgroundColor: Colors.themes.customer.primary,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 2,
     shadowColor: Colors.themes.customer.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -548,12 +654,11 @@ const styles = StyleSheet.create({
   },
   micButton: {
     backgroundColor: Colors.themes.customer.primary,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 2,
     shadowColor: Colors.themes.customer.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -562,6 +667,76 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.6,
+  },
+  // Attachment Action Sheet Modal Styles
+  attachModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    justifyContent: "flex-end",
+  },
+  attachSheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === "ios" ? 34 : 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  attachSheetHandle: {
+    width: 38,
+    height: 4,
+    backgroundColor: "#CBD5E1",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  attachSheetTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 18,
+    textAlign: "center",
+  },
+  attachGrid: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  attachGridItem: {
+    alignItems: "center",
+    gap: 8,
+    width: 76,
+  },
+  attachIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  attachGridLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#475569",
+    textAlign: "center",
+  },
+  attachCancelBtn: {
+    backgroundColor: "#F1F5F9",
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  attachCancelText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#64748B",
   },
   // Voice Recording Bar Styles
   recordingContainer: {

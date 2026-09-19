@@ -4,30 +4,56 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome } from "@expo/vector-icon
 import { router } from "expo-router";
 import Colors from "@/constants/Colors";
 import { AppConversationParticipant } from "@/types/chat";
+import { useSession } from "@/context/ctx";
 
 interface ChatHeaderProps {
   partner: AppConversationParticipant | null;
+  partnerPhone?: string | null;
   onPressProfile?: () => void;
   isSupport?: boolean;
 }
 
-export function ChatHeader({ partner, onPressProfile, isSupport = false }: ChatHeaderProps) {
+export function ChatHeader({
+  partner,
+  partnerPhone,
+  onPressProfile,
+  isSupport = false,
+}: ChatHeaderProps) {
+  const { session } = useSession();
+  const isVendor = session.appMode === "vendor" || session.appMode === "vendor_staff";
+  const primaryThemeColor = isVendor
+    ? Colors.themes.provider.primary
+    : Colors.themes.customer.primary;
+
   const displayName = isSupport
-    ? "Tasky • AI Assistant"
-    : partner?.display_name || "Tasker Support";
+    ? (isVendor ? "Tasker Vendor Helpdesk" : "Tasky • AI Assistant")
+    : partner?.display_name || (isVendor ? "Customer" : "Service Partner");
 
   const subtitle = isSupport
     ? "⚡ Instant AI Support • 24/7"
-    : "Online • Tasker Company";
+    : partner?.role
+      ? `${partner.role} • Active`
+      : (isVendor ? "Order Customer" : "Assigned Service Partner");
+
+  const resolvedPhone = (!isSupport && (partnerPhone || partner?.phone))
+    ? (partnerPhone || partner?.phone)!
+    : "03041112717";
 
   const handleCall = () => {
-    Linking.openURL("tel:03041112717").catch((err) =>
+    const cleanPhone = resolvedPhone.replace(/[^0-9+]/g, "");
+    Linking.openURL(`tel:${cleanPhone}`).catch((err) =>
       console.warn("Cannot dial phone:", err)
     );
   };
 
   const handleWhatsApp = () => {
-    Linking.openURL("https://wa.me/923041112717").catch((err) =>
+    const digits = resolvedPhone.replace(/[^0-9]/g, "");
+    const waPhone = digits.startsWith("0")
+      ? `92${digits.slice(1)}`
+      : digits.startsWith("92")
+        ? digits
+        : digits;
+    Linking.openURL(`https://wa.me/${waPhone}`).catch((err) =>
       console.warn("Cannot open WhatsApp:", err)
     );
   };
@@ -60,11 +86,11 @@ export function ChatHeader({ partner, onPressProfile, isSupport = false }: ChatH
               style={[
                 styles.avatar,
                 styles.avatarPlaceholder,
-                { backgroundColor: Colors.themes.customer.primary },
+                { backgroundColor: primaryThemeColor },
               ]}
             >
               <Ionicons
-                name="construct"
+                name={isVendor ? "person" : "construct"}
                 size={18}
                 color="#FFFFFF"
               />
@@ -81,7 +107,7 @@ export function ChatHeader({ partner, onPressProfile, isSupport = false }: ChatH
             <MaterialCommunityIcons
               name="check-decagram"
               size={15}
-              color={Colors.themes.customer.primary}
+              color={primaryThemeColor}
               style={styles.verifiedIcon}
             />
           </View>
@@ -98,7 +124,7 @@ export function ChatHeader({ partner, onPressProfile, isSupport = false }: ChatH
           onPress={handleCall}
           activeOpacity={0.7}
         >
-          <Ionicons name="call" size={16} color={Colors.themes.customer.primary} />
+          <Ionicons name="call" size={16} color={primaryThemeColor} />
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.actionButton, styles.whatsappButton]}

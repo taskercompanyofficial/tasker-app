@@ -1,9 +1,11 @@
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import { ChatRoom } from "@/components/Chat/ChatRoom";
-import { ORDER_URL } from "@/lib/api-endpoints";
+import { ProfileSummaryModal } from "@/components/Chat/ProfileSummaryModal";
+import { ORDER_URL, WORK_ORDER_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
 import { Order } from "@/types/order";
+import { AppConversationParticipant } from "@/types/chat";
 import { Ionicons, MaterialCommunityIcons, FontAwesome } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -15,15 +17,27 @@ import {
   TouchableOpacity,
   View,
   Image,
+  StatusBar,
+  useColorScheme,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function CustomerSupportChatHub() {
-  const params = useLocalSearchParams<{ initialWorkOrderId?: string }>();
+export default function CustomerSupportChatHub({
+  initialWorkOrderId: propInitialWorkOrderId,
+}: {
+  initialWorkOrderId?: string;
+} = {}) {
+  const params = useLocalSearchParams<{ initialWorkOrderId?: string; id?: string }>();
+  const initialId = propInitialWorkOrderId || params.initialWorkOrderId || params.id || null;
   const [activeWorkOrders, setActiveWorkOrders] = useState<Order[]>([]);
-  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(
-    params.initialWorkOrderId || null
-  );
+  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(initialId);
+
+  useEffect(() => {
+    const id = propInitialWorkOrderId || params.initialWorkOrderId || params.id;
+    if (id) {
+      setSelectedWorkOrderId(String(id));
+    }
+  }, [propInitialWorkOrderId, params.initialWorkOrderId, params.id]);
 
   useEffect(() => {
     fetchActiveOrders();
@@ -37,71 +51,166 @@ export default function CustomerSupportChatHub() {
       const active = ordersList.filter(
         (o) => o.status === "in_progress" || o.status === "pending" || o.status === "confirmed" || o.status === "scheduled"
       );
+      const currentTarget = propInitialWorkOrderId || params.initialWorkOrderId || params.id;
+      if (currentTarget) {
+        const found = ordersList.find((o) => String(o.id) === String(currentTarget) || String(o.order_number) === String(currentTarget));
+        if (found && !active.some((o) => String(o.id) === String(found.id))) {
+          active.unshift(found);
+        }
+      }
       setActiveWorkOrders(active);
     } catch (err) {
       console.error("Failed to fetch orders for chat hub:", err);
     }
   };
 
+  const [technicianPartner, setTechnicianPartner] = useState<AppConversationParticipant | null>(null);
+  const [technicianPhone, setTechnicianPhone] = useState<string | null>(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
+  useEffect(() => {
+    if (!selectedWorkOrderId) {
+      setTechnicianPartner(null);
+      setTechnicianPhone(null);
+      return;
+    }
+
+    let isMounted = true;
+    myAxios
+      .get(`${WORK_ORDER_URL}/${selectedWorkOrderId}`)
+      .then((res) => {
+        if (!isMounted) return;
+        const data = res.data?.data;
+        const phone =
+          data?.vendor_staff?.phone ||
+          data?.vendor?.phone ||
+          data?.assigned_to?.phone ||
+          data?.extra_number ||
+          null;
+        if (phone) {
+          setTechnicianPhone(String(phone).trim());
+        }
+      })
+      .catch(() => {
+        // Fallback or quiet ignore
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedWorkOrderId]);
+
+  const isSupportDesk = !selectedWorkOrderId;
+  const currentOrder = activeWorkOrders.find(
+    (o) => String(o.id) === String(selectedWorkOrderId) || String(o.order_number) === String(selectedWorkOrderId)
+  );
+
+  const activePhone = (!isSupportDesk && (technicianPhone || technicianPartner?.phone))
+    ? (technicianPhone || technicianPartner?.phone)!
+    : "03041112717";
+
   const handleCall = () => {
-    Linking.openURL("tel:03041112717").catch(() => {});
+    const cleanPhone = activePhone.replace(/[^0-9+]/g, "");
+    Linking.openURL(`tel:${cleanPhone}`).catch(() => {});
   };
 
   const handleWhatsApp = () => {
-    Linking.openURL("https://wa.me/923041112717").catch(() => {});
+    const digits = activePhone.replace(/[^0-9]/g, "");
+    const waPhone = digits.startsWith("0")
+      ? `92${digits.slice(1)}`
+      : digits.startsWith("92")
+        ? digits
+        : digits;
+    Linking.openURL(`https://wa.me/${waPhone}`).catch(() => {});
   };
 
-  const isSupportDesk = !selectedWorkOrderId;
+  const headerTitle = isSupportDesk
+    ? "Tasky • AI Chat Support"
+    : technicianPartner?.display_name
+      ? technicianPartner.display_name
+      : `Technician Chat • #${currentOrder?.order_number || selectedWorkOrderId}`;
+
+  const headerSubtitle = isSupportDesk
+    ? "⚡ Live 24/7 AI Assistant • Instant Reply"
+    : technicianPartner
+      ? `${technicianPartner.role || "Service Technician"} • Order #${currentOrder?.order_number || selectedWorkOrderId}`
+      : "Direct Chat with Assigned Technician";
+
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={
+          isDark ? "rgba(0, 0, 0, 0.40)" : "rgba(255, 255, 255, 0.40)"
+        }
+        translucent
+      />
       {/* App Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
 
-        <View style={styles.avatarWrapper}>
-          {isSupportDesk ? (
-            <Image
-              source={require("@/assets/images/tasker-ai-avatar.jpg")}
-              style={styles.avatarImg}
-            />
-          ) : (
-            <View
-              style={[
-                styles.avatar,
-                { backgroundColor: "#3B82F6" },
-              ]}
-            >
-              <Ionicons
-                name="construct"
-                size={18}
-                color="#FFFFFF"
+        {/* Profile Info (Clickable for assigned technician) */}
+        <TouchableOpacity
+          style={styles.headerProfileContainer}
+          onPress={() => {
+            if (!isSupportDesk && technicianPartner) {
+              setShowProfileModal(true);
+            }
+          }}
+          activeOpacity={!isSupportDesk && technicianPartner ? 0.7 : 1}
+        >
+          <View style={styles.avatarWrapper}>
+            {isSupportDesk ? (
+              <Image
+                source={require("@/assets/images/tasker-ai-avatar.jpg")}
+                style={styles.avatarImg}
+              />
+            ) : technicianPartner?.avatar_url ? (
+              <Image
+                source={{ uri: technicianPartner.avatar_url }}
+                style={styles.avatarImg}
+              />
+            ) : (
+              <View
+                style={[
+                  styles.avatar,
+                  { backgroundColor: "#3B82F6" },
+                ]}
+              >
+                <Ionicons
+                  name="construct"
+                  size={18}
+                  color="#FFFFFF"
+                />
+              </View>
+            )}
+            <View style={styles.onlineBadge} />
+          </View>
+
+          <View style={styles.headerTextContainer}>
+            <View style={styles.headerTitleRow}>
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                {headerTitle}
+              </Text>
+              <MaterialCommunityIcons
+                name="check-decagram"
+                size={14}
+                color={Colors.themes.customer.primary}
               />
             </View>
-          )}
-          <View style={styles.onlineBadge} />
-        </View>
-
-        <View style={styles.headerTextContainer}>
-          <View style={styles.headerTitleRow}>
-            <Text style={styles.headerTitle} numberOfLines={1}>
-              {isSupportDesk ? "Tasky • AI Chat Support" : `Order #${selectedWorkOrderId}`}
-            </Text>
-            <MaterialCommunityIcons
-              name="check-decagram"
-              size={14}
-              color={Colors.themes.customer.primary}
-            />
+            <View style={styles.statusRow}>
+              <View style={styles.statusDot} />
+              <Text style={styles.headerSubtitle} numberOfLines={1}>
+                {headerSubtitle}
+              </Text>
+            </View>
           </View>
-          <View style={styles.statusRow}>
-            <View style={styles.statusDot} />
-            <Text style={styles.headerSubtitle}>
-              {isSupportDesk ? "⚡ Live 24/7 AI Assistant • Instant Reply" : "Direct Order Chat"}
-            </Text>
-          </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Quick Action Buttons */}
         <View style={styles.headerActions}>
@@ -138,9 +247,19 @@ export default function CustomerSupportChatHub() {
         <ChatRoom
           key={selectedWorkOrderId || "support"}
           workOrderId={selectedWorkOrderId || undefined}
+          partnerPhone={technicianPhone || technicianPartner?.phone}
           hideHeader={true}
+          onPartnerResolved={(partner) => setTechnicianPartner(partner)}
         />
       </View>
+
+      {/* Technician Worker Profile Summary Modal */}
+      <ProfileSummaryModal
+        visible={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        partner={technicianPartner}
+        phone={technicianPhone || technicianPartner?.phone}
+      />
     </SafeAreaView>
   );
 }
@@ -222,6 +341,12 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 4,
     marginRight: 8,
+  },
+  headerProfileContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 6,
   },
   avatarWrapper: {
     position: "relative",

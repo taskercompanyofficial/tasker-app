@@ -49,11 +49,45 @@ myAxios.interceptors.request.use(
 
 let isHandlingAuthError = false;
 
+// Check if endpoint contains sensitive PII / Auth data that should never be cached unencrypted
+const isSensitiveEndpoint = (url?: string) => {
+  if (!url) return false;
+  return (
+    url.includes("/auth/") ||
+    url.includes("/me") ||
+    url.includes("/earnings") ||
+    url.includes("/wallet") ||
+    url.includes("/profile") ||
+    url.includes("/payout") ||
+    url.includes("/delete-account")
+  );
+};
+
+// Check if mutation is critical (auth, OTP, payout) and should never be faked with dummy 202
+const isCriticalMutation = (url?: string) => {
+  if (!url) return false;
+  return (
+    url.includes("/auth/") ||
+    url.includes("/sign-in") ||
+    url.includes("/sign-out") ||
+    url.includes("/login") ||
+    url.includes("/verify-otp") ||
+    url.includes("/check-credentials") ||
+    url.includes("/change-password") ||
+    url.includes("/create-customer") ||
+    url.includes("/payout") ||
+    url.includes("/delete-account")
+  );
+};
+
 // Add response interceptor for error handling and caching
 myAxios.interceptors.response.use(
   async (response: AxiosResponse) => {
-    // Cache successful GET requests for offline support
-    if (response.config.method?.toLowerCase() === "get") {
+    // Cache non-sensitive successful GET requests for offline support
+    if (
+      response.config.method?.toLowerCase() === "get" &&
+      !isSensitiveEndpoint(response.config.url)
+    ) {
       try {
         const cacheKey = getCacheKey(response.config);
         // Only cache the data part to save space
@@ -75,7 +109,7 @@ myAxios.interceptors.response.use(
     if (!error.response) {
       const method = error.config?.method?.toLowerCase();
 
-      if (method === "get") {
+      if (method === "get" && !isSensitiveEndpoint(requestUrl)) {
         try {
           const cacheKey = getCacheKey(error.config);
           const cachedData = await AsyncStorage.getItem(cacheKey);
@@ -93,9 +127,12 @@ myAxios.interceptors.response.use(
         } catch (e) {
           console.warn("Failed to retrieve cached data:", e);
         }
-      } else if (method === "post" || method === "put" || method === "delete") {
+      } else if (
+        (method === "post" || method === "put" || method === "delete") &&
+        !isCriticalMutation(requestUrl)
+      ) {
         try {
-          // Enqueue the mutation action for later sync
+          // Enqueue the non-critical mutation action for later sync
           const { useOfflineStore } = require("@/context/offline-store");
           useOfflineStore.getState().enqueueAction({
             url: error.config.url,
@@ -129,7 +166,12 @@ myAxios.interceptors.response.use(
     const status = error.response?.status;
     const message = error.response?.data?.message || error.message;
 
-    if (status === 401 && !isHandlingAuthError) {
+    const isBackgroundService =
+      requestUrl &&
+      (requestUrl.includes("/register-token") ||
+        requestUrl.includes(APP_LOGS_INGEST_URL));
+
+    if (status === 401 && !isHandlingAuthError && !isBackgroundService) {
       isHandlingAuthError = true;
 
       const authState = useAuthStore.getState();

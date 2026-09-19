@@ -111,7 +111,7 @@ export default function VendorSignIn() {
             type: "success",
             text1: response.message || "Login successful",
           });
-          await signIn(response.token, userType);
+          await signIn(response.token, userType, response.user);
           
           const vendorUser = response.user;
           const isVendor = userType === "vendor";

@@ -4,11 +4,13 @@ import { useAuthStore } from "@/context/auth-store";
 import { useEcho } from "@/context/EchoProvider";
 import { router } from "expo-router";
 import {
+  Image,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  useColorScheme,
 } from "react-native";
 import NotificationBell from "./common/NotificationBell";
 
@@ -52,9 +54,38 @@ export default function Header({
     );
   };
 
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
+  const rawAvatar =
+    (user as any)?.active_avatar_url ||
+    (user as any)?.daily_selfie_image ||
+    (user as any)?.profile_image ||
+    user?.avatar_url ||
+    null;
+
+  const avatarUri = rawAvatar
+    ? rawAvatar.startsWith("http")
+      ? rawAvatar
+      : rawAvatar.startsWith("/")
+      ? rawAvatar
+      : `/${rawAvatar}`
+    : null;
+
+  const isPartnerOnline = Boolean(
+    isVendor &&
+      ((user as any)?.is_online || (user as any)?.online_status === "online")
+  );
+
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={"#fff"} barStyle="dark-content" />
+      <StatusBar
+        backgroundColor={
+          isDark ? "rgba(0, 0, 0, 0.40)" : "rgba(255, 255, 255, 0.40)"
+        }
+        barStyle={isDark ? "light-content" : "dark-content"}
+        translucent
+      />
       <View style={styles.content}>
         <View style={styles.leftSection}>
           {showGreeting && user ? (
@@ -91,16 +122,30 @@ export default function Header({
                 router.push((isVendor ? "/vendor/settings" : "/customer/settings") as any)
               }
             >
-              <View
-                style={[
-                  styles.avatarPlaceholder,
-                  { backgroundColor: theme.primary },
-                ]}
-              >
-                <Text style={styles.avatarText}>
-                  {user.name?.charAt(0).toUpperCase() ||
-                    user.first_name?.charAt(0).toUpperCase()}
-                </Text>
+              <View style={styles.avatarContainer}>
+                {avatarUri ? (
+                  <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
+                ) : (
+                  <View
+                    style={[
+                      styles.avatarPlaceholder,
+                      { backgroundColor: theme.primary },
+                    ]}
+                  >
+                    <Text style={styles.avatarText}>
+                      {user.name?.charAt(0).toUpperCase() ||
+                        user.first_name?.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+                {isVendor && (
+                  <View
+                    style={[
+                      styles.avatarOnlineBadge,
+                      { backgroundColor: isPartnerOnline ? "#10B981" : "#9CA3AF" },
+                    ]}
+                  />
+                )}
               </View>
             </TouchableOpacity>
           )}
@@ -148,6 +193,26 @@ const styles = StyleSheet.create({
   },
   profileButton: {
     marginLeft: Spacing.xs,
+  },
+  avatarContainer: {
+    position: "relative",
+  },
+  avatarImg: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: "#10B981",
+  },
+  avatarOnlineBadge: {
+    position: "absolute",
+    bottom: -1,
+    right: -1,
+    width: 11,
+    height: 11,
+    borderRadius: 5.5,
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
   },
   avatarPlaceholder: {
     width: 36,

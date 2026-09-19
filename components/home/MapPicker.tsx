@@ -90,8 +90,8 @@ export default function MapPicker({
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
 
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
-  const searchDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (visible) {

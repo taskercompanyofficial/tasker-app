@@ -1,6 +1,16 @@
 import React from "react";
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Image, ScrollView, Dimensions } from "react-native";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  Dimensions,
+  Linking,
+} from "react-native";
+import { Ionicons, MaterialCommunityIcons, FontAwesome } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { AppConversationParticipant } from "@/types/chat";
 
@@ -10,10 +20,33 @@ interface ProfileSummaryModalProps {
   visible: boolean;
   onClose: () => void;
   partner: AppConversationParticipant | null;
+  phone?: string | null;
 }
 
-export function ProfileSummaryModal({ visible, onClose, partner }: ProfileSummaryModalProps) {
+export function ProfileSummaryModal({
+  visible,
+  onClose,
+  partner,
+  phone: propPhone,
+}: ProfileSummaryModalProps) {
   if (!partner) return null;
+
+  const resolvedPhone = propPhone || partner.phone || "03041112717";
+
+  const handleCall = () => {
+    const cleanPhone = resolvedPhone.replace(/[^0-9+]/g, "");
+    Linking.openURL(`tel:${cleanPhone}`).catch(() => {});
+  };
+
+  const handleWhatsApp = () => {
+    const digits = resolvedPhone.replace(/[^0-9]/g, "");
+    const waPhone = digits.startsWith("0")
+      ? `92${digits.slice(1)}`
+      : digits.startsWith("92")
+        ? digits
+        : digits;
+    Linking.openURL(`https://wa.me/${waPhone}`).catch(() => {});
+  };
 
   return (
     <Modal
@@ -22,22 +55,27 @@ export function ProfileSummaryModal({ visible, onClose, partner }: ProfileSummar
       animationType="slide"
       onRequestClose={onClose}
     >
-      <TouchableOpacity 
-        style={styles.overlay} 
-        activeOpacity={1} 
+      <TouchableOpacity
+        style={styles.overlay}
+        activeOpacity={1}
         onPress={onClose}
       >
-        <View style={styles.sheet}>
+        <View style={styles.sheet} onStartShouldSetResponder={() => true}>
           <View style={styles.handle} />
-          
-          <TouchableOpacity 
-            style={styles.closeButton} 
+
+          <TouchableOpacity
+            style={styles.closeButton}
             onPress={onClose}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="close" size={24} color={Colors.text.tertiary} />
+            <Ionicons name="close" size={22} color="#64748B" />
           </TouchableOpacity>
 
-          <ScrollView contentContainerStyle={styles.content}>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Header: Avatar, Name, Role */}
             <View style={styles.header}>
               <View style={styles.avatarContainer}>
                 {partner.avatar_url ? (
@@ -45,23 +83,45 @@ export function ProfileSummaryModal({ visible, onClose, partner }: ProfileSummar
                 ) : (
                   <View style={[styles.avatar, styles.avatarPlaceholder]}>
                     <Text style={styles.avatarText}>
-                      {partner.display_name?.charAt(0).toUpperCase()}
+                      {partner.display_name?.charAt(0).toUpperCase() || "T"}
                     </Text>
                   </View>
                 )}
                 {partner.is_verified && (
                   <View style={styles.verifiedBadge}>
-                    <MaterialCommunityIcons name="check-decagram" size={20} color="#FFFFFF" />
+                    <MaterialCommunityIcons name="check-decagram" size={16} color="#FFFFFF" />
                   </View>
                 )}
               </View>
-              
+
               <Text style={styles.name}>{partner.display_name}</Text>
               <View style={styles.roleBadge}>
-                <Text style={styles.roleText}>{partner.role || "Service Provider"}</Text>
+                <Text style={styles.roleText}>{partner.role || "Service Partner"}</Text>
               </View>
             </View>
 
+            {/* Quick Contact Action Buttons */}
+            <View style={styles.actionButtonsRow}>
+              <TouchableOpacity
+                style={[styles.contactBtn, styles.callBtn]}
+                onPress={handleCall}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="call" size={16} color="#FFFFFF" />
+                <Text style={styles.callBtnText}>Call Directly</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.contactBtn, styles.waBtn]}
+                onPress={handleWhatsApp}
+                activeOpacity={0.8}
+              >
+                <FontAwesome name="whatsapp" size={17} color="#FFFFFF" />
+                <Text style={styles.waBtnText}>WhatsApp</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Minimal Stats Row */}
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
                 <Text style={styles.statValue}>4.9/5</Text>
@@ -69,38 +129,36 @@ export function ProfileSummaryModal({ visible, onClose, partner }: ProfileSummar
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>124</Text>
-                <Text style={styles.statLabel}>Jobs Done</Text>
+                <Text style={styles.statValue}>150+</Text>
+                <Text style={styles.statLabel}>Jobs Completed</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>Verified</Text>
-                <Text style={styles.statLabel}>Status</Text>
+                <Text style={[styles.statValue, { color: "#16A34A" }]}>Verified</Text>
+                <Text style={styles.statLabel}>Tasker Pro</Text>
               </View>
             </View>
 
+            {/* Contact & Verification Cards */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Contact Information</Text>
-              <View style={styles.infoRow}>
+              <View style={styles.infoCard}>
                 <Ionicons name="call-outline" size={18} color={Colors.themes.customer.primary} />
-                <Text style={styles.infoText}>Contact directly for emergencies</Text>
+                <View style={styles.infoCardContent}>
+                  <Text style={styles.infoCardTitle}>Direct Contact Number</Text>
+                  <Text style={styles.infoCardSubtitle}>{resolvedPhone}</Text>
+                </View>
               </View>
-              <View style={styles.infoRow}>
-                <Ionicons name="shield-outline" size={18} color={Colors.themes.customer.primary} />
-                <Text style={styles.infoText}>Background checked & Identity verified</Text>
+
+              <View style={styles.infoCard}>
+                <Ionicons name="shield-checkmark-outline" size={18} color="#16A34A" />
+                <View style={styles.infoCardContent}>
+                  <Text style={styles.infoCardTitle}>Safety & Verification</Text>
+                  <Text style={styles.infoCardSubtitle}>
+                    CNIC verified & background checked Tasker company technician
+                  </Text>
+                </View>
               </View>
             </View>
-
-            <TouchableOpacity 
-              style={styles.fullProfileButton}
-              onPress={() => {
-                onClose();
-                // Future: router.push(`/customer/vendor/${partner.participant_id}`)
-              }}
-            >
-              <Text style={styles.fullProfileButtonText}>View Full Profile</Text>
-              <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
-            </TouchableOpacity>
           </ScrollView>
         </View>
       </TouchableOpacity>
@@ -111,152 +169,183 @@ export function ProfileSummaryModal({ visible, onClose, partner }: ProfileSummar
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
     justifyContent: "flex-end",
   },
   sheet: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    minHeight: SCREEN_HEIGHT * 0.45,
-    maxHeight: SCREEN_HEIGHT * 0.8,
+    minHeight: SCREEN_HEIGHT * 0.42,
+    maxHeight: SCREEN_HEIGHT * 0.78,
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: 28,
   },
   handle: {
-    width: 40,
+    width: 36,
     height: 4,
-    backgroundColor: "#E5E7EB",
+    backgroundColor: "#E2E8F0",
     borderRadius: 2,
     alignSelf: "center",
-    marginTop: 12,
+    marginTop: 10,
   },
   closeButton: {
     position: "absolute",
-    top: 20,
-    right: 20,
+    top: 14,
+    right: 18,
     zIndex: 10,
+    padding: 6,
   },
   content: {
     alignItems: "center",
-    paddingTop: 30,
+    paddingTop: 18,
+    paddingBottom: 16,
   },
   header: {
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 16,
   },
   avatarContainer: {
     position: "relative",
-    marginBottom: 16,
+    marginBottom: 10,
   },
   avatar: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: "#F3F4F6",
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: "#F1F5F9",
   },
   avatarPlaceholder: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.themes.customer.primary + "15",
+    backgroundColor: "#EFF6FF",
   },
   avatarText: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "700",
     color: Colors.themes.customer.primary,
   },
   verifiedBadge: {
     position: "absolute",
-    bottom: 2,
-    right: 2,
-    backgroundColor: "#3B82F6",
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    bottom: 0,
+    right: 0,
+    backgroundColor: Colors.themes.customer.primary,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: "#FFFFFF",
   },
   name: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: Colors.text.primary,
-    marginBottom: 8,
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginBottom: 4,
   },
   roleBadge: {
-    backgroundColor: Colors.themes.customer.background,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    backgroundColor: "#F1F5F9",
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
   roleText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
-    color: Colors.themes.customer.primary,
+    color: "#475569",
     textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  actionButtonsRow: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+    marginBottom: 16,
+  },
+  contactBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 11,
+    borderRadius: 12,
+  },
+  callBtn: {
+    backgroundColor: Colors.themes.customer.primary,
+  },
+  callBtnText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  waBtn: {
+    backgroundColor: "#16A34A",
+  },
+  waBtnText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
   },
   statsRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F9FAFB",
-    borderRadius: 16,
-    paddingVertical: 16,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 14,
+    paddingVertical: 12,
     width: "100%",
-    marginBottom: 24,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
   },
   statItem: {
     flex: 1,
     alignItems: "center",
   },
   statValue: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: Colors.text.primary,
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#0F172A",
   },
   statLabel: {
-    fontSize: 11,
-    color: Colors.text.tertiary,
+    fontSize: 10,
+    color: "#64748B",
     marginTop: 2,
+    fontWeight: "500",
   },
   statDivider: {
     width: 1,
-    height: 30,
-    backgroundColor: "#E5E7EB",
+    height: 24,
+    backgroundColor: "#E2E8F0",
   },
   section: {
     width: "100%",
-    marginBottom: 24,
-    gap: 12,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: Colors.text.primary,
-    marginBottom: 4,
-  },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  infoText: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-  },
-  fullProfileButton: {
-    backgroundColor: Colors.themes.customer.primary,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
     gap: 8,
-    paddingVertical: 14,
-    borderRadius: 16,
-    width: "100%",
   },
-  fullProfileButtonText: {
-    fontSize: 16,
+  infoCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+    gap: 10,
+  },
+  infoCardContent: {
+    flex: 1,
+  },
+  infoCardTitle: {
+    fontSize: 11,
     fontWeight: "600",
-    color: "#FFFFFF",
+    color: "#64748B",
+  },
+  infoCardSubtitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginTop: 1,
   },
 });

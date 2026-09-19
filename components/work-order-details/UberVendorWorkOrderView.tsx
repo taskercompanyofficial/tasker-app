@@ -20,6 +20,7 @@ import * as Location from "expo-location";
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Image,
   Linking,
   StyleSheet,
   Text,
@@ -472,6 +473,10 @@ export default function UberVendorWorkOrderView({
     }
   };
 
+  const handleChatCustomer = () => {
+    router.push(`/vendor/work-order-chat/${workOrder.id}` as any);
+  };
+
   const handleWhatsAppCustomer = () => {
     if (workOrder.customer?.whatsapp) {
       const cleanNumber = workOrder.customer.whatsapp.replace(/\D/g, "");
@@ -745,8 +750,17 @@ export default function UberVendorWorkOrderView({
                 onPress={handleCallCustomer}
                 activeOpacity={0.8}
               >
-                <Ionicons name="call" size={16} color={Colors.neutral.white} />
+                <Ionicons name="call" size={15} color={Colors.neutral.white} />
                 <Text style={styles.quickCallBtnText}>Call</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.quickChatBtn}
+                onPress={handleChatCustomer}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="chatbubbles" size={15} color={Colors.neutral.white} />
+                <Text style={styles.quickChatBtnText}>Chat</Text>
               </TouchableOpacity>
 
               {workOrder.customer?.whatsapp ? (
@@ -755,7 +769,7 @@ export default function UberVendorWorkOrderView({
                   onPress={handleWhatsAppCustomer}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="logo-whatsapp" size={16} color={Colors.neutral.white} />
+                  <Ionicons name="logo-whatsapp" size={15} color={Colors.neutral.white} />
                   <Text style={styles.quickWhatsappBtnText}>WhatsApp</Text>
                 </TouchableOpacity>
               ) : null}
@@ -765,7 +779,7 @@ export default function UberVendorWorkOrderView({
                 onPress={handleNavigateGoogleMaps}
                 activeOpacity={0.8}
               >
-                <Ionicons name="navigate" size={16} color={Colors.neutral.white} />
+                <Ionicons name="navigate" size={15} color={Colors.neutral.white} />
                 <Text style={styles.quickNavBtnText}>Nav</Text>
               </TouchableOpacity>
             </View>
@@ -789,6 +803,7 @@ export default function UberVendorWorkOrderView({
             customer={workOrder.customer}
             address={workOrder.address}
             extraNumber={workOrder.extra_number}
+            workOrderId={workOrder.id}
           />
 
           <ServiceInfoSection
@@ -849,9 +864,29 @@ export default function UberVendorWorkOrderView({
                 {workOrder.vendor_staff ? (
                   <View style={styles.assignedStaffCard}>
                     <View style={styles.staffAvatarSmall}>
-                      <Text style={styles.avatarTextSmall}>
-                        {workOrder.vendor_staff.name.charAt(0).toUpperCase()}
-                      </Text>
+                      {(() => {
+                        const avatarPath =
+                          workOrder.vendor_staff.active_avatar_url ||
+                          workOrder.vendor_staff.daily_selfie_image ||
+                          workOrder.vendor_staff.image;
+                        if (avatarPath) {
+                          return (
+                            <Image
+                              source={{
+                                uri: avatarPath.startsWith("http")
+                                  ? avatarPath
+                                  : `/${avatarPath}`,
+                              }}
+                              style={{ width: 36, height: 36, borderRadius: 18 }}
+                            />
+                          );
+                        }
+                        return (
+                          <Text style={styles.avatarTextSmall}>
+                            {workOrder.vendor_staff.name.charAt(0).toUpperCase()}
+                          </Text>
+                        );
+                      })()}
                     </View>
                     <View style={styles.staffDetails}>
                       <Text style={styles.staffNameText}>
@@ -1233,9 +1268,24 @@ const styles = StyleSheet.create({
     backgroundColor: "#10B981",
     paddingVertical: 10,
     borderRadius: BorderRadius.md,
-    gap: 6,
+    gap: 5,
   },
   quickCallBtnText: {
+    fontSize: Typography.sizes.xs,
+    fontWeight: "700",
+    color: Colors.neutral.white,
+  },
+  quickChatBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#2563EB",
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+    gap: 5,
+  },
+  quickChatBtnText: {
     fontSize: Typography.sizes.xs,
     fontWeight: "700",
     color: Colors.neutral.white,

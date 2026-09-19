@@ -38,7 +38,10 @@ export function useNotificationDeepLink() {
         if (data.chat_type === "support") {
           router.push("/customer/support-chat");
         } else if (data.order_id || data.work_order_id) {
-          router.push(`/customer/order-chat/${data.order_id || data.work_order_id}`);
+          router.push({
+            pathname: "/customer/support-chat",
+            params: { initialWorkOrderId: data.order_id || data.work_order_id },
+          } as any);
         }
         break;
       case "order":

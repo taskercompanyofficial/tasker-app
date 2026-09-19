@@ -9,83 +9,23 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useColorScheme,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import myAxios from "@/lib/axios.config";
 import { VENDOR_SIGN_OUT_URL, VENDOR_STAFF_SIGN_OUT_URL } from "@/lib/api-endpoints";
-import {
-  VENDOR_QUICK_LOGIN_REVOKE_URL,
-  VENDOR_STAFF_QUICK_LOGIN_REVOKE_URL,
-} from "@/lib/api-endpoints";
 import { router } from "expo-router";
 import CustomSwitch from "@/components/common/CustomSwitch";
 import AlertModal from "@/components/common/AlertModal";
 import * as SystemUI from "expo-system-ui";
 import { useFocusEffect } from "expo-router";
-import { useBiometric } from "@/hooks/use-biometric";
-import * as SecureStore from "expo-secure-store";
-
-const BIOMETRIC_VENDOR_CREDENTIAL_KEY = "@biometric_vendor_quick_login";
-
-interface BiometricSettingItemProps {
-  isAvailable: boolean;
-  isEnabled: boolean;
-  biometryType: string | null;
-  isLoading: boolean;
-  onToggle: () => void;
-}
-
-function BiometricSettingItem({ isAvailable, isEnabled, biometryType, isLoading, onToggle }: BiometricSettingItemProps) {
-  const getIcon = () => {
-    if (biometryType === "FINGERPRINT") return "finger-print-outline";
-    if (biometryType === "FACIAL_RECOGNITION") return "scan-outline";
-    return "finger-print-outline";
-  };
-
-  const getLabel = () => {
-    if (biometryType === "FINGERPRINT") return "Fingerprint Login";
-    if (biometryType === "FACIAL_RECOGNITION") return "Face ID Login";
-    return "Biometric Login";
-  };
-
-  const getSubtitle = () => {
-    if (isLoading) return "Verifying...";
-    if (!isAvailable) return "Not available on this device";
-    return isEnabled ? "Enabled - Tap to disable" : "Disabled - Tap to enable";
-  };
-
-  return (
-    <TouchableOpacity
-      style={[styles.settingItem, styles.firstItem]}
-      onPress={onToggle}
-      disabled={isLoading}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.iconBox, { backgroundColor: isEnabled ? Colors.success + "15" : Colors.neutral.gray[100] }]}>
-        <Ionicons
-          name={getIcon() as any}
-          size={20}
-          color={isEnabled ? Colors.success : isAvailable ? Colors.text.tertiary : Colors.neutral.gray[400]}
-        />
-      </View>
-      <View style={styles.settingContent}>
-        <Text style={styles.settingTitle}>{getLabel()}</Text>
-        <Text style={styles.settingSubtitle}>{getSubtitle()}</Text>
-      </View>
-      <CustomSwitch value={isEnabled} onValueChange={onToggle} disabled={isLoading} />
-    </TouchableOpacity>
-  );
-}
 
 export default function VendorSettings() {
   const { session, setAppMode, signOutMode } = useSession();
   const [showSwitchConfirm, setShowSwitchConfirm] = React.useState(false);
   const [pendingCustomer, setPendingCustomer] = React.useState<boolean | null>(null);
-  
-  const { isAvailable, biometryType, isEnabled, enableBiometric, disableBiometric } = useBiometric();
-  const [biometricLoading, setBiometricLoading] = useState(false);
 
   const isVendor = useMemo(
     () => session.appMode === "vendor" || session.appMode === "vendor_staff",
@@ -98,50 +38,8 @@ export default function VendorSettings() {
 
   useFocusEffect(
     React.useCallback(() => {
-      // #region agent log
-      fetch("http://127.0.0.1:7789/ingest/e7df05fe-e28b-4c90-971d-c6d804cac73a", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "54d0b8",
-        },
-        body: JSON.stringify({
-          sessionId: "54d0b8",
-          runId: "initial",
-          hypothesisId: "H7_settings_focus_churn",
-          location: "app/vendor/(tabs)/settings.tsx:101",
-          message: "Settings focus effect entered",
-          data: {
-            appMode: session.appMode,
-            userType: session.user?.user_type ?? null,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       SystemUI.setBackgroundColorAsync(Colors.neutral.white);
       return () => {
-        // #region agent log
-        fetch("http://127.0.0.1:7789/ingest/e7df05fe-e28b-4c90-971d-c6d804cac73a", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "54d0b8",
-          },
-          body: JSON.stringify({
-            sessionId: "54d0b8",
-            runId: "initial",
-            hypothesisId: "H7_settings_focus_churn",
-            location: "app/vendor/(tabs)/settings.tsx:117",
-            message: "Settings focus effect cleanup",
-            data: {
-              appMode: session.appMode,
-              userType: session.user?.user_type ?? null,
-            },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
         SystemUI.setBackgroundColorAsync(Colors.neutral.white);
       };
     }, []),
@@ -149,34 +47,6 @@ export default function VendorSettings() {
 
   const vendorName = session.user?.name || (isStaff ? "Staff Member" : "Service Provider");
   const vendorEmail = session.user?.email || (isStaff ? session.user?.phone : "provider@tasker.com");
-
-  useEffect(() => {
-    // #region agent log
-    fetch("http://127.0.0.1:7789/ingest/e7df05fe-e28b-4c90-971d-c6d804cac73a", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "54d0b8",
-      },
-      body: JSON.stringify({
-        sessionId: "54d0b8",
-        runId: "initial",
-        hypothesisId: "H4_settings_profile_shape",
-        location: "app/vendor/(tabs)/settings.tsx:111",
-        message: "Derived vendor/staff profile values",
-        data: {
-          appMode: session.appMode,
-          isStaff,
-          rawName: session.user?.name ?? null,
-          rawPhone: session.user?.phone ?? null,
-          vendorName,
-          vendorEmail,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-  }, [isStaff, session.appMode, session.user, vendorEmail, vendorName]);
 
   const onSignOut = async () => {
     try {
@@ -240,9 +110,18 @@ export default function VendorSettings() {
     </TouchableOpacity>
   );
 
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={
+          isDark ? "rgba(0, 0, 0, 0.40)" : "rgba(255, 255, 255, 0.40)"
+        }
+        translucent
+      />
 
       <View style={styles.profileCard}>
         <View style={styles.profileHeader}>
@@ -344,48 +223,20 @@ export default function VendorSettings() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account Settings</Text>
           <View style={styles.itemsGate}>
-            <BiometricSettingItem
-              isAvailable={isAvailable}
-              isEnabled={isEnabled}
-              biometryType={biometryType}
-              isLoading={biometricLoading}
-              onToggle={async () => {
-                if (!isAvailable) {
-                  Toast.show({
-                    type: "info",
-                    text1: "Biometric unavailable",
-                    text2: "Enable fingerprint/Face ID in your phone settings first",
-                  });
-                  return;
-                }
-
-                setBiometricLoading(true);
-                if (isEnabled) {
-                  await disableBiometric();
-                  try {
-                    const revokeUrl =
-                      isStaff
-                        ? VENDOR_STAFF_QUICK_LOGIN_REVOKE_URL
-                        : VENDOR_QUICK_LOGIN_REVOKE_URL;
-                    await myAxios.delete(revokeUrl);
-                  } catch {}
-                  await SecureStore.deleteItemAsync(BIOMETRIC_VENDOR_CREDENTIAL_KEY);
-                  Toast.show({ type: "success", text1: "Biometric login disabled" });
-                } else {
-                  const success = await enableBiometric();
-                  if (success) {
-                    Toast.show({ type: "success", text1: "Biometric login enabled" });
-                  }
-                }
-                setBiometricLoading(false);
-              }}
-            />
             <SettingItem
               icon="notifications-outline"
               title="Notifications"
               subtitle="Configure your job alerts"
               onPress={() => router.push("/vendor/notifications" as any)}
               color={Colors.success}
+              isFirst
+            />
+            <SettingItem
+              icon="shield-checkmark-outline"
+              title="App Permissions"
+              subtitle="Location and overlay access"
+              onPress={() => router.push("/vendor/permissions" as any)}
+              color={Colors.warning}
             />
             <SettingItem
               icon="lock-closed-outline"

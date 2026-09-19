@@ -6,18 +6,22 @@ import Splash from "@/components/splash";
 import Colors from "@/constants/Colors";
 import { useAuthStore } from "@/context/auth-store";
 import { EchoProvider } from "@/context/EchoProvider";
+import { VoiceCallProvider } from "@/context/VoiceCallContext";
 import { addDebugLog, initRemoteLogging } from "@/lib/debug-monitor";
 import { Observe, ObserveRoot, useObserve } from "@/lib/observe";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Stack, usePathname, useRouter } from "expo-router";
-import { usePreventScreenCapture } from "expo-screen-capture";
 import * as SystemUI from "expo-system-ui";
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  StatusBar,
+  useColorScheme,
+} from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
-import { useQuickActionCallback } from "expo-quick-actions/hooks";
-import { handleQuickAction, setupQuickActions } from "@/lib/quickActions";
 
 
 // Configure EAS Observe safely
@@ -35,9 +39,6 @@ try {
 }
 
 function RootLayout() {
-  // Prevent screenshots and screen recording across the entire application
-  usePreventScreenCapture();
-
   const router = useRouter();
   const pathname = usePathname();
   const isLoading = useAuthStore((state) => state.isLoading);
@@ -66,12 +67,6 @@ function RootLayout() {
     }
   }, []);
 
-  // Quick Actions (App icon long-press shortcuts on iOS & Android)
-  useQuickActionCallback(handleQuickAction);
-
-  useEffect(() => {
-    setupQuickActions(appMode);
-  }, [appMode]);
 
   // Mark app interactive once auth initialization completes
   useEffect(() => {
@@ -109,8 +104,11 @@ function RootLayout() {
     });
   }, [isLoading, appMode, pathname]);
 
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
   useEffect(() => {
-    SystemUI.setBackgroundColorAsync(Colors.neutral.white);
+    SystemUI.setBackgroundColorAsync(isDark ? "#121212" : Colors.neutral.white);
     if (__DEV__) {
       try {
         const KeepAwake = require("expo-keep-awake");
@@ -126,17 +124,26 @@ function RootLayout() {
         console.warn("expo-keep-awake failed to initialize:", err);
       }
     }
-  }, []);
+  }, [isDark]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheetModalProvider>
         <EchoProvider>
-          <OTAUpdateManager />
-          <NetworkStatus />
-          <RootNavigator />
-          <Toast />
-          <DebugPanel />
+          <VoiceCallProvider>
+            <StatusBar
+              barStyle={isDark ? "light-content" : "dark-content"}
+              backgroundColor={
+                isDark ? "rgba(0, 0, 0, 0.40)" : "rgba(255, 255, 255, 0.40)"
+              }
+              translucent
+            />
+            <OTAUpdateManager />
+            <NetworkStatus />
+            <RootNavigator />
+            <Toast />
+            <DebugPanel />
+          </VoiceCallProvider>
         </EchoProvider>
       </BottomSheetModalProvider>
     </GestureHandlerRootView>
