@@ -22,7 +22,7 @@ import { VENDOR_EARNINGS_URL, VENDOR_PAYOUT_SUBMIT_URL } from "@/lib/api-endpoin
 import myAxios from "@/lib/axios.config";
 import Modal from "@/components/Modal";
 import Button from "@/components/Button";
-import { Alert, Image } from "react-native";
+import { Alert, Image, Platform } from "react-native";
 import { useSession } from "@/context/ctx";
 
 type VendorTxn = {
@@ -171,10 +171,12 @@ export default function VendorEarnings() {
   }, [txns]);
 
   const handlePickImage = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (permissionResult.status !== "granted") {
-      Alert.alert("Permission Required", "Gallery access is needed to upload screenshots.");
-      return;
+    if (Platform.OS !== "android") {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permissionResult.status !== "granted") {
+        Alert.alert("Permission Required", "Gallery access is needed to upload screenshots.");
+        return;
+      }
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({

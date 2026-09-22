@@ -15,7 +15,8 @@ const listeners = new Set<(items: DebugLogItem[]) => void>();
 let remoteLogInitDone = false;
 
 const isProdDebugEnabled = process.env.EXPO_PUBLIC_ENABLE_APP_DEBUG === "1";
-export const isDebugMonitorEnabled = __DEV__ || isProdDebugEnabled;
+// export const isDebugMonitorEnabled = __DEV__ || isProdDebugEnabled;
+export const isDebugMonitorEnabled = false;
 
 const emit = () => {
   const snapshot = [...logs];

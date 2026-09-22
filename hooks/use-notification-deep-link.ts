@@ -34,6 +34,15 @@ export function useNotificationDeepLink() {
 
   const handleCustomerNavigation = (type: string, data: any) => {
     switch (type) {
+      case "voice_call":
+      case "voice_call_missed":
+        if (data.work_order_id || data.order_id) {
+          router.push({
+            pathname: "/customer/support-chat",
+            params: { initialWorkOrderId: data.work_order_id || data.order_id },
+          } as any);
+        }
+        break;
       case "chat":
         if (data.chat_type === "support") {
           router.push("/customer/support-chat");
@@ -61,6 +70,12 @@ export function useNotificationDeepLink() {
 
   const handleVendorNavigation = (type: string, data: any) => {
     switch (type) {
+      case "voice_call":
+      case "voice_call_missed":
+        if (data.work_order_id) {
+          router.push(`/vendor/work-order-chat/${data.work_order_id}` as any);
+        }
+        break;
       case "chat":
         if (data.chat_type === "support") {
           router.push("/vendor/support-chat");

@@ -174,8 +174,8 @@ export default function CustomerInfoSection({
                   <Ionicons name="call" size={16} color="#059669" />
                 </View>
                 <View>
-                  <Text style={styles.voiceActionTitle}>Voice Call Customer</Text>
-                  <Text style={styles.voiceActionSubtitle}>Free encrypted in-app audio call</Text>
+                  <Text style={styles.voiceActionTitle}>Call Customer</Text>
+                  <Text style={styles.voiceActionSubtitle}>Fast, secure audio connection</Text>
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={16} color="#059669" />

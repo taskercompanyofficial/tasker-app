@@ -22,11 +22,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useVoiceCall } from "@/context/VoiceCallContext";
+
 export default function CustomerSupportChatHub({
   initialWorkOrderId: propInitialWorkOrderId,
 }: {
   initialWorkOrderId?: string;
 } = {}) {
+  const { initiateCall } = useVoiceCall();
   const params = useLocalSearchParams<{ initialWorkOrderId?: string; id?: string }>();
   const initialId = propInitialWorkOrderId || params.initialWorkOrderId || params.id || null;
   const [activeWorkOrders, setActiveWorkOrders] = useState<Order[]>([]);
@@ -110,6 +113,19 @@ export default function CustomerSupportChatHub({
     : "03041112717";
 
   const handleCall = () => {
+    if (selectedWorkOrderId) {
+      const targetWorkOrderId = currentOrder?.id || Number(selectedWorkOrderId);
+      if (targetWorkOrderId) {
+        initiateCall({
+          workOrderId: Number(targetWorkOrderId),
+          receiverName: technicianPartner?.display_name || "Service Technician",
+          receiverAvatar: technicianPartner?.avatar_url,
+          workOrderNumber: currentOrder?.order_number || String(selectedWorkOrderId),
+        });
+        return;
+      }
+    }
+
     const cleanPhone = activePhone.replace(/[^0-9+]/g, "");
     Linking.openURL(`tel:${cleanPhone}`).catch(() => {});
   };

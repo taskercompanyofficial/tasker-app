@@ -228,11 +228,7 @@ export default function VendorJobs() {
             <Ionicons
               name={tab.icon as any}
               size={16}
-              color={
-                activeTab === tab.key
-                  ? Colors.themes.provider.primary
-                  : Colors.text.secondary
-              }
+              color={activeTab === tab.key ? '#fff' : '#64748B'}
             />
             <Text
               style={[
@@ -318,58 +314,65 @@ export default function VendorJobs() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral.gray[50],
+    backgroundColor: '#EEF2F7',
   },
   searchContainer: {
     paddingHorizontal: 12,
-    paddingBottom: 8,
-    backgroundColor: Colors.neutral.white,
+    paddingVertical: 8,
+    backgroundColor: 'transparent',
   },
   searchWrapper: {
-    marginTop: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.neutral.gray[100],
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    height: 36,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    height: 40,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
     fontSize: 13,
     color: Colors.text.primary,
-    height: "100%",
+    height: '100%',
   },
   tabsContainer: {
-    flexDirection: "row",
+    flexDirection: 'row',
     paddingHorizontal: 12,
     paddingVertical: 8,
     gap: 6,
-    backgroundColor: Colors.neutral.white,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral.gray[100],
+    backgroundColor: '#EEF2F7',
   },
   tab: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: Colors.neutral.gray[100],
+    paddingVertical: 7,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   tabActive: {
-    backgroundColor: Colors.themes.provider.primary + "15",
+    backgroundColor: '#1E3A8A',
+    borderColor: '#1E3A8A',
   },
   tabText: {
     fontSize: 11,
-    fontWeight: "600",
-    color: Colors.text.secondary,
+    fontWeight: '700',
+    color: '#64748B',
   },
   tabTextActive: {
-    color: Colors.themes.provider.primary,
+    color: '#fff',
   },
   content: {
     flex: 1,
@@ -377,47 +380,48 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 12,
     paddingBottom: 100,
+    gap: 0,
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingVertical: 40,
     gap: 12,
   },
   loadingText: {
     fontSize: 12,
-    color: Colors.text.secondary,
+    color: '#64748B',
   },
   emptyState: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
     gap: 8,
   },
   emptyTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: Colors.text.primary,
-    marginTop: 12,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginTop: 8,
   },
   emptyText: {
     fontSize: 12,
-    color: Colors.text.secondary,
-    textAlign: "center",
+    color: '#64748B',
+    textAlign: 'center',
     paddingHorizontal: 32,
     lineHeight: 18,
   },
   loadingMoreContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 16,
     gap: 8,
   },
   loadingMoreText: {
     fontSize: 12,
-    color: Colors.text.secondary,
+    color: '#64748B',
   },
 });

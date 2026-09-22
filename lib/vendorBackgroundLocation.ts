@@ -61,44 +61,33 @@ export async function requestVendorBatteryOptimizationIgnore(): Promise<void> {
 }
 
 /**
- * Request Vendor Background Location Permissions & Notifications
+ * Request Vendor Foreground Location Permissions & Notifications
  */
 export async function requestVendorBackgroundLocationPermissions(): Promise<boolean> {
   try {
-    // 1. Request Foreground Location
+    // 1. Request Foreground Location ("While using the app")
     const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
     if (fgStatus !== "granted") {
       Toast.show({
         type: "error",
         text1: "Location Required",
-        text2: "Foreground location access is needed for live navigation.",
+        text2: "Location access is needed for live navigation.",
       });
       return false;
     }
 
-    // 2. Request Notifications for Foreground Service
+    // 2. Request Notifications for Job Alerts
     await requestVendorNotificationPermissions();
-
-    // In dev / Expo Go mode, skip background permission request as it's unsupported
-    if (isDevOrExpoGo) {
-      return true;
-    }
-
-    // 3. Request Background Location Permission for vendors
-    const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
-    if (bgStatus !== "granted") {
-      console.warn("[VendorBGLocation] Background location permission denied by user");
-    }
 
     return true;
   } catch (err) {
     console.warn("[VendorBGLocation] Permission error:", err);
-    return isDevOrExpoGo ? true : false;
+    return true;
   }
 }
 
 /**
- * Start Vendor Background Location & Foreground Service Notification
+ * Start Vendor Navigation (foreground-based tracking)
  */
 export async function startVendorBackgroundNavigation(
   workOrderNumber: string,
@@ -108,36 +97,10 @@ export async function startVendorBackgroundNavigation(
     const hasPermissions = await requestVendorBackgroundLocationPermissions();
     if (!hasPermissions) return false;
 
-    // In dev / Expo Go, background location task cannot be registered
-    if (isDevOrExpoGo) {
-      console.log("[VendorBGLocation] Dev / Expo Go mode: skipping background location task");
-      return true;
-    }
-
-    // Check if background location task is already running
-    const isStarted = await Location.hasStartedLocationUpdatesAsync(
-      VENDOR_BG_LOCATION_TASK,
-    ).catch(() => false);
-
-    if (!isStarted) {
-      await Location.startLocationUpdatesAsync(VENDOR_BG_LOCATION_TASK, {
-        accuracy: Location.Accuracy.BestForNavigation,
-        timeInterval: 3000,
-        distanceInterval: 10,
-        showsBackgroundLocationIndicator: true,
-        foregroundService: {
-          notificationTitle: `Tasker Navigation #${workOrderNumber}`,
-          notificationBody: customerName
-            ? `Navigating to ${customerName} • Live background tracking active`
-            : "Tasker is active in background with live tracking",
-          notificationColor: "#2563EB",
-        },
-      });
-    }
-
+    // Background location task is disabled to comply with Google Play foreground policies
     return true;
   } catch (err) {
-    console.warn("[VendorBGLocation] Start background tracking fallback:", err);
+    console.warn("[VendorBGLocation] Start tracking fallback:", err);
     return false;
   }
 }
@@ -146,17 +109,7 @@ export async function startVendorBackgroundNavigation(
  * Stop Vendor Background Location Task
  */
 export async function stopVendorBackgroundNavigation(): Promise<void> {
-  try {
-    const isStarted = await Location.hasStartedLocationUpdatesAsync(
-      VENDOR_BG_LOCATION_TASK,
-    ).catch(() => false);
-
-    if (isStarted) {
-      await Location.stopLocationUpdatesAsync(VENDOR_BG_LOCATION_TASK);
-    }
-  } catch (err) {
-    console.warn("[VendorBGLocation] Stop error:", err);
-  }
+  // No-op since background location task is disabled
 }
 
 /**

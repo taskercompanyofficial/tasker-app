@@ -184,7 +184,7 @@ export function ChatInput({
     setShowAttachModal(false);
   };
 
-  const handleSuggestionPress = (sug: { id: string; label: string; prompt?: string; action?: string }) => {
+  const handleSuggestionPress = (sug: { id: string; label: string; prompt?: string | undefined; action?: string | undefined }) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {}

@@ -131,14 +131,16 @@ export default function CustomerCompleteProfile() {
 
   const handlePickAvatar = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        Toast.show({
-          type: "error",
-          text1: "Permission required",
-          text2: "Gallery access is needed to upload a profile photo.",
-        });
-        return;
+      if (Platform.OS !== "android") {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+          Toast.show({
+            type: "error",
+            text1: "Permission required",
+            text2: "Gallery access is needed to upload a profile photo.",
+          });
+          return;
+        }
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({

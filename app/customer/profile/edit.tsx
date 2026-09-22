@@ -80,14 +80,16 @@ export default function EditProfilePage() {
 
   const handlePickAvatar = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        Toast.show({
-          type: "error",
-          text1: "Permission Required",
-          text2: "Gallery access is required to change profile picture.",
-        });
-        return;
+      if (Platform.OS !== "android") {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+          Toast.show({
+            type: "error",
+            text1: "Permission Required",
+            text2: "Gallery access is required to change profile picture.",
+          });
+          return;
+        }
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({

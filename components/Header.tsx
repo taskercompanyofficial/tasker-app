@@ -1,7 +1,6 @@
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import { useAuthStore } from "@/context/auth-store";
-import { useEcho } from "@/context/EchoProvider";
 import { router } from "expo-router";
 import {
   Image,
@@ -27,7 +26,6 @@ export default function Header({
 }: HeaderProps) {
   const appMode = useAuthStore((state) => state.appMode);
   const user = useAuthStore((state) => state.user);
-  const { isConnected, connectionState } = useEcho();
   const isVendor = appMode === "vendor" || appMode === "vendor_staff";
   const theme = isVendor ? Colors.themes.provider : Colors.themes.customer;
 
@@ -38,21 +36,7 @@ export default function Header({
     return "Good Evening";
   };
 
-  /** Live connection badge (only displayed for vendors/technicians) */
-  const ConnectionStatus = () => {
-    if (!isVendor) return null;
-    const isLive = isConnected;
-    const isConnecting = connectionState === "connecting" || connectionState === "initialized";
-    const dotColor = isLive ? Colors.success : isConnecting ? "#F59E0B" : Colors.error;
-    const label = isLive ? "Online" : isConnecting ? "Connecting" : "Offline";
 
-    return (
-      <View style={styles.statusWrap}>
-        <View style={[styles.statusDot, { backgroundColor: dotColor }]} />
-        <Text style={[styles.statusText, { color: dotColor }]}>{label}</Text>
-      </View>
-    );
-  };
 
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -95,19 +79,13 @@ export default function Header({
                 router.push((isVendor ? "/vendor/settings" : "/customer/settings") as any)
               }
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={styles.greeting}>{getGreeting()}</Text>
-                <ConnectionStatus />
-              </View>
+              <Text style={styles.greeting}>{getGreeting()}</Text>
               <Text style={styles.userName}>
                 {user.name || `${user.first_name} ${user.last_name}`}
               </Text>
             </TouchableOpacity>
           ) : (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={styles.title}>{title}</Text>
-              <ConnectionStatus />
-            </View>
+            <Text style={styles.title}>{title}</Text>
           )}
         </View>
 

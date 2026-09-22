@@ -502,7 +502,7 @@ export default function OrderDetailsPage() {
               activeOpacity={0.85}
             >
               <Ionicons name="call" size={19} color="#FFFFFF" />
-              <Text style={styles.voiceCallActionText}>In-App Voice Call Provider</Text>
+              <Text style={styles.voiceCallActionText}>Call Service Provider</Text>
             </TouchableOpacity>
           )}
 

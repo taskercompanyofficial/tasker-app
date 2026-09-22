@@ -33,7 +33,6 @@ export default function VendorLocationGateModal({
   onPermissionGranted,
 }: VendorLocationGateModalProps) {
   const [fgGranted, setFgGranted] = useState<boolean | null>(null);
-  const [bgGranted, setBgGranted] = useState<boolean | null>(null);
   const [overlayGranted, setOverlayGranted] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -44,10 +43,8 @@ export default function VendorLocationGateModal({
     }
     try {
       const fg = await Location.getForegroundPermissionsAsync();
-      const bg = await Location.getBackgroundPermissionsAsync();
 
       setFgGranted(fg.granted);
-      setBgGranted(bg.granted);
 
       if (Platform.OS === "android") {
         const overlayAck = await AsyncStorage.getItem(OVERLAY_ACK_KEY);
@@ -56,7 +53,7 @@ export default function VendorLocationGateModal({
         setOverlayGranted(true);
       }
 
-      if (fg.granted && bg.granted) {
+      if (fg.granted) {
         if (onPermissionGranted) onPermissionGranted();
       }
     } catch (e) {
@@ -82,19 +79,11 @@ export default function VendorLocationGateModal({
   const handleRequestLocation = async () => {
     setLoading(true);
     try {
-      // Step 1: Request Foreground location first (Android 11+ requirement)
       const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
       setFgGranted(fgStatus === "granted");
 
-      if (fgStatus === "granted") {
-        // Step 2: Request Background location ("Allow all the time")
-        const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
-        setBgGranted(bgStatus === "granted");
-
-        // If background location requires manual settings toggle on Android 11+
-        if (bgStatus !== "granted") {
-          await Linking.openSettings().catch(() => {});
-        }
+      if (fgStatus !== "granted") {
+        await Linking.openSettings().catch(() => {});
       }
     } catch (e) {
       console.warn("[VendorLocationGate] Request error:", e);
@@ -116,11 +105,11 @@ export default function VendorLocationGateModal({
     }
   };
 
-  const isLocationGranted = fgGranted === true && bgGranted === true;
+  const isLocationGranted = fgGranted === true;
   const isAllGranted = isLocationGranted && (Platform.OS !== "android" || overlayGranted === true);
 
   // If in Expo Go sandbox, still checking, or permissions granted / dismissed, don't block
-  if (isExpoGo || fgGranted === null || bgGranted === null || (isAllGranted && !loading) || dismissed) {
+  if (isExpoGo || fgGranted === null || (isAllGranted && !loading) || dismissed) {
     return null;
   }
 
@@ -148,29 +137,12 @@ export default function VendorLocationGateModal({
                 color={fgGranted ? "#10B981" : "#EF4444"}
               />
               <View style={{ flex: 1 }}>
-                <Text style={styles.statusTitle}>1. Foreground Location Access</Text>
-                <Text style={styles.statusSub}>Calculates route & customer ETA while app is open</Text>
+                <Text style={styles.statusTitle}>1. Location Access (While Using App)</Text>
+                <Text style={styles.statusSub}>Calculates route & customer ETA while navigating</Text>
               </View>
             </View>
 
-            {/* 2. Background Location */}
-            <View style={styles.statusRow}>
-              <Ionicons
-                name={bgGranted ? "checkmark-circle" : "close-circle"}
-                size={20}
-                color={bgGranted ? "#10B981" : "#EF4444"}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.statusTitle}>2. Background Location Access ("Allow all the time")</Text>
-                <Text style={styles.statusSub}>
-                  {bgGranted
-                    ? "Active: live arrival updates send while phone is locked"
-                    : "Select 'Allow all the time' in device location settings"}
-                </Text>
-              </View>
-            </View>
-
-            {/* 3. Display Over Other Apps (Android) */}
+            {/* 2. Display Over Other Apps (Android) */}
             {Platform.OS === "android" && (
               <View style={styles.statusRow}>
                 <Ionicons
@@ -179,11 +151,11 @@ export default function VendorLocationGateModal({
                   color={overlayGranted ? "#10B981" : Colors.themes.provider.primary}
                 />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.statusTitle}>3. Display Over Other Apps</Text>
+                  <Text style={styles.statusTitle}>2. Display Over Other Apps</Text>
                   <Text style={styles.statusSub}>
                     {overlayGranted
                       ? "Configured: floating job alerts appear over WhatsApp & Maps"
-                      : "Required on Android to show navigation bubbles over other apps"}
+                      : "Required on Android to show navigation alerts over other apps"}
                   </Text>
                 </View>
               </View>
@@ -206,7 +178,7 @@ export default function VendorLocationGateModal({
                   <>
                     <Ionicons name="shield-checkmark" size={18} color={Colors.neutral.white} />
                     <Text style={styles.grantBtnText}>
-                      {!fgGranted ? "1. Allow Location Access" : "2. Allow Background ('All The Time')"}
+                      Allow Location Access
                     </Text>
                   </>
                 )}

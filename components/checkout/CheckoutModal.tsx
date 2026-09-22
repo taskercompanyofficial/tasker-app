@@ -114,14 +114,16 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
 
     const handlePickImage = async () => {
       try {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== "granted") {
-          Toast.show({
-            type: "error",
-            text1: "Permission Required",
-            text2: "Gallery permission is required to attach photos.",
-          });
-          return;
+        if (Platform.OS !== "android") {
+          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (status !== "granted") {
+            Toast.show({
+              type: "error",
+              text1: "Permission Required",
+              text2: "Gallery permission is required to attach photos.",
+            });
+            return;
+          }
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({

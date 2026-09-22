@@ -4,7 +4,6 @@ import {
   AppState,
   BackHandler,
   Linking,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,12 +19,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants, { ExecutionEnvironment } from "expo-constants";
 import Colors from "@/constants/Colors";
 import {
-  requestVendorOverlayPermission,
   requestVendorNotificationPermissions,
 } from "@/lib/vendorBackgroundLocation";
 
 export const VENDOR_PERMISSIONS_COMPLETED_KEY = "@vendor_permissions_completed";
-const OVERLAY_ACK_KEY = "@vendor_overlay_acknowledged";
 
 const isExpoGo =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
@@ -34,9 +31,7 @@ const isExpoGo =
 export default function VendorPermissionsScreen() {
   const router = useRouter();
 
-  const [fgGranted, setFgGranted] = useState<boolean | null>(null);
-  const [bgGranted, setBgGranted] = useState<boolean | null>(null);
-  const [overlayGranted, setOverlayGranted] = useState<boolean | null>(null);
+  const [locGranted, setLocGranted] = useState<boolean | null>(null);
   const [notifGranted, setNotifGranted] = useState<boolean | null>(null);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
@@ -49,30 +44,19 @@ export default function VendorPermissionsScreen() {
 
   const checkPermissions = useCallback(async () => {
     if (isExpoGo) {
-      setFgGranted(true);
-      setBgGranted(true);
-      setOverlayGranted(true);
+      setLocGranted(true);
       setNotifGranted(true);
       return;
     }
 
     try {
-      const [fg, bg, notif] = await Promise.all([
+      const [fg, notif] = await Promise.all([
         Location.getForegroundPermissionsAsync(),
-        Location.getBackgroundPermissionsAsync(),
         Notifications.getPermissionsAsync().catch(() => ({ granted: false })),
       ]);
 
-      setFgGranted(fg.granted);
-      setBgGranted(bg.granted);
+      setLocGranted(fg.granted);
       setNotifGranted(notif.granted);
-
-      if (Platform.OS === "android") {
-        const overlayAck = await AsyncStorage.getItem(OVERLAY_ACK_KEY);
-        setOverlayGranted(overlayAck === "true");
-      } else {
-        setOverlayGranted(true);
-      }
     } catch (e) {
       console.warn("[VendorPermissionsScreen] Error checking permissions:", e);
     }
@@ -92,54 +76,17 @@ export default function VendorPermissionsScreen() {
     };
   }, [checkPermissions]);
 
-  const handleRequestForeground = async () => {
-    setLoadingAction("foreground");
+  const handleRequestLocation = async () => {
+    setLoadingAction("location");
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      setFgGranted(status === "granted");
-      if (status !== "granted") {
+      const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
+      setLocGranted(fgStatus === "granted");
+
+      if (fgStatus !== "granted") {
         await Linking.openSettings().catch(() => {});
       }
     } catch (e) {
-      console.warn("[VendorPermissionsScreen] Foreground error:", e);
-    } finally {
-      setLoadingAction(null);
-    }
-  };
-
-  const handleRequestBackground = async () => {
-    setLoadingAction("background");
-    try {
-      if (!fgGranted) {
-        const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
-        setFgGranted(fgStatus === "granted");
-        if (fgStatus !== "granted") {
-          await Linking.openSettings().catch(() => {});
-          return;
-        }
-      }
-
-      const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
-      setBgGranted(bgStatus === "granted");
-
-      if (bgStatus !== "granted") {
-        await Linking.openSettings().catch(() => {});
-      }
-    } catch (e) {
-      console.warn("[VendorPermissionsScreen] Background error:", e);
-    } finally {
-      setLoadingAction(null);
-    }
-  };
-
-  const handleRequestOverlay = async () => {
-    setLoadingAction("overlay");
-    try {
-      await AsyncStorage.setItem(OVERLAY_ACK_KEY, "true");
-      setOverlayGranted(true);
-      await requestVendorOverlayPermission();
-    } catch (e) {
-      console.warn("[VendorPermissionsScreen] Overlay error:", e);
+      console.warn("[VendorPermissionsScreen] Location error:", e);
     } finally {
       setLoadingAction(null);
     }
@@ -174,16 +121,8 @@ export default function VendorPermissionsScreen() {
     }
 
     // Step-by-step request for missing permissions
-    if (!fgGranted) {
-      await handleRequestForeground();
-      return;
-    }
-    if (!bgGranted) {
-      await handleRequestBackground();
-      return;
-    }
-    if (Platform.OS === "android" && !overlayGranted) {
-      await handleRequestOverlay();
+    if (!locGranted) {
+      await handleRequestLocation();
       return;
     }
     if (!notifGranted) {
@@ -193,9 +132,7 @@ export default function VendorPermissionsScreen() {
   };
 
   const isAllGranted =
-    fgGranted === true &&
-    bgGranted === true &&
-    (Platform.OS !== "android" || overlayGranted === true) &&
+    locGranted === true &&
     notifGranted === true;
 
   return (
@@ -221,54 +158,18 @@ export default function VendorPermissionsScreen() {
 
         {/* Minimal Cards List */}
         <View style={styles.cardGroup}>
-          {/* 1. Foreground Location */}
-          <View style={styles.card}>
-            <View style={[styles.iconBox, { backgroundColor: "#EFF6FF" }]}>
-              <Ionicons
-                name="location-sharp"
-                size={20}
-                color={Colors.themes.provider.primary}
-              />
-            </View>
-            <View style={styles.cardInfo}>
-              <Text style={styles.cardTitle}>Location Access</Text>
-              <Text style={styles.cardDesc}>
-                Find customer requests within your service area
-              </Text>
-            </View>
-            {fgGranted ? (
-              <View style={styles.pillGranted}>
-                <Ionicons name="checkmark-circle" size={14} color="#16A34A" />
-                <Text style={styles.pillGrantedText}>Enabled</Text>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.pillAction}
-                onPress={handleRequestForeground}
-                disabled={loadingAction === "foreground"}
-                activeOpacity={0.8}
-              >
-                {loadingAction === "foreground" ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.pillActionText}>Enable</Text>
-                )}
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* 2. Background Location */}
+          {/* 1. Location Access */}
           <View style={styles.card}>
             <View style={[styles.iconBox, { backgroundColor: "#ECFDF5" }]}>
               <Ionicons name="navigate-sharp" size={20} color="#16A34A" />
             </View>
             <View style={styles.cardInfo}>
-              <Text style={styles.cardTitle}>Background Tracking</Text>
+              <Text style={styles.cardTitle}>Location Navigation</Text>
               <Text style={styles.cardDesc}>
                 Route tracking for live arrival updates to customers
               </Text>
             </View>
-            {bgGranted ? (
+            {locGranted ? (
               <View style={styles.pillGranted}>
                 <Ionicons name="checkmark-circle" size={14} color="#16A34A" />
                 <Text style={styles.pillGrantedText}>Enabled</Text>
@@ -276,11 +177,11 @@ export default function VendorPermissionsScreen() {
             ) : (
               <TouchableOpacity
                 style={styles.pillAction}
-                onPress={handleRequestBackground}
-                disabled={loadingAction === "background"}
+                onPress={handleRequestLocation}
+                disabled={loadingAction === "location"}
                 activeOpacity={0.8}
               >
-                {loadingAction === "background" ? (
+                {loadingAction === "location" ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <Text style={styles.pillActionText}>Enable</Text>
@@ -289,41 +190,7 @@ export default function VendorPermissionsScreen() {
             )}
           </View>
 
-          {/* 3. Display Over Other Apps (Android only) */}
-          {Platform.OS === "android" && (
-            <View style={styles.card}>
-              <View style={[styles.iconBox, { backgroundColor: "#F5F3FF" }]}>
-                <Ionicons name="layers-sharp" size={20} color="#7C3AED" />
-              </View>
-              <View style={styles.cardInfo}>
-                <Text style={styles.cardTitle}>Display Over Other Apps</Text>
-                <Text style={styles.cardDesc}>
-                  Shows floating order badge alerts when app is minimized
-                </Text>
-              </View>
-              {overlayGranted ? (
-                <View style={styles.pillGranted}>
-                  <Ionicons name="checkmark-circle" size={14} color="#16A34A" />
-                  <Text style={styles.pillGrantedText}>Enabled</Text>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.pillAction, { backgroundColor: "#7C3AED" }]}
-                  onPress={handleRequestOverlay}
-                  disabled={loadingAction === "overlay"}
-                  activeOpacity={0.8}
-                >
-                  {loadingAction === "overlay" ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.pillActionText}>Enable</Text>
-                  )}
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-
-          {/* 4. Notifications */}
+          {/* 2. Notifications */}
           <View style={styles.card}>
             <View style={[styles.iconBox, { backgroundColor: "#FFFBEB" }]}>
               <Ionicons name="notifications-sharp" size={20} color="#D97706" />

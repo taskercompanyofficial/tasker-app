@@ -10,6 +10,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { compressImage as professionalCompress } from "@/lib/image";
 import Toast from "react-native-toast-message";
+import { Platform } from "react-native";
 
 interface UploadData {
   fileTypeId: number;
@@ -189,11 +190,13 @@ const compressImage = async (uri: string) => {
     isPickerActive.current = true;
     
     try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (permissionResult.status !== "granted") {
-        onError("Permission to access gallery is required");
-        return;
+      if (Platform.OS !== "android") {
+        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        
+        if (permissionResult.status !== "granted") {
+          onError("Permission to access gallery is required");
+          return;
+        }
       }
 
       setShowSourceSheet(false);

@@ -128,6 +128,7 @@ export function ChatRoom({
           <ChatHeader
             partner={activePartner}
             partnerPhone={partnerPhone}
+            workOrderId={workOrderId}
             onPressProfile={onPressProfile || (() => setShowProfile(true))}
             isSupport={isSupport}
           />

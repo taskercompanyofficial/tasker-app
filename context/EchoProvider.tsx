@@ -28,13 +28,15 @@ import {
   useRef,
   useState,
 } from "react";
-import { Platform } from "react-native";
+import { Platform, AppState } from "react-native";
+import Constants from "expo-constants";
 import Toast from "react-native-toast-message";
 
 // Dynamic loading for OS notifications to prevent crashes in Expo Go SDK 53+
 let Notifications: any = null;
+const isExpoGo = Constants.appOwnership === "expo";
 try {
-  if (Platform.OS !== "web" && !__DEV__) {
+  if (Platform.OS !== "web" && !isExpoGo) {
     Notifications = require("expo-notifications");
   }
 } catch (e) {
@@ -424,16 +426,85 @@ export function EchoProvider({ children }: PropsWithChildren) {
         notificationCallbacksRef.current.forEach((cb) => cb(event));
       })
       .listen(".message.created", (event: any) => {
-        console.log(`[Echo] 💬 Message: ${event.message?.text}`);
+        console.log(`[Echo] 💬 Message: ${event.message?.text || event.message?.content}`);
         chatCallbacksRef.current.forEach((cb) => cb(event));
+
+        // When app is minimized or in background, trigger an immediate OS notification!
+        if (AppState.currentState !== "active" && Notifications?.scheduleNotificationAsync) {
+          try {
+            const senderName = event.message?.sender_name || event.sender_name || "New Message";
+            const textContent =
+              event.message?.content ||
+              event.message?.text ||
+              (event.message?.type === "image"
+                ? "📷 Sent an image"
+                : event.message?.type === "audio"
+                  ? "🎙️ Sent a voice message"
+                  : "You received a new message");
+
+            Notifications.scheduleNotificationAsync({
+              content: {
+                title: `💬 ${senderName}`,
+                body: textContent,
+                data: {
+                  type: "chat",
+                  conversation_id: event.conversation_id,
+                  work_order_id: event.work_order_id,
+                },
+                sound: "default",
+              },
+              trigger: null,
+            });
+          } catch (e) {
+            console.warn("[Echo] Failed to schedule message notification:", e);
+          }
+        }
       })
       .listen(".voice.incoming-call", (event: IncomingVoiceCallEvent) => {
         console.log(`[Echo] 📞 Incoming Voice Call: ${event.caller_name} (Call #${event.call_id})`);
         voiceIncomingCallbacksRef.current.forEach((cb) => cb(event));
+
+        // When app is minimized or in background, trigger a high-priority OS call notification!
+        if (AppState.currentState !== "active" && Notifications?.scheduleNotificationAsync) {
+          try {
+            Notifications.scheduleNotificationAsync({
+              content: {
+                title: `📞 Incoming Call from ${event.caller_name}`,
+                body: event.work_order_number
+                  ? `Work Order #${event.work_order_number} • Tap to answer`
+                  : "Incoming voice call • Tap to answer",
+                data: {
+                  type: "voice_call",
+                  call_id: event.call_id,
+                  room_name: event.room_name,
+                  work_order_id: event.work_order_id,
+                  work_order_number: event.work_order_number,
+                  caller_name: event.caller_name,
+                  caller_avatar: event.caller_avatar,
+                },
+                categoryIdentifier: "voice_call_incoming",
+                sound: "default",
+              },
+              trigger: null,
+            });
+          } catch (e) {
+            console.warn("[Echo] Failed to schedule call notification:", e);
+          }
+        }
       })
       .listen(".voice.status-updated", (event: VoiceCallStatusUpdateEvent) => {
         console.log(`[Echo] 📞 Voice Call Status: ${event.status} (Call #${event.call_id})`);
         voiceStatusCallbacksRef.current.forEach((cb) => cb(event));
+
+        // If call ended/missed/rejected, dismiss call notification
+        if (
+          (event.status === "ended" || event.status === "rejected" || event.status === "missed") &&
+          Notifications?.dismissAllNotificationsAsync
+        ) {
+          try {
+            Notifications.dismissAllNotificationsAsync().catch(() => {});
+          } catch (_) {}
+        }
       });
 
     // Sub to Public Channel (Work Orders)

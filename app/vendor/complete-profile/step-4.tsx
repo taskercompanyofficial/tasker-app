@@ -85,11 +85,19 @@ export default function Step4LiveSelfie() {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch (_) {}
 
-        Toast.show({
-          type: "success",
-          text1: "🎉 Live Photo Saved!",
-          text2: "Proceeding to Guarantor References.",
-        });
+        if (res.data?.data?.fallback || res.data?.data?.manual_review) {
+          Toast.show({
+            type: "info",
+            text1: "📸 Photo Submitted",
+            text2: "Saved for manual verification. Proceeding to References.",
+          });
+        } else {
+          Toast.show({
+            type: "success",
+            text1: "🎉 Live Photo Verified!",
+            text2: "Proceeding to Guarantor References.",
+          });
+        }
 
         router.push("/vendor/complete-profile/step-5" as any);
       }

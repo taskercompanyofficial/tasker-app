@@ -15,9 +15,6 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.taskercompany.company",
-      "config": {
-        "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
-      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Tasker requires camera access to scan your CNIC identity documents and capture biometric selfie photos for verification.",
@@ -28,6 +25,8 @@
         "NSLocationAlwaysUsageDescription": "Tasker requires background location access to update customers on your arrival status even when the app is in background.",
         "NSMicrophoneUsageDescription": "Tasker requires microphone access so you can speak directly with customers and service technicians on voice calls.",
         "UIBackgroundModes": [
+          "audio",
+          "voip",
           "location",
           "fetch",
           "remote-notification",
@@ -55,15 +54,38 @@
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_BACKGROUND_LOCATION",
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_LOCATION",
-        "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.WAKE_LOCK",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "taskercompany.com",
+              "pathPrefix": "/"
+            },
+            {
+              "scheme": "https",
+              "host": "www.taskercompany.com",
+              "pathPrefix": "/"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
       ]
     },
     "web": {
@@ -72,10 +94,15 @@
     },
     "plugins": [
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Tasker to access your photo library so you can upload documents and receipts."
+        }
+      ],
+      [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow Tasker Vendor to track live location in the background for active customer work order navigation.",
-          "isAndroidBackgroundLocationEnabled": true
+          "locationAlwaysAndWhenInUsePermission": "Allow Tasker to access your location to calculate distance and navigate to customer appointments."
         }
       ],
       [
@@ -105,7 +132,14 @@
       "expo-web-browser",
       "expo-asset",
       "expo-sharing",
-      "react-native-document-scanner-plugin"
+      "react-native-document-scanner-plugin",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icons/adaptive-icon.png",
+          "color": "#10B981"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

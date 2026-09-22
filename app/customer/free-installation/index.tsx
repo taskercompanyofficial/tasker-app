@@ -134,16 +134,18 @@ export default function FreeInstallationPage() {
   };
 
   const pickImage = async (type: "invoice" | "warranty") => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (Platform.OS !== "android") {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    if (status !== "granted") {
-      setAlertModal({
-        visible: true,
-        type: "error",
-        title: "Permission Denied",
-        message: "Camera roll permissions are required.",
-      });
-      return;
+      if (status !== "granted") {
+        setAlertModal({
+          visible: true,
+          type: "error",
+          title: "Permission Denied",
+          message: "Camera roll permissions are required.",
+        });
+        return;
+      }
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({

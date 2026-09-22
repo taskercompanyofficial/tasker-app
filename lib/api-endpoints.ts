@@ -57,6 +57,8 @@ export const VOICE_REJECT_CALL_URL = (id: number | string, mode: string = "custo
   `${API_URL}/${mode === "vendor" ? "vendor" : mode === "vendor_staff" || mode === "vendor-staff" ? "vendor-staff" : "tasker-app"}/voice/calls/${id}/reject`;
 export const VOICE_END_CALL_URL = (id: number | string, mode: string = "customer") =>
   `${API_URL}/${mode === "vendor" ? "vendor" : mode === "vendor_staff" || mode === "vendor-staff" ? "vendor-staff" : "tasker-app"}/voice/calls/${id}/end`;
+export const VOICE_RINGING_CALL_URL = (id: number | string, mode: string = "customer") =>
+  `${API_URL}/${mode === "vendor" ? "vendor" : mode === "vendor_staff" || mode === "vendor-staff" ? "vendor-staff" : "tasker-app"}/voice/calls/${id}/ringing`;
 
 export const VENDOR_OTP_URL = `${API_URL}/vendor/auth/check-credentials`;
 export const VENDOR_OTP_VERIFY_URL = `${API_URL}/vendor/auth/verify-otp`;

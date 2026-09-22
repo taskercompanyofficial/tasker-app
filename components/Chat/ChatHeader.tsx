@@ -5,10 +5,12 @@ import { router } from "expo-router";
 import Colors from "@/constants/Colors";
 import { AppConversationParticipant } from "@/types/chat";
 import { useSession } from "@/context/ctx";
+import { useVoiceCall } from "@/context/VoiceCallContext";
 
 interface ChatHeaderProps {
   partner: AppConversationParticipant | null;
   partnerPhone?: string | null;
+  workOrderId?: number | string;
   onPressProfile?: () => void;
   isSupport?: boolean;
 }
@@ -16,10 +18,12 @@ interface ChatHeaderProps {
 export function ChatHeader({
   partner,
   partnerPhone,
+  workOrderId,
   onPressProfile,
   isSupport = false,
 }: ChatHeaderProps) {
   const { session } = useSession();
+  const { initiateCall } = useVoiceCall();
   const isVendor = session.appMode === "vendor" || session.appMode === "vendor_staff";
   const primaryThemeColor = isVendor
     ? Colors.themes.provider.primary
@@ -40,6 +44,15 @@ export function ChatHeader({
     : "03041112717";
 
   const handleCall = () => {
+    if (workOrderId) {
+      initiateCall({
+        workOrderId: Number(workOrderId),
+        receiverName: displayName,
+        receiverAvatar: partner?.avatar_url,
+      });
+      return;
+    }
+
     const cleanPhone = resolvedPhone.replace(/[^0-9+]/g, "");
     Linking.openURL(`tel:${cleanPhone}`).catch((err) =>
       console.warn("Cannot dial phone:", err)

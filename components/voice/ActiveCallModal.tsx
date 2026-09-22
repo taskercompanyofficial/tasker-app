@@ -43,19 +43,21 @@ export default function ActiveCallModal({
 }: ActiveCallModalProps) {
   const [durationSecs, setDurationSecs] = useState(0);
 
-  // Live duration timer
+  // Live duration timer - only increments when call is actually connected (no statusText)
   useEffect(() => {
     let timer: any = null;
-    if (visible) {
+    if (visible && !statusText) {
       setDurationSecs(0);
       timer = setInterval(() => {
         setDurationSecs((prev) => prev + 1);
       }, 1000);
+    } else {
+      setDurationSecs(0);
     }
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [visible]);
+  }, [visible, !statusText]);
 
   const formatDuration = (sec: number) => {
     const mins = Math.floor(sec / 60);
@@ -97,13 +99,27 @@ export default function ActiveCallModal({
                   <Text style={styles.fallbackText}>{initialLetter}</Text>
                 </View>
               )}
-              <View style={styles.liveDot} />
+              <View
+                style={[
+                  styles.liveDot,
+                  statusText === "Calling..." && styles.callingDot,
+                  statusText === "Ringing..." && styles.ringingDot,
+                ]}
+              />
             </View>
 
             <Text style={styles.participantName} numberOfLines={1}>
               {participantName}
             </Text>
-            <Text style={styles.timerText}>{statusText || formatDuration(durationSecs)}</Text>
+            <Text
+              style={[
+                styles.timerText,
+                statusText === "Calling..." && styles.callingText,
+                statusText === "Ringing..." && styles.ringingText,
+              ]}
+            >
+              {statusText || formatDuration(durationSecs)}
+            </Text>
           </View>
 
           {/* Bottom Call Controls: Mute, Speaker, End */}
@@ -141,12 +157,17 @@ export default function ActiveCallModal({
                 activeOpacity={0.75}
               >
                 <Ionicons
-                  name={isSpeakerOn ? "volume-high" : "volume-medium"}
+                  name={isSpeakerOn ? "volume-high" : "ear-outline"}
                   size={26}
-                  color={isSpeakerOn ? "#10B981" : "#FFFFFF"}
+                  color={isSpeakerOn ? "#10B981" : "#D1D5DB"}
                 />
-                <Text style={styles.controlBtnText}>
-                  {isSpeakerOn ? "Speaker On" : "Speaker"}
+                <Text
+                  style={[
+                    styles.controlBtnText,
+                    isSpeakerOn && { color: "#10B981", fontWeight: "700" },
+                  ]}
+                >
+                  {isSpeakerOn ? "Speaker" : "Earpiece"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -252,6 +273,12 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: "#0A0F1D",
   },
+  callingDot: {
+    backgroundColor: "#60A5FA",
+  },
+  ringingDot: {
+    backgroundColor: "#F59E0B",
+  },
   participantName: {
     color: "#FFFFFF",
     fontSize: 24,
@@ -265,6 +292,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     letterSpacing: 1,
+  },
+  callingText: {
+    color: "#93C5FD",
+    fontSize: 18,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  ringingText: {
+    color: "#34D399",
+    fontSize: 18,
+    fontWeight: "700",
+    letterSpacing: 0.8,
   },
   controlsContainer: {
     width: "100%",

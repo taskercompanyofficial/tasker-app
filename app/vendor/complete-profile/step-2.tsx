@@ -22,6 +22,7 @@ import {
   TouchableOpacity,
   View,
   Image,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
@@ -44,10 +45,12 @@ export default function Step2CnicScan() {
 
   // Gallery Picker
   const pickGalleryImage = async (side: "front" | "back") => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Toast.show({ type: "error", text1: "Permission to access gallery is required" });
-      return;
+    if (Platform.OS !== "android") {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Toast.show({ type: "error", text1: "Permission to access gallery is required" });
+        return;
+      }
     }
 
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -196,11 +199,19 @@ export default function Step2CnicScan() {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch (_) {}
 
-        Toast.show({
-          type: "success",
-          text1: "✨ CNIC Verified & Saved!",
-          text2: "Details extracted. Please confirm in Step 3.",
-        });
+        if (res.data?.fallback) {
+          Toast.show({
+            type: "info",
+            text1: "CNIC Images Saved",
+            text2: "Please review or enter your details manually in Step 3.",
+          });
+        } else {
+          Toast.show({
+            type: "success",
+            text1: "✨ CNIC Verified & Saved!",
+            text2: "Details extracted. Please confirm in Step 3.",
+          });
+        }
 
         // Navigate to Step 3 Review Page
         router.push("/vendor/complete-profile/step-3" as any);

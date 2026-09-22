@@ -89,10 +89,10 @@ export default function IncomingCallModal({
           <View style={styles.header}>
             <View style={styles.badgeRow}>
               <Ionicons name="call" size={14} color="#10B981" />
-              <Text style={styles.badgeText}>IN-APP AUDIO CALL</Text>
+              <Text style={styles.badgeText}>INCOMING CALL</Text>
             </View>
             <Text style={styles.subHeader}>
-              {workOrderNumber ? `Work Order #${workOrderNumber}` : "Live VoIP Call"}
+              {workOrderNumber ? `Work Order #${workOrderNumber}` : "Voice Call"}
             </Text>
           </View>
 
