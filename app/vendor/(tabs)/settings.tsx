@@ -21,6 +21,9 @@ import CustomSwitch from "@/components/common/CustomSwitch";
 import AlertModal from "@/components/common/AlertModal";
 import * as SystemUI from "expo-system-ui";
 import { useFocusEffect } from "expo-router";
+import { getAppVersionDisplay } from "@/lib/appVersion";
+import { Image } from "expo-image";
+import getImageUrl from "@/lib/utils";
 
 export default function VendorSettings() {
   const { session, setAppMode, signOutMode } = useSession();
@@ -47,6 +50,15 @@ export default function VendorSettings() {
 
   const vendorName = session.user?.name || (isStaff ? "Staff Member" : "Service Provider");
   const vendorEmail = session.user?.email || (isStaff ? session.user?.phone : "provider@tasker.com");
+  const [avatarError, setAvatarError] = useState(false);
+
+  const rawVendorAvatar =
+    session.user?.active_avatar_url ||
+    session.user?.profile_image ||
+    session.user?.avatar_url ||
+    (session.user as any)?.image ||
+    null;
+  const vendorAvatarUri = rawVendorAvatar ? getImageUrl(rawVendorAvatar) : "";
 
   const onSignOut = async () => {
     try {
@@ -129,11 +141,22 @@ export default function VendorSettings() {
         <View style={styles.profileCardCircle2} />
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {vendorName.charAt(0).toUpperCase()}
-              </Text>
-            </View>
+            {vendorAvatarUri && !avatarError ? (
+              <Image
+                source={{ uri: vendorAvatarUri }}
+                style={styles.avatar}
+                contentFit="cover"
+                transition={200}
+                cachePolicy="disk"
+                onError={() => setAvatarError(true)}
+              />
+            ) : (
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>
+                  {vendorName.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
             <View style={styles.verifiedBadge}>
               <Ionicons
                 name="checkmark-sharp"
@@ -279,7 +302,7 @@ export default function VendorSettings() {
           <Text style={styles.logoutText}>Sign Out Account</Text>
         </TouchableOpacity>
 
-        <Text style={styles.versionText}>Tasker Company v1.2.4</Text>
+        <Text style={styles.versionText}>{getAppVersionDisplay("Tasker Company")}</Text>
       </ScrollView>
 
       <AlertModal

@@ -9,7 +9,6 @@ import * as ImagePicker from "expo-image-picker";
 import { compressImage } from "@/lib/image";
 import { LinearGradient } from "expo-linear-gradient";
 import CnicScannerModal from "@/components/vendor/CnicScannerModal";
-import TaskyTypewriterText from "@/components/vendor/TaskyTypewriterText";
 import myAxios from "@/lib/axios.config";
 import { VENDOR_EXTRACT_CNIC_URL } from "@/lib/api-endpoints";
 import * as Haptics from "expo-haptics";
@@ -253,47 +252,14 @@ export default function Step2CnicScan() {
         </View>
       </View>
 
-      {/* Sticky Progress Bar */}
-      <View style={styles.progressStickyBar}>
-        <View style={styles.progressLabelRow}>
-          <Text style={styles.progressStatusLabel}>Step 2: Identity Document Scan</Text>
-          <Text style={styles.progressPercentLabel}>33% Complete</Text>
-        </View>
-        <View style={styles.progressBarTrack}>
-          <View style={[styles.progressBarFill, { width: "33%" }]} />
-        </View>
-      </View>
-
-      {/* Conversational Bubble */}
-      <View style={styles.conversationalSpeechBar}>
-        <Image
-          source={require("@/assets/images/tasky-ai-clipboard.png")}
-          style={styles.conversationalAvatar}
-          resizeMode="contain"
-        />
-        <View style={{ flex: 1 }}>
-          <View style={styles.speechBadgeRow}>
-            <Text style={styles.speechAssistantName}>Tasky Assistant</Text>
-            <View style={styles.liveSpeechDot} />
-          </View>
-          <TaskyTypewriterText
-            key="cnic-scan-speech"
-            text="Please scan your CNIC Front and Back. I will automatically extract all your identity information and save your documents!"
-            speedMs={20}
-            style={styles.conversationalSpeechText}
-            cursorColor={Colors.themes.provider.primary}
-          />
-        </View>
-      </View>
-
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.stepSectionContainer}>
-          <Text style={styles.stepSectionHeading}>Scan CNIC Cards</Text>
+          <Text style={styles.stepSectionHeading}>Scan Your CNIC</Text>
           <Text style={styles.stepSectionSub}>
-            Both sides are required for identity verification & partner trust badge.
+            Front and back sides required for verification
           </Text>
 
           {/* CNIC Front Card */}
@@ -307,11 +273,6 @@ export default function Step2CnicScan() {
                 />
                 <Text style={styles.cnicCardTitle}>CNIC Front Side</Text>
               </View>
-              {hasFront && (
-                <View style={styles.uploadedBadge}>
-                  <Text style={styles.uploadedBadgeText}>Ready (+10%)</Text>
-                </View>
-              )}
             </View>
 
             {hasFront ? (
@@ -370,11 +331,6 @@ export default function Step2CnicScan() {
                 />
                 <Text style={styles.cnicCardTitle}>CNIC Back Side</Text>
               </View>
-              {hasBack && (
-                <View style={styles.uploadedBadge}>
-                  <Text style={styles.uploadedBadgeText}>Ready (+10%)</Text>
-                </View>
-              )}
             </View>
 
             {hasBack ? (
@@ -453,7 +409,7 @@ export default function Step2CnicScan() {
                 <>
                   <Ionicons name="sparkles" size={18} color="#FFFFFF" />
                   <Text style={styles.extractActionBtnText}>
-                    Extract Details & Continue to Step 3
+                    Extract Details & Continue
                   </Text>
                   <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
                 </>
@@ -508,104 +464,26 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.themes.provider.primary,
   },
-  progressStickyBar: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
-  progressLabelRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  progressStatusLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: Colors.text.primary,
-  },
-  progressPercentLabel: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: Colors.themes.provider.primary,
-  },
-  progressBarTrack: {
-    height: 8,
-    backgroundColor: "#E2E8F0",
-    borderRadius: 4,
-    overflow: "hidden",
-    marginTop: 2,
-  },
-  progressBarFill: {
-    height: "100%",
-    backgroundColor: Colors.themes.provider.primary,
-    borderRadius: 4,
-  },
-  conversationalSpeechBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: "#1E3A8A0A",
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#1E3A8A18",
-  },
-  conversationalAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1.5,
-    borderColor: Colors.themes.provider.primary,
-  },
-  speechBadgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 2,
-  },
-  speechAssistantName: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: Colors.themes.provider.primary,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  liveSpeechDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#10B981",
-  },
-  conversationalSpeechText: {
-    fontSize: 12.5,
-    color: Colors.text.primary,
-    lineHeight: 18,
-    fontWeight: "500",
-  },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.xl,
     paddingBottom: Spacing.xl,
   },
   stepSectionContainer: {
     width: "100%",
   },
   stepSectionHeading: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: "800",
     color: Colors.text.primary,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   stepSectionSub: {
-    fontSize: 13,
+    fontSize: 14,
     color: Colors.text.secondary,
-    lineHeight: 18,
-    marginBottom: Spacing.md,
+    lineHeight: 20,
+    marginBottom: Spacing.xl,
   },
   cnicUploadCard: {
     backgroundColor: "#FFFFFF",
@@ -613,14 +491,14 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
     ...Shadows.sm,
   },
   cnicCardHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   cnicCardTitleRow: {
     flexDirection: "row",
@@ -628,24 +506,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cnicCardTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
     color: Colors.text.primary,
   },
-  uploadedBadge: {
-    backgroundColor: "#10B98118",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: BorderRadius.full,
-  },
-  uploadedBadgeText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#10B981",
-  },
   cnicActionRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: 12,
   },
   autoCaptureBtn: {
     flex: 1.4,
@@ -653,13 +520,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: Colors.themes.provider.primary,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: BorderRadius.md,
-    gap: 6,
+    gap: 8,
     ...Shadows.sm,
   },
   autoCaptureBtnText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
     color: "#FFFFFF",
   },
@@ -669,12 +536,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#F1F5F9",
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: BorderRadius.md,
-    gap: 6,
+    gap: 8,
   },
   galleryUploadBtnText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
     color: Colors.themes.provider.primary,
   },
@@ -686,25 +553,25 @@ const styles = StyleSheet.create({
   },
   cnicImagePreview: {
     width: "100%",
-    height: 140,
+    height: 160,
     resizeMode: "cover",
   },
   retakeRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     backgroundColor: "#F8FAFC",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: "#E2E8F0",
   },
   retakeMiniBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
   },
   retakeMiniText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "700",
     color: "#2563EB",
   },
@@ -713,17 +580,17 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     overflow: "hidden",
     ...Shadows.md,
-    marginTop: Spacing.sm,
+    marginTop: Spacing.md,
   },
   extractActionGradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 15,
-    gap: 8,
+    paddingVertical: 16,
+    gap: 10,
   },
   extractActionBtnText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "800",
     color: "#FFFFFF",
   },

@@ -1,4 +1,9 @@
+// ⚠️  Must be the FIRST import — registers the vendor background location task
+// with expo-task-manager before any navigation or component mounts.
+import "@/tasks/vendorLocationTask";
+
 import AlertModal from "@/components/common/AlertModal";
+
 import DebugPanel from "@/components/common/DebugPanel";
 import OTAUpdateManager from "@/components/common/OTAUpdateManager";
 import NetworkStatus from "@/components/NetworkStatus";
@@ -6,7 +11,10 @@ import Splash from "@/components/splash";
 import Colors from "@/constants/Colors";
 import { useAuthStore } from "@/context/auth-store";
 import { EchoProvider } from "@/context/EchoProvider";
+import { useNetwork } from "@/hooks/use-network";
 import { VoiceCallProvider } from "@/context/VoiceCallContext";
+import VendorActiveTripBubble from "@/components/vendor/VendorActiveTripBubble";
+
 import { addDebugLog, initRemoteLogging } from "@/lib/debug-monitor";
 import { Observe, ObserveRoot, useObserve } from "@/lib/observe";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
@@ -143,6 +151,8 @@ function RootLayout() {
             <RootNavigator />
             <Toast />
             <DebugPanel />
+            {/* Floating trip bubble — visible on all screens during an active vendor job */}
+            <VendorActiveTripBubble />
           </VoiceCallProvider>
         </EchoProvider>
       </BottomSheetModalProvider>
@@ -160,6 +170,8 @@ function RootNavigator() {
   const vendorToken = useAuthStore((state) => state.vendorToken);
   const vendorStaffToken = useAuthStore((state) => state.vendorStaffToken);
 
+  const { isOffline } = useNetwork();
+
   const [splashTimerEnded, setSplashTimerEnded] = useState(false);
 
   useEffect(() => {
@@ -171,6 +183,7 @@ function RootNavigator() {
 
   const showFetchError =
     !isLoading &&
+    !isOffline &&
     (customerToken || vendorToken || vendorStaffToken) &&
     !user &&
     !!fetchError;

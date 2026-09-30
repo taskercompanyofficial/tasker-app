@@ -2,8 +2,10 @@ import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import { useAuthStore } from "@/context/auth-store";
 import { router } from "expo-router";
+import { Image } from "expo-image";
+import getImageUrl from "@/lib/utils";
+import { useState } from "react";
 import {
-  Image,
   StatusBar,
   StyleSheet,
   Text,
@@ -48,13 +50,8 @@ export default function Header({
     user?.avatar_url ||
     null;
 
-  const avatarUri = rawAvatar
-    ? rawAvatar.startsWith("http")
-      ? rawAvatar
-      : rawAvatar.startsWith("/")
-      ? rawAvatar
-      : `/${rawAvatar}`
-    : null;
+  const avatarUri = rawAvatar ? getImageUrl(rawAvatar) : null;
+  const [imageError, setImageError] = useState(false);
 
   const isPartnerOnline = Boolean(
     isVendor &&
@@ -101,8 +98,15 @@ export default function Header({
               }
             >
               <View style={styles.avatarContainer}>
-                {avatarUri ? (
-                  <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
+                {avatarUri && !imageError ? (
+                  <Image
+                    source={{ uri: avatarUri }}
+                    style={styles.avatarImg}
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="disk"
+                    onError={() => setImageError(true)}
+                  />
                 ) : (
                   <View
                     style={[

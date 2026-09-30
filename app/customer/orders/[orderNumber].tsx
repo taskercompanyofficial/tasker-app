@@ -9,11 +9,13 @@ import { WORK_ORDER_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
 import { Order, OrderItem } from "@/types/order";
 import { useVoiceCall } from "@/context/VoiceCallContext";
+import { useVendorLiveLocation } from "@/hooks/useVendorLiveLocation";
 import { Ionicons, FontAwesome } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   Image,
   Modal,
   RefreshControl,
@@ -23,7 +25,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
+
 
 export default function OrderDetailsPage() {
   const { orderNumber } = useLocalSearchParams<{ orderNumber: string }>();
@@ -38,6 +42,16 @@ export default function OrderDetailsPage() {
   const [reviewPrompted, setReviewPrompted] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const { initiateCall } = useVoiceCall();
+
+  // Subscribe to live vendor location via Reverb when order is in_progress
+  // Pass null to skip subscription until we know the order ID
+  const isTrackingActive =
+    !!order?.id &&
+    !!order?.assigned_vendor_id &&
+    order?.status === "in_progress";
+  const vendorCoords = useVendorLiveLocation(isTrackingActive ? order?.id : null);
+
+
 
   useEffect(() => {
     if (orderNumber) {
@@ -312,12 +326,101 @@ export default function OrderDetailsPage() {
           )}
         </View>
 
+        {/* ── Live Vendor Tracking Card ────────────────────────────────────── */}
+        {isTrackingActive && (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="navigate" size={18} color="#2563EB" />
+              <Text style={styles.cardTitle}>Technician Live Location</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", marginLeft: "auto", gap: 5 }}>
+                <View
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: vendorCoords ? "#10B981" : "#F59E0B",
+                  }}
+                />
+                <Text style={{ fontSize: 11, color: vendorCoords ? "#10B981" : "#F59E0B", fontWeight: "600" }}>
+                  {vendorCoords ? "LIVE" : "WAITING"}
+                </Text>
+              </View>
+            </View>
+
+            <MapView
+              provider={PROVIDER_DEFAULT}
+              style={{ width: "100%", height: 200, borderRadius: 10, overflow: "hidden" }}
+              initialRegion={{
+                latitude: vendorCoords?.lat ?? (order.address?.latitude ? Number(order.address.latitude) : 31.5204),
+                longitude: vendorCoords?.lng ?? (order.address?.longitude ? Number(order.address.longitude) : 74.3587),
+                latitudeDelta: 0.04,
+                longitudeDelta: 0.04,
+              }}
+              region={
+                vendorCoords
+                  ? {
+                      latitude: (vendorCoords.lat + (order.address?.latitude ? Number(order.address.latitude) : vendorCoords.lat)) / 2,
+                      longitude: (vendorCoords.lng + (order.address?.longitude ? Number(order.address.longitude) : vendorCoords.lng)) / 2,
+                      latitudeDelta: Math.abs(vendorCoords.lat - (order.address?.latitude ? Number(order.address.latitude) : vendorCoords.lat)) * 2.5 + 0.01,
+                      longitudeDelta: Math.abs(vendorCoords.lng - (order.address?.longitude ? Number(order.address.longitude) : vendorCoords.lng)) * 2.5 + 0.01,
+                    }
+                  : undefined
+              }
+              scrollEnabled={false}
+              zoomEnabled={false}
+            >
+              {/* Vendor pin */}
+              {vendorCoords && (
+                <Marker
+                  coordinate={{ latitude: vendorCoords.lat, longitude: vendorCoords.lng }}
+                  title="Your Technician"
+                  description="En route to your location"
+                  pinColor="#2563EB"
+                />
+              )}
+
+              {/* Customer address pin */}
+              {order.address?.latitude && order.address?.longitude && (
+                <Marker
+                  coordinate={{
+                    latitude: Number(order.address.latitude),
+                    longitude: Number(order.address.longitude),
+                  }}
+                  title="Your Location"
+                  description={order.address.address_line_1}
+                  pinColor={Colors.themes.customer.primary}
+                />
+              )}
+
+              {/* Route line between vendor and customer */}
+              {vendorCoords && order.address?.latitude && order.address?.longitude && (
+                <Polyline
+                  coordinates={[
+                    { latitude: vendorCoords.lat, longitude: vendorCoords.lng },
+                    { latitude: Number(order.address.latitude), longitude: Number(order.address.longitude) },
+                  ]}
+                  strokeColor="#2563EB"
+                  strokeWidth={2.5}
+                  lineDashPattern={[6, 4]}
+                />
+              )}
+            </MapView>
+
+            <Text style={{ fontSize: 12, color: Colors.text.secondary, marginTop: 8, textAlign: "center" }}>
+              {vendorCoords
+                ? "🔵 Technician is on the way to your location"
+                : "Waiting for technician to share location..."}
+            </Text>
+          </View>
+        )}
+
         {/* Services List Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Ionicons name="build-outline" size={18} color={Colors.themes.customer.primary} />
             <Text style={styles.cardTitle}>Booked Services ({order.items?.length || 0})</Text>
           </View>
+
 
           {order.items?.map((item: OrderItem, index: number) => (
             <View

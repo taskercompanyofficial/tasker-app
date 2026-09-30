@@ -17,6 +17,15 @@
       "bundleIdentifier": "com.taskercompany.company",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false,
+          "NSExceptionDomains": {
+            "taskercompany.cloud": {
+              "NSIncludesSubdomains": true,
+              "NSTemporaryExceptionAllowsInsecureHTTPLoads": true
+            }
+          }
+        },
         "NSCameraUsageDescription": "Tasker requires camera access to scan your CNIC identity documents and capture biometric selfie photos for verification.",
         "NSPhotoLibraryUsageDescription": "Tasker requires photo library access so you can upload your CNIC card photos and portfolio images.",
         "NSPhotoLibraryAddUsageDescription": "Tasker requires permission to save receipts and scanned documents.",
@@ -29,8 +38,7 @@
           "voip",
           "location",
           "fetch",
-          "remote-notification",
-          "processing"
+          "remote-notification"
         ]
       }
     },
@@ -54,6 +62,9 @@
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.WAKE_LOCK",
@@ -102,7 +113,9 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow Tasker to access your location to calculate distance and navigate to customer appointments."
+          "locationAlwaysAndWhenInUsePermission": "Allow Tasker to access your location to calculate distance and navigate to customer appointments.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       [

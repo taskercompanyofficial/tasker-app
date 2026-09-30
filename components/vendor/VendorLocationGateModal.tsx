@@ -15,215 +15,237 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { requestVendorOverlayPermission } from "@/lib/vendorBackgroundLocation";
+import {
+  checkVendorOnlineReadiness,
+  requestVendorBatteryOptimizationIgnore,
+  VendorPermissionsCheck,
+} from "@/lib/vendorBackgroundLocation";
+import { requestSystemOverlayPermission } from "@/lib/floatingBubble";
 
 interface VendorLocationGateModalProps {
+  visible?: boolean;
+  onClose?: () => void;
   onPermissionGranted?: () => void;
+  onAllGranted?: () => void;
 }
 
-// Only true Expo Go sandbox environment lacks background location / overlay capabilities
 const isExpoGo =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
   (Constants as any).appOwnership === "expo";
 
-const OVERLAY_ACK_KEY = "@vendor_overlay_acknowledged";
-
 export default function VendorLocationGateModal({
+  visible = true,
+  onClose,
   onPermissionGranted,
+  onAllGranted,
 }: VendorLocationGateModalProps) {
-  const [fgGranted, setFgGranted] = useState<boolean | null>(null);
-  const [overlayGranted, setOverlayGranted] = useState<boolean | null>(null);
+  const [perms, setPerms] = useState<VendorPermissionsCheck>({
+    hasForeground: false,
+    hasBackground: false,
+    hasOverlay: false,
+    isReady: false,
+  });
   const [loading, setLoading] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
 
-  const checkPermissions = useCallback(async () => {
+  const checkStatus = useCallback(async () => {
     if (isExpoGo) {
+      onAllGranted?.();
+      onPermissionGranted?.();
       return;
     }
+
     try {
-      const fg = await Location.getForegroundPermissionsAsync();
-
-      setFgGranted(fg.granted);
-
-      if (Platform.OS === "android") {
-        const overlayAck = await AsyncStorage.getItem(OVERLAY_ACK_KEY);
-        setOverlayGranted(overlayAck === "true");
-      } else {
-        setOverlayGranted(true);
-      }
-
-      if (fg.granted) {
-        if (onPermissionGranted) onPermissionGranted();
+      const res = await checkVendorOnlineReadiness();
+      setPerms(res);
+      if (res.isReady) {
+        onAllGranted?.();
+        onPermissionGranted?.();
       }
     } catch (e) {
-      console.warn("[VendorLocationGate] Check error:", e);
+      console.warn("[VendorLocationGateModal] Check error:", e);
     }
-  }, [onPermissionGranted]);
+  }, [onAllGranted, onPermissionGranted]);
 
-  // Check on mount and every time vendor returns from device Settings
   useEffect(() => {
-    checkPermissions();
+    if (visible) {
+      checkStatus();
+    }
 
     const sub = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "active") {
-        checkPermissions();
+      if (nextState === "active" && visible) {
+        checkStatus();
       }
     });
 
     return () => {
       sub.remove();
     };
-  }, [checkPermissions]);
+  }, [visible, checkStatus]);
 
-  const handleRequestLocation = async () => {
+  const handleFixLocation = async () => {
     setLoading(true);
     try {
-      const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
-      setFgGranted(fgStatus === "granted");
-
-      if (fgStatus !== "granted") {
-        await Linking.openSettings().catch(() => {});
+      if (!perms.hasForeground) {
+        const fg = await Location.requestForegroundPermissionsAsync();
+        if (fg.status === "granted") {
+          await Location.requestBackgroundPermissionsAsync();
+        }
+      } else if (!perms.hasBackground) {
+        // Direct to background permission request
+        const bg = await Location.requestBackgroundPermissionsAsync();
+        if (bg.status !== "granted") {
+          await Linking.openSettings();
+        }
       }
     } catch (e) {
-      console.warn("[VendorLocationGate] Request error:", e);
+      console.warn("[VendorLocationGateModal] Location error:", e);
     } finally {
       setLoading(false);
+      await checkStatus();
     }
   };
 
-  const handleRequestOverlay = async () => {
+  const handleFixOverlay = async () => {
     setLoading(true);
     try {
-      await AsyncStorage.setItem(OVERLAY_ACK_KEY, "true");
-      setOverlayGranted(true);
-      await requestVendorOverlayPermission();
+      await requestSystemOverlayPermission();
+      setTimeout(checkStatus, 1000);
     } catch (e) {
-      console.warn("[VendorLocationGate] Overlay error:", e);
+      console.warn("[VendorLocationGateModal] Overlay error:", e);
     } finally {
       setLoading(false);
     }
   };
 
-  const isLocationGranted = fgGranted === true;
-  const isAllGranted = isLocationGranted && (Platform.OS !== "android" || overlayGranted === true);
+  const handleFixBattery = async () => {
+    await requestVendorBatteryOptimizationIgnore();
+  };
 
-  // If in Expo Go sandbox, still checking, or permissions granted / dismissed, don't block
-  if (isExpoGo || fgGranted === null || (isAllGranted && !loading) || dismissed) {
-    return null;
-  }
+  if (!visible) return null;
 
   return (
-    <Modal visible={!dismissed} transparent animationType="fade">
-      <View style={styles.overlay}>
-        <View style={styles.card}>
-          <View style={styles.iconCircle}>
-            <Ionicons name="location" size={32} color={Colors.neutral.white} />
+    <Modal visible={visible} transparent animationType="slide">
+      <View style={styles.backdrop}>
+        <View style={styles.sheetCard}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.shieldBadge}>
+              <Ionicons name="shield-checkmark" size={30} color={Colors.themes.provider.primary} />
+            </View>
+            <Text style={styles.title}>Required to Go Online</Text>
+            <Text style={styles.subtitle}>
+              Customers and dispatch require active real-time tracking while you are on-duty.
+            </Text>
           </View>
 
-          <Text style={styles.title}>Provider Permissions Required</Text>
-
-          <Text style={styles.subtitle}>
-            To assign orders, track live arrival for customers, and display job alerts when minimized, Tasker requires the following permissions:
-          </Text>
-
-          {/* Permission Requirements Status Card */}
-          <View style={styles.statusList}>
-            {/* 1. Foreground Location */}
-            <View style={styles.statusRow}>
-              <Ionicons
-                name={fgGranted ? "checkmark-circle" : "close-circle"}
-                size={20}
-                color={fgGranted ? "#10B981" : "#EF4444"}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.statusTitle}>1. Location Access (While Using App)</Text>
-                <Text style={styles.statusSub}>Calculates route & customer ETA while navigating</Text>
+          {/* Checklist */}
+          <View style={styles.checklist}>
+            {/* 1. Location Always Allow */}
+            <View style={styles.itemRow}>
+              <View style={[styles.iconCircle, { backgroundColor: perms.hasBackground ? "#ECFDF5" : "#FEF3C7" }]}>
+                <Ionicons
+                  name="location"
+                  size={20}
+                  color={perms.hasBackground ? "#10B981" : "#D97706"}
+                />
               </View>
+              <View style={styles.itemContent}>
+                <Text style={styles.itemTitle}>Location: "Allow all the time"</Text>
+                <Text style={styles.itemDesc}>
+                  Keeps live GPS active when your screen is locked or app is minimized.
+                </Text>
+              </View>
+              {perms.hasBackground ? (
+                <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+              ) : (
+                <TouchableOpacity
+                  style={styles.enableBtn}
+                  onPress={handleFixLocation}
+                  disabled={loading}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.enableBtnText}>Enable</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
-            {/* 2. Display Over Other Apps (Android) */}
+            {/* 2. Display Over Other Apps (Android Only) */}
             {Platform.OS === "android" && (
-              <View style={styles.statusRow}>
-                <Ionicons
-                  name={overlayGranted ? "checkmark-circle" : "layers-outline"}
-                  size={20}
-                  color={overlayGranted ? "#10B981" : Colors.themes.provider.primary}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.statusTitle}>2. Display Over Other Apps</Text>
-                  <Text style={styles.statusSub}>
-                    {overlayGranted
-                      ? "Configured: floating job alerts appear over WhatsApp & Maps"
-                      : "Required on Android to show navigation alerts over other apps"}
+              <View style={styles.itemRow}>
+                <View style={[styles.iconCircle, { backgroundColor: perms.hasOverlay ? "#ECFDF5" : "#EFF6FF" }]}>
+                  <Ionicons
+                    name="layers"
+                    size={20}
+                    color={perms.hasOverlay ? "#10B981" : "#2563EB"}
+                  />
+                </View>
+                <View style={styles.itemContent}>
+                  <Text style={styles.itemTitle}>Display Over Other Apps</Text>
+                  <Text style={styles.itemDesc}>
+                    Shows floating navigation bubble over Google Maps & Waze.
                   </Text>
                 </View>
+                {perms.hasOverlay ? (
+                  <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.enableBtn, { backgroundColor: "#2563EB" }]}
+                    onPress={handleFixOverlay}
+                    disabled={loading}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.enableBtnText}>Enable</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {/* 3. Battery Optimization (Android) */}
+            {Platform.OS === "android" && (
+              <View style={[styles.itemRow, { borderBottomWidth: 0 }]}>
+                <View style={[styles.iconCircle, { backgroundColor: "#F3F4F6" }]}>
+                  <Ionicons name="battery-charging-outline" size={20} color="#4B5563" />
+                </View>
+                <View style={styles.itemContent}>
+                  <Text style={styles.itemTitle}>Battery Optimization (Recommended)</Text>
+                  <Text style={styles.itemDesc}>
+                    Set Tasker to Unrestricted so Android doesn't stop location in sleep.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.enableBtn, { backgroundColor: "#4B5563" }]}
+                  onPress={handleFixBattery}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.enableBtnText}>Setup</Text>
+                </TouchableOpacity>
               </View>
             )}
           </View>
 
           {/* Action Buttons */}
-          <View style={styles.actions}>
-            {/* Action 1: Grant Location */}
-            {!isLocationGranted && (
-              <TouchableOpacity
-                style={styles.grantBtn}
-                onPress={handleRequestLocation}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                {loading ? (
-                  <ActivityIndicator color={Colors.neutral.white} size="small" />
-                ) : (
-                  <>
-                    <Ionicons name="shield-checkmark" size={18} color={Colors.neutral.white} />
-                    <Text style={styles.grantBtnText}>
-                      Allow Location Access
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.primaryBtn,
+              { backgroundColor: perms.isReady ? Colors.themes.provider.primary : "#111827" },
+            ]}
+            onPress={checkStatus}
+            activeOpacity={0.85}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.primaryBtnText}>
+                {perms.isReady ? "Go Online Now 🟢" : "Check Permissions Again"}
+              </Text>
             )}
+          </TouchableOpacity>
 
-            {/* Action 2: Grant Display Over Other Apps (Android) */}
-            {Platform.OS === "android" && !overlayGranted && (
-              <TouchableOpacity
-                style={[styles.grantBtn, { backgroundColor: "#0284C7" }]}
-                onPress={handleRequestOverlay}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="layers" size={18} color={Colors.neutral.white} />
-                <Text style={styles.grantBtnText}>
-                  3. Allow Display Over Other Apps
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            {/* Settings Link */}
-            <TouchableOpacity
-              style={styles.settingsBtn}
-              onPress={() => Linking.openSettings()}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="settings-outline" size={16} color={Colors.themes.provider.primary} />
-              <Text style={styles.settingsBtnText}>Open Device Settings</Text>
+          {onClose && (
+            <TouchableOpacity style={styles.cancelBtn} onPress={onClose} activeOpacity={0.7}>
+              <Text style={styles.cancelBtnText}>Stay Offline for Now</Text>
             </TouchableOpacity>
-
-            {/* Dismiss / Continue if at least location is granted */}
-            {fgGranted && (
-              <TouchableOpacity
-                style={styles.dismissBtn}
-                onPress={() => {
-                  setDismissed(true);
-                  if (onPermissionGranted) onPermissionGranted();
-                }}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.dismissBtnText}>Continue to Dashboard</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          )}
         </View>
       </View>
     </Modal>
@@ -231,108 +253,119 @@ export default function VendorLocationGateModal({
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  backdrop: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.8)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: Spacing.lg,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    justifyContent: "flex-end",
   },
-  card: {
-    width: "100%",
-    backgroundColor: Colors.neutral.white,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.xl,
-    alignItems: "center",
-    gap: Spacing.md,
+  sheetCard: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+    paddingBottom: Platform.OS === "ios" ? 40 : 28,
     ...Shadows.lg,
   },
-  iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: Colors.themes.provider.primary,
+  header: {
     alignItems: "center",
+    marginBottom: 20,
+  },
+  shieldBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(16, 185, 129, 0.12)",
     justifyContent: "center",
-    ...Shadows.md,
+    alignItems: "center",
+    marginBottom: 12,
   },
   title: {
-    fontSize: Typography.sizes.lg,
-    fontWeight: Typography.weights.bold,
-    color: Colors.text.primary,
+    fontSize: 19,
+    fontWeight: "800",
+    color: "#111827",
     textAlign: "center",
   },
   subtitle: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.text.secondary,
+    fontSize: 13,
+    color: "#6B7280",
     textAlign: "center",
+    marginTop: 6,
     lineHeight: 18,
+    paddingHorizontal: 12,
   },
-  statusList: {
-    width: "100%",
-    backgroundColor: Colors.background.secondary,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    gap: Spacing.sm,
+  checklist: {
+    backgroundColor: "#F9FAFB",
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: Colors.border.light,
+    borderColor: "#E5E7EB",
   },
-  statusRow: {
+  itemRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: Spacing.sm,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
   },
-  statusTitle: {
-    fontSize: Typography.sizes.xs,
+  iconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  itemContent: {
+    flex: 1,
+    marginHorizontal: 12,
+  },
+  itemTitle: {
+    fontSize: 13,
     fontWeight: "700",
-    color: Colors.text.primary,
+    color: "#1F2937",
   },
-  statusSub: {
-    fontSize: 10,
-    color: Colors.text.secondary,
-    lineHeight: 14,
+  itemDesc: {
+    fontSize: 11,
+    color: "#6B7280",
+    marginTop: 2,
+    lineHeight: 15,
   },
-  actions: {
-    width: "100%",
-    gap: Spacing.xs,
-    marginTop: Spacing.xs,
+  enableBtn: {
+    backgroundColor: "#10B981",
+    paddingHorizontal: 13,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
-  grantBtn: {
-    flexDirection: "row",
+  enableBtnText: {
+    color: "#ffffff",
+    fontWeight: "700",
+    fontSize: 12,
+  },
+  primaryBtn: {
+    paddingVertical: 15,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.themes.provider.primary,
-    paddingVertical: 13,
-    borderRadius: BorderRadius.md,
-    gap: 8,
-    ...Shadows.sm,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  grantBtnText: {
-    fontSize: Typography.sizes.sm,
+  primaryBtnText: {
+    color: "#ffffff",
     fontWeight: "700",
-    color: Colors.neutral.white,
+    fontSize: 15,
   },
-  settingsBtn: {
-    flexDirection: "row",
+  cancelBtn: {
+    paddingVertical: 12,
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 9,
-    borderRadius: BorderRadius.md,
-    gap: 6,
+    marginTop: 6,
   },
-  settingsBtnText: {
-    fontSize: Typography.sizes.xs,
-    fontWeight: "700",
-    color: Colors.themes.provider.primary,
-  },
-  dismissBtn: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 8,
-  },
-  dismissBtnText: {
-    fontSize: Typography.sizes.xs,
-    color: "#64748B",
+  cancelBtnText: {
+    color: "#6B7280",
     fontWeight: "600",
+    fontSize: 13,
   },
 });

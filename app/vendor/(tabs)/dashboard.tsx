@@ -1,5 +1,8 @@
 import Header from "@/components/Header";
 import DailySelfieModal from "@/components/vendor/DailySelfieModal";
+import VendorLocationGateModal from "@/components/vendor/VendorLocationGateModal";
+import { checkVendorOnlineReadiness } from "@/lib/vendorBackgroundLocation";
+
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing, Typography } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
@@ -9,8 +12,11 @@ import {
   VENDOR_ONLINE_STATUS_URL,
   VENDOR_TOGGLE_ONLINE_STATUS_URL,
   VENDOR_WORK_ORDER_SUMMARY_URL,
+  VENDOR_LOCATION_PING_URL,
+  VENDOR_STAFF_LOCATION_PING_URL,
 } from "@/lib/api-endpoints";
 import axios from "@/lib/axios.config";
+import * as Location from "expo-location";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useFocusEffect, router } from "expo-router";
@@ -104,6 +110,7 @@ export default function VendorDashboard() {
   const [secondsRemaining, setSecondsRemaining] = useState(0);
   const [togglingOnline, setTogglingOnline] = useState(false);
   const [showSelfieModal, setShowSelfieModal] = useState(false);
+  const [showPermissionGate, setShowPermissionGate] = useState(false);
 
   // Animations
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -150,9 +157,45 @@ export default function VendorDashboard() {
     } catch (e) { console.warn("[Dashboard] Online status fetch failed:", e); }
   }, [mode]);
 
+  const sendDashboardOnlineLocationPing = async () => {
+    try {
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      if (!loc) return;
+      const pingUrl = isStaff ? VENDOR_STAFF_LOCATION_PING_URL : VENDOR_LOCATION_PING_URL;
+      console.log(`📍 [DASHBOARD:ONLINE_PING] Posting GPS -> ${pingUrl}`, {
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      });
+      const pingRes = await axios.post(pingUrl, {
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+        heading: loc.coords.heading ?? null,
+        speed: loc.coords.speed ?? null,
+        battery_level: 100,
+        is_charging: false,
+        app_state: "foreground",
+      });
+      console.log("✅ [DASHBOARD:ONLINE_PING_SUCCESS]", pingRes.data);
+    } catch (err: any) {
+      console.warn("⚠️ [DASHBOARD:ONLINE_PING_ERROR]", err?.response?.data ?? err?.message);
+    }
+  };
+
   const handleToggleOnline = async (targetValue: boolean) => {
     try {
       try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch (_) {}
+
+      // 🛑 PRE-FLIGHT CHECK: Enforce background location & overlay permissions before going online
+      if (targetValue) {
+        const readiness = await checkVendorOnlineReadiness();
+        if (!readiness.isReady) {
+          setShowPermissionGate(true);
+          return;
+        }
+      }
+
       if (targetValue && secondsRemaining <= 0) { setShowSelfieModal(true); return; }
       setTogglingOnline(true);
       const res = await axios.post(VENDOR_TOGGLE_ONLINE_STATUS_URL(mode), {
@@ -163,6 +206,9 @@ export default function VendorDashboard() {
         setIsOnline(Boolean(d.is_online));
         setSecondsRemaining(Number(d.seconds_remaining ?? 0));
         try { await refetchUser(mode); } catch (_) {}
+        if (targetValue) {
+          sendDashboardOnlineLocationPing();
+        }
         Toast.show({
           type: "success",
           text1: targetValue ? "🟢 You are Online" : "⚫ You are Offline",
@@ -545,9 +591,28 @@ export default function VendorDashboard() {
       <DailySelfieModal
         visible={showSelfieModal}
         onClose={() => setShowSelfieModal(false)}
-        onSuccess={(data) => {
-          setIsOnline(Boolean(data.is_online));
+        onSuccess={async (data) => {
           setSecondsRemaining(Number(data.seconds_remaining ?? 86400));
+          const readiness = await checkVendorOnlineReadiness();
+          if (readiness.isReady) {
+            setIsOnline(Boolean(data.is_online));
+            if (data.is_online) {
+              sendDashboardOnlineLocationPing();
+            }
+          } else {
+            setIsOnline(false);
+            setShowPermissionGate(true);
+          }
+        }}
+      />
+
+      {/* Driver Readiness / Required Permissions Gate Modal */}
+      <VendorLocationGateModal
+        visible={showPermissionGate}
+        onClose={() => setShowPermissionGate(false)}
+        onAllGranted={() => {
+          setShowPermissionGate(false);
+          handleToggleOnline(true);
         }}
       />
     </SafeAreaView>
@@ -570,7 +635,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 0,
     overflow: "hidden",
-    ...Shadows.md,
   },
   heroBgCircle1: {
     position: "absolute", width: 220, height: 220, borderRadius: 110,
@@ -681,7 +745,6 @@ const styles = StyleSheet.create({
     borderRadius: 16, marginHorizontal: Spacing.md,
     marginBottom: Spacing.md, padding: Spacing.md,
     borderWidth: 1, borderColor: Colors.themes.provider.accent + "30",
-    ...Shadows.sm,
   },
   staffAvatarWrap: {
     width: 46, height: 46, borderRadius: 23,
@@ -703,7 +766,6 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 5,
     backgroundColor: "#fff", paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: 20, borderWidth: 1, borderColor: Colors.border.light,
-    ...Shadows.sm,
   },
   syncDot: { width: 7, height: 7, borderRadius: 3.5 },
   syncText: { fontSize: 11, color: Colors.text.secondary, fontWeight: "600" },
@@ -717,7 +779,8 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     position: "relative",
     overflow: "hidden",
-    ...Shadows.sm,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
   statCardBlue: { borderTopWidth: 3, borderTopColor: Colors.themes.provider.primary },
   statCardAmber: { borderTopWidth: 3, borderTopColor: Colors.warning },
@@ -740,7 +803,8 @@ const styles = StyleSheet.create({
   actionsCard: {
     backgroundColor: "#fff",
     borderRadius: 18, overflow: "hidden",
-    ...Shadows.sm,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
   actionRow: {
     flexDirection: "row", alignItems: "center",

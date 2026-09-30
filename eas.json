@@ -12,12 +12,20 @@
     "preview": {
       "distribution": "internal",
       "channel": "preview",
-      "uploadSourceMaps": true
+      "uploadSourceMaps": true,
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "https://api.taskercompany.cloud",
+        "EXPO_PUBLIC_STORAGE_URL": "https://api.taskercompany.cloud/storage"
+      }
     },
     "production": {
       "autoIncrement": true,
       "channel": "production",
-      "uploadSourceMaps": true
+      "uploadSourceMaps": true,
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "https://api.taskercompany.cloud",
+        "EXPO_PUBLIC_STORAGE_URL": "https://api.taskercompany.cloud/storage"
+      }
     }
   },
   "submit": {

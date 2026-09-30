@@ -37,6 +37,74 @@ import {
   stopVendorBackgroundNavigation,
   setupVendorAppStateNavigationNotice,
 } from "@/lib/vendorBackgroundLocation";
+import { activeTripStore } from "@/components/vendor/VendorActiveTripBubble";
+import { setupSystemOverlayAppStateSync } from "@/lib/floatingBubble";
+
+import { useAuthStore } from "@/context/auth-store";
+import { VENDOR_LOCATION_PING_URL, VENDOR_STAFF_LOCATION_PING_URL } from "@/lib/api-endpoints";
+import axios from "axios";
+
+/**
+ * Foreground location ping — called on every watchPositionAsync update while
+ * the vendor has the app open. Sends lat/lng to Laravel which broadcasts
+ * VendorLocationUpdated to the customer's Reverb channel.
+ */
+async function sendForegroundLocationPing(
+  latitude: number,
+  longitude: number,
+  heading: number | null | undefined,
+  speed: number | null | undefined,
+  workOrderId: number | string,
+): Promise<void> {
+  try {
+    const state = useAuthStore.getState();
+    const token = state.token;
+    const mode = state.appMode;
+    if (!token) {
+      console.warn("[FG-PING:SKIPPED] No auth token available in useAuthStore");
+      return;
+    }
+
+    const url = mode === "vendor_staff"
+      ? VENDOR_STAFF_LOCATION_PING_URL
+      : VENDOR_LOCATION_PING_URL;
+
+    console.log(
+      `🚀 [FG-PING:POSTING] -> ${url} | Order #${workOrderId} | Lat: ${latitude.toFixed(5)}, Lng: ${longitude.toFixed(5)}`
+    );
+
+    const res = await axios.post(
+      url,
+      {
+        latitude,
+        longitude,
+        heading: heading ?? null,
+        speed: speed ?? null,
+        battery_level: 100,
+        is_charging: false,
+        work_order_id: workOrderId,
+        app_state: "foreground",
+      },
+      {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        timeout: 5000,
+      },
+    );
+
+    console.log(
+      `✅ [FG-PING:SUCCESS] Foreground location accepted by backend! Status: ${res.status}`
+    );
+  } catch (err: any) {
+    console.error(
+      "❌ [FG-PING:FAILED] Foreground location ping failed:",
+      err?.response?.status ?? err?.code ?? "Network Error",
+      err?.response?.data ?? err?.message
+    );
+  }
+}
+
+
+
 
 
 
@@ -212,6 +280,7 @@ export default function UberVendorWorkOrderView({
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
     let removeAppStateNotice: (() => void) | null = null;
+    let removeSystemOverlaySync: (() => void) | null = null;
 
     async function initLiveLocation() {
       try {
@@ -221,13 +290,25 @@ export default function UberVendorWorkOrderView({
         // Start background location service for vendors
         if (workOrder?.work_order_number) {
           await startVendorBackgroundNavigation(
-            workOrder.work_order_number,
+            workOrder.id,                   // ← DB id for location ping payload
+            workOrder.work_order_number,    // ← for notification text
             workOrder.customer?.name,
           );
           removeAppStateNotice = setupVendorAppStateNavigationNotice(
             workOrder.work_order_number,
           );
+          removeSystemOverlaySync = setupSystemOverlayAppStateSync(
+            workOrder.work_order_number,
+          );
+
+          // Show global floating bubble on other vendor screens
+          activeTripStore.setTrip({
+            workOrderId: workOrder.id,
+            workOrderNumber: workOrder.work_order_number,
+            customerName: workOrder.customer?.name,
+          });
         }
+
 
         const currentLoc = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.BestForNavigation,
@@ -240,6 +321,21 @@ export default function UberVendorWorkOrderView({
             speed: currentLoc.coords.speed || 0,
           };
           setVendorLocation(coords);
+
+          console.log(
+            `📍 [FG-GPS:INITIAL_FIX] Lat: ${coords.latitude.toFixed(5)}, Lng: ${coords.longitude.toFixed(5)}`
+          );
+
+          // Initial ping on screen mount
+          if (workOrder?.id) {
+            sendForegroundLocationPing(
+              coords.latitude,
+              coords.longitude,
+              coords.heading,
+              coords.speed,
+              workOrder.id,
+            ).catch(() => {});
+          }
 
           if (hasValidCoords) {
             const info = calculateDistanceAndEta(
@@ -259,8 +355,8 @@ export default function UberVendorWorkOrderView({
         subscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.BestForNavigation,
-            timeInterval: 2000,
-            distanceInterval: 5,
+            timeInterval: 3000,
+            distanceInterval: 0,
           },
           (loc) => {
             const coords = {
@@ -270,6 +366,21 @@ export default function UberVendorWorkOrderView({
               speed: loc.coords.speed || 0,
             };
             setVendorLocation(coords);
+            console.log(
+              `📍 [FG-GPS:WATCH_UPDATE] Lat: ${coords.latitude.toFixed(5)}, Lng: ${coords.longitude.toFixed(5)}`
+            );
+
+            // Foreground ping — sends location to Laravel while app is open
+            // (background task handles it when app is minimized)
+            if (workOrder?.id) {
+              sendForegroundLocationPing(
+                coords.latitude,
+                coords.longitude,
+                coords.heading,
+                coords.speed,
+                workOrder.id,
+              ).catch(() => {});
+            }
 
             if (hasValidCoords) {
               const info = calculateDistanceAndEta(
@@ -310,11 +421,15 @@ export default function UberVendorWorkOrderView({
     initLiveLocation();
 
     return () => {
+      // Pause screen-specific map watching when navigating away from this screen
       subscription?.remove();
-      if (removeAppStateNotice) removeAppStateNotice();
-      stopVendorBackgroundNavigation();
+      // NOTE: Background tracking (startVendorBackgroundNavigation), activeTripStore,
+      // and system overlay (FloatingBubble) deliberately REMAIN ACTIVE so the vendor
+      // can navigate to Dashboard, Chat, or Google Maps while tracking stays alive!
     };
-  }, [hasValidCoords, isNavigating, lat, lng, workOrder?.customer?.name, workOrder?.work_order_number]);
+  }, [hasValidCoords, isNavigating, lat, lng, workOrder?.customer?.name, workOrder?.work_order_number, workOrder?.id]);
+
+
 
   // Fetch actual street-by-street driving route from Google Directions API (or OSRM fallback)
   useEffect(() => {
@@ -523,11 +638,15 @@ export default function UberVendorWorkOrderView({
   const onReject = async (reason: string) => {
     setShowRejectModal(false);
     await handleReject(reason);
+    await stopVendorBackgroundNavigation();
+    activeTripStore.setTrip(null);
   };
 
   const onCancelOrder = async (reason: string) => {
     setShowCancelModal(false);
     await handleCancel(reason);
+    await stopVendorBackgroundNavigation();
+    activeTripStore.setTrip(null);
   };
 
   const onScheduleOrder = async (
@@ -541,7 +660,16 @@ export default function UberVendorWorkOrderView({
 
   const onStatusUpdate = async (remarks: string) => {
     setShowStatusModal(false);
+    const targetStatus = pendingStatusUpdate?.statusSlug || pendingStatusUpdate?.status_slug;
     await handleUpdateStatus(remarks);
+    if (
+      targetStatus === "completed" ||
+      targetStatus === "cancelled" ||
+      targetStatus === "closed"
+    ) {
+      await stopVendorBackgroundNavigation();
+      activeTripStore.setTrip(null);
+    }
   };
 
   const handleStatusButtonPress = (

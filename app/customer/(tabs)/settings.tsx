@@ -22,6 +22,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
+import { getAppVersionDisplay } from "@/lib/appVersion";
 
 export default function Settings() {
   const { signOutMode, session, setAppMode } = useSession();
@@ -31,6 +32,14 @@ export default function Settings() {
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [isVendor, setIsVendor] = useState(session.appMode === "vendor");
   const [pendingVendor, setPendingVendor] = useState<boolean | null>(null);
+  const [avatarError, setAvatarError] = useState(false);
+
+  const rawCustomerAvatar =
+    session.user?.avatar_url ||
+    (session.user as any)?.active_avatar_url ||
+    (session.user as any)?.profile_image ||
+    null;
+  const customerAvatar = rawCustomerAvatar ? getImageUrl(rawCustomerAvatar) : "";
 
   const handleSignOut = async () => {
     try {
@@ -111,13 +120,14 @@ export default function Settings() {
           <View style={styles.profileCard}>
             <View style={styles.profileRow}>
               <View style={styles.avatarContainer}>
-                {session.user?.avatar_url ? (
+                {customerAvatar && !avatarError ? (
                   <Image
-                    source={{ uri: getImageUrl(session.user.avatar_url) }}
+                    source={{ uri: customerAvatar }}
                     style={styles.avatar}
                     contentFit="cover"
                     transition={200}
                     cachePolicy="disk"
+                    onError={() => setAvatarError(true)}
                   />
                 ) : (
                   <View style={styles.avatarPlaceholder}>
@@ -219,7 +229,7 @@ export default function Settings() {
           />
 
           {/* App Version */}
-          <Text style={styles.versionText}>Tasker App v1.0.0</Text>
+          <Text style={styles.versionText}>{getAppVersionDisplay("Tasker App")}</Text>
         </ScrollView>
       </View>
 

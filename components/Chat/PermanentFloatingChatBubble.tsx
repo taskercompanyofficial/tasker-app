@@ -76,13 +76,14 @@ export function PermanentFloatingChatBubble({ workOrderId, conversationId }: Per
     pathname.includes("/customer/settings");
 
   const bottomOffset = isTabScreen
-    ? Math.max(insets.bottom + 65, 88)
-    : Math.max(insets.bottom + 20, 32);
+    ? Math.max(insets.bottom + 95, 115)
+    : Math.max(insets.bottom + 25, 40);
+
 
   const handlePress = () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    } catch {}
+    } catch { }
 
     Animated.sequence([
       Animated.timing(scaleAnim, {
@@ -157,6 +158,7 @@ const styles = StyleSheet.create({
   container: {
     position: "absolute",
     right: 18,
+    bottom: -20,
     zIndex: 99999,
     elevation: 99999,
     alignItems: "center",
@@ -202,7 +204,7 @@ const styles = StyleSheet.create({
   },
   sparkleBadge: {
     position: "absolute",
-    top: -5,
+    top: -25,
     right: -7,
     backgroundColor: "#10B981",
     width: 16,

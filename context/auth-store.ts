@@ -138,10 +138,26 @@ const persistState = async () => {
       version: 1,
     };
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+
+    // Sync the active token + mode to plain AsyncStorage keys so the
+    // background location task (which runs outside React context) can read them.
+    const bgToken = state.appMode === "vendor_staff"
+      ? state.vendorStaffToken
+      : state.appMode === "vendor"
+        ? state.vendorToken
+        : null; // customers don't send location pings
+
+    if (bgToken) {
+      await AsyncStorage.setItem("bg_auth_token", bgToken);
+      await AsyncStorage.setItem("bg_app_mode", state.appMode ?? "vendor");
+    } else {
+      await AsyncStorage.multiRemove(["bg_auth_token", "bg_app_mode", "active_work_order_id"]);
+    }
   } catch (error) {
     console.warn("[AuthStore] Failed to persist auth state", error);
   }
 };
+
 
 const setState = (
   updater:

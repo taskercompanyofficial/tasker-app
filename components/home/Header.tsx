@@ -48,6 +48,14 @@ export default function HomeHeader() {
   const router = useRouter();
   const [userAddresses, setUserAddresses] = useState<Address[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
+  const [avatarError, setAvatarError] = useState(false);
+
+  const rawCustomerAvatar =
+    session.user?.avatar_url ||
+    (session.user as any)?.active_avatar_url ||
+    (session.user as any)?.profile_image ||
+    null;
+  const avatarUrl = rawCustomerAvatar ? getImageUrl(rawCustomerAvatar) : "";
 
   // Bottom Sheet hooks
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
@@ -181,13 +189,14 @@ export default function HomeHeader() {
             activeOpacity={0.7}
             onPress={() => router.push("/customer/settings")}
           >
-            {session.user?.avatar_url ? (
+            {avatarUrl && !avatarError ? (
               <Image
-                source={{ uri: getImageUrl(session.user.avatar_url) }}
+                source={{ uri: avatarUrl }}
                 style={styles.avatarImage}
                 contentFit="cover"
                 transition={200}
                 cachePolicy="disk"
+                onError={() => setAvatarError(true)}
               />
             ) : (
               <View style={styles.avatar}>

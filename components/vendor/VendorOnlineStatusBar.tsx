@@ -21,6 +21,9 @@ import {
 } from "react-native";
 import Toast from "react-native-toast-message";
 import DailySelfieModal from "./DailySelfieModal";
+import VendorLocationGateModal from "./VendorLocationGateModal";
+import { checkVendorOnlineReadiness } from "@/lib/vendorBackgroundLocation";
+
 
 interface VendorOnlineStatusBarProps {
   onStatusChanged?: (isOnline: boolean) => void;
@@ -40,6 +43,7 @@ export default function VendorOnlineStatusBar({
   const [activeAvatar, setActiveAvatar] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [showSelfieModal, setShowSelfieModal] = useState<boolean>(false);
+  const [showPermissionGate, setShowPermissionGate] = useState<boolean>(false);
 
   // Animated pulse for online indicator beacon
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -123,11 +127,22 @@ export default function VendorOnlineStatusBar({
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       } catch (_) {}
 
+      // 🛑 PRE-FLIGHT CHECK: If vendor wants to go ONLINE, verify required background permissions first!
+      if (targetValue) {
+        const readiness = await checkVendorOnlineReadiness();
+        if (!readiness.isReady) {
+          // Block going online — keep offline and show permission gate checklist
+          setShowPermissionGate(true);
+          return;
+        }
+      }
+
       // If switching to online without valid 24h verification, show camera modal
       if (targetValue && (!isVerified || secondsRemaining <= 0)) {
         setShowSelfieModal(true);
         return;
       }
+
 
       setLoading(true);
       const endpoint = VENDOR_TOGGLE_ONLINE_STATUS_URL(mode);
@@ -326,6 +341,17 @@ export default function VendorOnlineStatusBar({
             setActiveAvatar(data.active_avatar_url);
           }
           onStatusChanged?.(true);
+        }}
+      />
+
+      {/* Driver Readiness / Required Permissions Gate Modal */}
+      <VendorLocationGateModal
+        visible={showPermissionGate}
+        onClose={() => setShowPermissionGate(false)}
+        onAllGranted={() => {
+          setShowPermissionGate(false);
+          // All required background & overlay permissions are granted — proceed to toggle online!
+          handleToggle(true);
         }}
       />
     </>
