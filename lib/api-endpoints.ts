@@ -3,6 +3,7 @@ const BACKEND_URL_ENV =
 export const BACKEND_URL = BACKEND_URL_ENV;
 export const API_URL = `${BACKEND_URL}/api`;
 export const APP_URL = `${API_URL}/tasker-app`;
+export const APP_VERSION_CHECK_URL = `${APP_URL}/app-version/check`;
 export const APP_LOGS_INGEST_URL = `${API_URL}/logs`;
 
 // Auth URLs

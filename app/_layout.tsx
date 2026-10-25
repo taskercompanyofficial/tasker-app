@@ -7,6 +7,7 @@ import AlertModal from "@/components/common/AlertModal";
 
 import DebugPanel from "@/components/common/DebugPanel";
 import OTAUpdateManager from "@/components/common/OTAUpdateManager";
+import ForceUpdateManager from "@/components/common/ForceUpdateManager";
 import NetworkStatus from "@/components/NetworkStatus";
 import Splash from "@/components/splash";
 import Colors from "@/constants/Colors";
@@ -150,6 +151,7 @@ function RootLayout() {
                 translucent
               />
               <OTAUpdateManager />
+              <ForceUpdateManager />
               <NetworkStatus />
               <RootNavigator />
               <Toast />
