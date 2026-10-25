@@ -11,6 +11,7 @@ import {
 } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -221,44 +222,55 @@ export default function VendorNotificationsPage() {
     );
   };
 
-  const renderNotification = ({ item }: { item: Notification }) => (
-    <TouchableOpacity
-      style={[
-        styles.notificationCard,
-        !item.read && styles.notificationCardUnread,
-      ]}
-      onPress={() => handleNotificationPress(item)}
-      activeOpacity={0.7}
-    >
-      <View
+  const renderNotification = ({ item }: { item: Notification }) => {
+    const notifImage = item.data?.image || item.data?.image_url;
+    return (
+      <TouchableOpacity
         style={[
-          styles.iconContainer,
-          { backgroundColor: getNotificationColor(item.type) + "15" },
+          styles.notificationCard,
+          !item.read && styles.notificationCardUnread,
         ]}
+        onPress={() => handleNotificationPress(item)}
+        activeOpacity={0.7}
       >
-        <Ionicons
-          name={getNotificationIcon(item.type) as any}
-          size={22}
-          color={getNotificationColor(item.type)}
-        />
-      </View>
-
-      <View style={styles.notificationContent}>
-        <View style={styles.notificationHeader}>
-          <AppText style={styles.notificationTitle} numberOfLines={1}>
-            {item.title}
-          </AppText>
-          <AppText style={styles.notificationTime}>
-            {formatTime(item.created_at)}
-          </AppText>
+        <View
+          style={[
+            styles.iconContainer,
+            { backgroundColor: getNotificationColor(item.type) + "15" },
+          ]}
+        >
+          <Ionicons
+            name={getNotificationIcon(item.type) as any}
+            size={22}
+            color={getNotificationColor(item.type)}
+          />
         </View>
-        <AppText style={styles.notificationMessage} numberOfLines={2}>
-          {item.message}
-        </AppText>
-        {!item.read && <View style={styles.unreadDot} />}
-      </View>
-    </TouchableOpacity>
-  );
+
+        <View style={styles.notificationContent}>
+          <View style={styles.notificationHeader}>
+            <AppText style={styles.notificationTitle} numberOfLines={1}>
+              {item.title}
+            </AppText>
+            <AppText style={styles.notificationTime}>
+              {formatTime(item.created_at)}
+            </AppText>
+          </View>
+          <AppText style={styles.notificationMessage} numberOfLines={3}>
+            {item.message}
+          </AppText>
+          {notifImage && (
+            <Image
+              source={{ uri: notifImage }}
+              style={styles.notificationImage}
+              contentFit="cover"
+              transition={200}
+            />
+          )}
+          {!item.read && <View style={styles.unreadDot} />}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return <Loader fullScreen />;
@@ -418,6 +430,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.text.secondary,
     lineHeight: 18,
+  },
+  notificationImage: {
+    width: "100%",
+    height: 120,
+    borderRadius: 8,
+    marginTop: 8,
+    backgroundColor: "#F3F4F6",
   },
   unreadDot: {
     position: "absolute",
