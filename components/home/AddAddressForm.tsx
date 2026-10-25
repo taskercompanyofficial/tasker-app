@@ -1,3 +1,6 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppTextInput from "@/components/common/AppTextInput";
+import AppText from "@/components/common/AppText";
 import Button from '@/components/Button'
 import Input from '@/components/Input'
 import Colors from '@/constants/Colors'
@@ -12,7 +15,7 @@ import {
     BottomSheetScrollView,
 } from '@gorhom/bottom-sheet'
 import React, { useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, TouchableOpacity, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Toast from 'react-native-toast-message'
 import MapPicker from './MapPicker'
@@ -51,9 +54,9 @@ const AddressTypeButton = ({
             size={18}
             color={selected ? Colors.themes.customer.primary : Colors.text.tertiary}
         />
-        <Text style={[styles.typeButtonText, selected && styles.typeButtonTextActive]}>
+        <AppText style={[styles.typeButtonText, selected && styles.typeButtonTextActive]}>
             {label}
-        </Text>
+        </AppText>
     </Pressable>
 )
 
@@ -162,7 +165,7 @@ export default React.forwardRef<BottomSheetModal, AddAddressFormProps>(
                 state: locationData.state,
             }))
 
-            Toast.show({
+            localizedToast({
                 type: 'success',
                 text1: 'Location Selected',
                 text2: 'Address fields have been filled. Please review and edit if needed.',
@@ -172,7 +175,7 @@ export default React.forwardRef<BottomSheetModal, AddAddressFormProps>(
         const handleSave = () => {
             post(ADDRESS_URL, {
                 onSuccess: (response) => {
-                    Toast.show({
+                    localizedToast({
                         type: 'success',
                         text1: 'Success',
                         text2: response.message || 'Address added successfully'
@@ -185,7 +188,7 @@ export default React.forwardRef<BottomSheetModal, AddAddressFormProps>(
                     closeSheet()
                 },
                 onError: (error) => {
-                    Toast.show({
+                    localizedToast({
                         type: 'error',
                         text1: 'Error',
                         text2: error.message || 'Failed to save address',
@@ -208,7 +211,7 @@ export default React.forwardRef<BottomSheetModal, AddAddressFormProps>(
                     <View style={{ flex: 1, paddingBottom: Math.max(insets.bottom, 12) }}>
                         {/* Header */}
                         <View style={styles.header}>
-                            <Text style={styles.title}>Add New Address</Text>
+                            <AppText style={styles.title}>Add New Address</AppText>
 
                             {/* Select on Map Button */}
                             <View style={{ flexDirection: 'row', gap: 2 }}>
@@ -217,9 +220,9 @@ export default React.forwardRef<BottomSheetModal, AddAddressFormProps>(
                                     onPress={() => setShowMapPicker(true)}
                                 >
                                     <Ionicons name="map" size={16} color={Colors.themes.customer.primary} />
-                                    <Text style={styles.locationButtonText}>
+                                    <AppText style={styles.locationButtonText}>
                                         Map
-                                    </Text>
+                                    </AppText>
                                 </Pressable>
                                 <Pressable onPress={closeSheet} style={styles.closeButton}>
                                     <Ionicons name="close" size={20} color={Colors.text.primary} />
@@ -235,7 +238,7 @@ export default React.forwardRef<BottomSheetModal, AddAddressFormProps>(
                         >
                             {/* Address Type */}
                             <View style={styles.section}>
-                                <Text style={styles.label}>Address Type *</Text>
+                                <AppText style={styles.label}>Address Type *</AppText>
                                 <View style={styles.typeRow}>
                                     <AddressTypeButton
                                         label="Home"
@@ -256,12 +259,12 @@ export default React.forwardRef<BottomSheetModal, AddAddressFormProps>(
                                         onPress={() => updateField('address_type', 'other')}
                                     />
                                 </View>
-                                <Text style={styles.error}>{errors.address_type}</Text>
+                                <AppText style={styles.error}>{errors.address_type}</AppText>
                             </View>
 
                             {/* Area Type */}
                             <View style={styles.section}>
-                                <Text style={styles.label}>Area Type *</Text>
+                                <AppText style={styles.label}>Area Type *</AppText>
                                 <View style={styles.typeRow}>
                                     <AddressTypeButton
                                         label="Residential"
@@ -276,7 +279,7 @@ export default React.forwardRef<BottomSheetModal, AddAddressFormProps>(
                                         onPress={() => updateField('area_type', 'commercial')}
                                     />
                                 </View>
-                                <Text style={styles.error}>{errors.area_type}</Text>
+                                <AppText style={styles.error}>{errors.area_type}</AppText>
                             </View>
                             {/* Address Line 1 */}
                             <Input
@@ -300,10 +303,10 @@ export default React.forwardRef<BottomSheetModal, AddAddressFormProps>(
                             {/* City & State */}
                             <View style={styles.row}>
                                 <View style={styles.halfWidth}>
-                                    <Text style={styles.label}>City *</Text>
+                                    <AppText style={styles.label}>City *</AppText>
                                     <View style={styles.cityInputContainer}>
                                         <Ionicons name="search-outline" size={16} color={Colors.text.tertiary} style={{ marginRight: 6 }} />
-                                        <TextInput
+                                        <AppTextInput
                                             style={styles.cityInput}
                                             placeholder="Search city..."
                                             placeholderTextColor={Colors.text.tertiary}
@@ -347,18 +350,18 @@ export default React.forwardRef<BottomSheetModal, AddAddressFormProps>(
                                                             onPress={() => handleCitySelect(item)}
                                                         >
                                                             <Ionicons name="location-outline" size={14} color={Colors.text.secondary} />
-                                                            <Text style={styles.cityDropdownText}>{item.name}</Text>
+                                                            <AppText style={styles.cityDropdownText}>{item.name}</AppText>
                                                         </TouchableOpacity>
                                                     )}
                                                 />
                                             ) : (
                                                 <View style={styles.cityDropdownEmpty}>
-                                                    <Text style={styles.cityDropdownEmptyText}>No cities found</Text>
+                                                    <AppText style={styles.cityDropdownEmptyText}>No cities found</AppText>
                                                 </View>
                                             )}
                                         </View>
                                     )}
-                                    {errors.city ? <Text style={styles.error}>{errors.city}</Text> : null}
+                                    {errors.city ? <AppText style={styles.error}>{errors.city}</AppText> : null}
                                 </View>
                                 <Input
                                     label="State *"

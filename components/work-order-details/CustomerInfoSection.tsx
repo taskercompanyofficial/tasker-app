@@ -1,3 +1,5 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -5,7 +7,6 @@ import React, { useState } from "react";
 import {
   Linking,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -70,7 +71,7 @@ export default function CustomerInfoSection({
         onPress={() => setExpanded(!expanded)}
         activeOpacity={0.7}
       >
-        <Text style={sectionStyles.sectionTitle}>Customer Info</Text>
+        <AppText style={sectionStyles.sectionTitle}>Customer Info</AppText>
         <Ionicons
           name={expanded ? "chevron-up" : "chevron-down"}
           size={18}
@@ -82,12 +83,12 @@ export default function CustomerInfoSection({
         <View style={sectionStyles.sectionContent}>
           {/* Name with badges */}
           <View style={fieldStyles.fieldGroup}>
-            <Text style={fieldStyles.fieldLabel}>Name</Text>
+            <AppText style={fieldStyles.fieldLabel}>Name</AppText>
             <View style={styles.nameContainer}>
-              <Text style={fieldStyles.fieldValue}>{customer.name}</Text>
+              <AppText style={fieldStyles.fieldValue}>{customer.name}</AppText>
               {customer.is_care_of_customer === 1 && (
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>Care Of</Text>
+                  <AppText style={styles.badgeText}>Care Of</AppText>
                 </View>
               )}
               {customer.status && (
@@ -99,7 +100,7 @@ export default function CustomerInfoSection({
                       : styles.badgeInactive,
                   ]}
                 >
-                  <Text style={styles.badgeText}>{customer.status}</Text>
+                  <AppText style={styles.badgeText}>{customer.status}</AppText>
                 </View>
               )}
             </View>
@@ -108,12 +109,12 @@ export default function CustomerInfoSection({
           {/* Phone & WhatsApp */}
           <View style={fieldStyles.fieldRow}>
             <View style={fieldStyles.fieldHalf}>
-              <Text style={fieldStyles.fieldLabel}>Mobile</Text>
+              <AppText style={fieldStyles.fieldLabel}>Mobile</AppText>
               <TouchableOpacity
                 onPress={handleCallCustomer}
                 style={styles.actionRow}
               >
-                <Text style={fieldStyles.fieldValue}>{customer.phone}</Text>
+                <AppText style={fieldStyles.fieldValue}>{customer.phone}</AppText>
                 <Ionicons
                   name="call"
                   size={14}
@@ -123,14 +124,14 @@ export default function CustomerInfoSection({
             </View>
             {customer.whatsapp && (
               <View style={fieldStyles.fieldHalf}>
-                <Text style={fieldStyles.fieldLabel}>WhatsApp</Text>
+                <AppText style={fieldStyles.fieldLabel}>WhatsApp</AppText>
                 <TouchableOpacity
                   onPress={handleWhatsAppClick}
                   style={styles.actionRow}
                 >
-                  <Text style={fieldStyles.fieldValue}>
+                  <AppText style={fieldStyles.fieldValue}>
                     {customer.whatsapp}
-                  </Text>
+                  </AppText>
                   <Ionicons name="logo-whatsapp" size={14} color="#25D366" />
                 </TouchableOpacity>
               </View>
@@ -149,11 +150,11 @@ export default function CustomerInfoSection({
                   <Ionicons name="chatbubbles" size={16} color="#2563EB" />
                 </View>
                 <View>
-                  <Text style={styles.chatActionTitle}>Chat with Customer</Text>
-                  <Text style={styles.chatActionSubtitle}>Direct messaging inside Tasker app</Text>
+                  <AppText style={styles.chatActionTitle}>Chat with Customer</AppText>
+                  <AppText style={styles.chatActionSubtitle}>Direct messaging inside Tasker app</AppText>
                 </View>
               </View>
-              <Ionicons name="chevron-forward" size={16} color="#2563EB" />
+              <DirectionalIcon name="chevron-forward" size={16} color="#2563EB" />
             </TouchableOpacity>
           )}
 
@@ -174,22 +175,22 @@ export default function CustomerInfoSection({
                   <Ionicons name="call" size={16} color="#059669" />
                 </View>
                 <View>
-                  <Text style={styles.voiceActionTitle}>Call Customer</Text>
-                  <Text style={styles.voiceActionSubtitle}>Fast, secure audio connection</Text>
+                  <AppText style={styles.voiceActionTitle}>Call Customer</AppText>
+                  <AppText style={styles.voiceActionSubtitle}>Fast, secure audio connection</AppText>
                 </View>
               </View>
-              <Ionicons name="chevron-forward" size={16} color="#059669" />
+              <DirectionalIcon name="chevron-forward" size={16} color="#059669" />
             </TouchableOpacity>
           )}
 
           {/* Address */}
           <View style={fieldStyles.fieldGroup}>
             <View style={styles.addressHeaderRow}>
-              <Text style={fieldStyles.fieldLabel}>Address</Text>
+              <AppText style={fieldStyles.fieldLabel}>Address</AppText>
               {hasGps && (
                 <View style={styles.gpsBadge}>
                   <Ionicons name="navigate-circle" size={12} color="#10B981" />
-                  <Text style={styles.gpsBadgeText}>GPS Available</Text>
+                  <AppText style={styles.gpsBadgeText}>GPS Available</AppText>
                 </View>
               )}
             </View>
@@ -199,9 +200,9 @@ export default function CustomerInfoSection({
               style={styles.addressActionRow}
               activeOpacity={0.7}
             >
-              <Text style={[fieldStyles.fieldValue, { flex: 1 }]}>
+              <AppText style={[fieldStyles.fieldValue, { flex: 1 }]}>
                 {address.address_line_1}, {address.city}, {address.state}
-              </Text>
+              </AppText>
               
               <View style={styles.mapIconButton}>
                 <Ionicons
@@ -209,7 +210,7 @@ export default function CustomerInfoSection({
                   size={12}
                   color={Colors.neutral.white}
                 />
-                <Text style={styles.mapIconButtonText}>Map & Nav</Text>
+                <AppText style={styles.mapIconButtonText}>Map & Nav</AppText>
               </View>
             </TouchableOpacity>
           </View>
@@ -217,8 +218,8 @@ export default function CustomerInfoSection({
           {/* Extra Number */}
           {extraNumber && (
             <View style={fieldStyles.fieldGroup}>
-              <Text style={fieldStyles.fieldLabel}>Extra Number</Text>
-              <Text style={fieldStyles.fieldValue}>{extraNumber}</Text>
+              <AppText style={fieldStyles.fieldLabel}>Extra Number</AppText>
+              <AppText style={fieldStyles.fieldValue}>{extraNumber}</AppText>
             </View>
           )}
         </View>

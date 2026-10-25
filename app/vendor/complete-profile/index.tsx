@@ -1,3 +1,6 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
@@ -10,7 +13,6 @@ import {
   ScrollView,
   StatusBar,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
   Image,
@@ -115,7 +117,7 @@ export default function Step1Intro() {
       (targetStep === 5 && step5Completed) ||
       (targetStep === 6 && step6Completed)
     ) {
-      Toast.show({
+      localizedToast({
         type: "info",
         text1: "🔒 Step Locked",
         text2: "This section is already completed & verified.",
@@ -125,19 +127,19 @@ export default function Step1Intro() {
 
     // Guard: Cannot skip ahead before previous steps are done
     if (targetStep === 3 && !step2Completed) {
-      Toast.show({ type: "error", text1: "CNIC Scan Required", text2: "Please complete CNIC scanning first." });
+      localizedToast({ type: "error", text1: "CNIC Scan Required", text2: "Please complete CNIC scanning first." });
       return;
     }
     if (targetStep === 4 && !step3Completed) {
-      Toast.show({ type: "error", text1: "Details Required", text2: "Please confirm your details first." });
+      localizedToast({ type: "error", text1: "Details Required", text2: "Please confirm your details first." });
       return;
     }
     if (targetStep === 5 && !step4Completed) {
-      Toast.show({ type: "error", text1: "Live Selfie Required", text2: "Please capture your live photo first." });
+      localizedToast({ type: "error", text1: "Live Selfie Required", text2: "Please capture your live photo first." });
       return;
     }
     if (targetStep === 6 && !step5Completed) {
-      Toast.show({ type: "error", text1: "References Required", text2: "Please add your reference contacts first." });
+      localizedToast({ type: "error", text1: "References Required", text2: "Please add your reference contacts first." });
       return;
     }
 
@@ -156,12 +158,12 @@ export default function Step1Intro() {
       <View style={styles.introHeader}>
         <View style={styles.partnerBadge}>
           <Ionicons name="shield-checkmark" size={14} color={Colors.themes.provider.primary} />
-          <Text style={styles.partnerBadgeText}>TASKER PARTNER NETWORK</Text>
+          <AppText style={styles.partnerBadgeText}>TASKER PARTNER NETWORK</AppText>
         </View>
         <View style={styles.progressPillTop}>
-          <Text style={styles.progressPillTextTop}>
+          <AppText style={styles.progressPillTextTop}>
             {step6Completed ? "Completed" : "Identity Verification"}
-          </Text>
+          </AppText>
         </View>
       </View>
 
@@ -180,7 +182,7 @@ export default function Step1Intro() {
           </View>
           <View style={styles.onlinePill}>
             <View style={styles.onlineDot} />
-            <Text style={styles.onlineText}>Tasky Identity Assistant</Text>
+            <AppText style={styles.onlineText}>Tasky Identity Assistant</AppText>
           </View>
         </View>
 
@@ -190,7 +192,7 @@ export default function Step1Intro() {
             <View style={styles.sparkleIconBox}>
               <Ionicons name="sparkles" size={16} color="#FFFFFF" />
             </View>
-            <Text style={styles.speechTitle}>Hi Partner! I&apos;m Tasky</Text>
+            <AppText style={styles.speechTitle}>Hi Partner! I&apos;m Tasky</AppText>
           </View>
           <TaskyTypewriterText
             text="I'm here to help you complete your verification so you can get approved and start receiving verified customer jobs!"
@@ -201,8 +203,8 @@ export default function Step1Intro() {
         {/* Progress Breakdown Card */}
         <View style={styles.progressOverviewCard}>
           <View style={styles.progressHeaderRow}>
-            <Text style={styles.progressOverviewTitle}>Profile Completion</Text>
-            <Text style={styles.progressOverviewPercent}>{progressText}</Text>
+            <AppText style={styles.progressOverviewTitle}>Profile Completion</AppText>
+            <AppText style={styles.progressOverviewPercent}>{progressText}</AppText>
           </View>
           <View style={styles.progressBarTrack}>
             <View style={[styles.progressBarFill, { width: progressPercent as any }]} />
@@ -211,7 +213,7 @@ export default function Step1Intro() {
 
         {/* Setup Roadmap */}
         <View style={styles.roadmapCard}>
-          <Text style={styles.roadmapHeading}>Verification Sections:</Text>
+          <AppText style={styles.roadmapHeading}>Verification Sections:</AppText>
 
           {/* Step 1 */}
           <View style={styles.stepRow}>
@@ -219,8 +221,8 @@ export default function Step1Intro() {
               <Ionicons name="phone-portrait" size={18} color="#10B981" />
             </View>
             <View style={styles.stepInfo}>
-              <Text style={styles.stepTitle}>Phone Number Verified</Text>
-              <Text style={styles.stepSub}>Your registered vendor account is active</Text>
+              <AppText style={styles.stepTitle}>Phone Number Verified</AppText>
+              <AppText style={styles.stepSub}>Your registered vendor account is active</AppText>
             </View>
             <Ionicons name="checkmark-circle" size={18} color="#10B981" />
           </View>
@@ -244,17 +246,17 @@ export default function Step1Intro() {
               />
             </View>
             <View style={styles.stepInfo}>
-              <Text style={styles.stepTitle}>CNIC Document Scan</Text>
-              <Text style={styles.stepSub}>
+              <AppText style={styles.stepTitle}>CNIC Document Scan</AppText>
+              <AppText style={styles.stepSub}>
                 {step2Completed
                   ? "CNIC cards verified & locked"
                   : "Capture Front & Back with instant verification"}
-              </Text>
+              </AppText>
             </View>
             {step2Completed ? (
               <Ionicons name="lock-closed" size={16} color="#10B981" />
             ) : (
-              <Ionicons name="chevron-forward" size={16} color="#2563EB" />
+              <DirectionalIcon name="chevron-forward" size={16} color="#2563EB" />
             )}
           </TouchableOpacity>
 
@@ -277,17 +279,17 @@ export default function Step1Intro() {
               />
             </View>
             <View style={styles.stepInfo}>
-              <Text style={styles.stepTitle}>Details & Current Address</Text>
-              <Text style={styles.stepSub}>
+              <AppText style={styles.stepTitle}>Details & Current Address</AppText>
+              <AppText style={styles.stepSub}>
                 {step3Completed
                   ? "Details confirmed & locked"
                   : "Review extracted info and specify present address"}
-              </Text>
+              </AppText>
             </View>
             {step3Completed ? (
               <Ionicons name="lock-closed" size={16} color="#10B981" />
             ) : step2Completed ? (
-              <Ionicons name="chevron-forward" size={16} color="#2563EB" />
+              <DirectionalIcon name="chevron-forward" size={16} color="#2563EB" />
             ) : (
               <Ionicons name="lock-closed-outline" size={16} color="#94A3B8" />
             )}
@@ -312,17 +314,17 @@ export default function Step1Intro() {
               />
             </View>
             <View style={styles.stepInfo}>
-              <Text style={styles.stepTitle}>Live Face Selfie</Text>
-              <Text style={styles.stepSub}>
+              <AppText style={styles.stepTitle}>Live Face Selfie</AppText>
+              <AppText style={styles.stepSub}>
                 {step4Completed
                   ? "Live photo captured & locked"
                   : "Take a real-time live camera selfie"}
-              </Text>
+              </AppText>
             </View>
             {step4Completed ? (
               <Ionicons name="lock-closed" size={16} color="#10B981" />
             ) : step3Completed ? (
-              <Ionicons name="chevron-forward" size={16} color="#2563EB" />
+              <DirectionalIcon name="chevron-forward" size={16} color="#2563EB" />
             ) : (
               <Ionicons name="lock-closed-outline" size={16} color="#94A3B8" />
             )}
@@ -347,17 +349,17 @@ export default function Step1Intro() {
               />
             </View>
             <View style={styles.stepInfo}>
-              <Text style={styles.stepTitle}>2 Reference Contacts</Text>
-              <Text style={styles.stepSub}>
+              <AppText style={styles.stepTitle}>2 Reference Contacts</AppText>
+              <AppText style={styles.stepSub}>
                 {step5Completed
                   ? "2 Reference contacts saved & locked"
                   : "Provide name, relation & phone of 2 references"}
-              </Text>
+              </AppText>
             </View>
             {step5Completed ? (
               <Ionicons name="lock-closed" size={16} color="#10B981" />
             ) : step4Completed ? (
-              <Ionicons name="chevron-forward" size={16} color="#2563EB" />
+              <DirectionalIcon name="chevron-forward" size={16} color="#2563EB" />
             ) : (
               <Ionicons name="lock-closed-outline" size={16} color="#94A3B8" />
             )}
@@ -382,17 +384,17 @@ export default function Step1Intro() {
               />
             </View>
             <View style={styles.stepInfo}>
-              <Text style={styles.stepTitle}>Personal & Work Background</Text>
-              <Text style={styles.stepSub}>
+              <AppText style={styles.stepTitle}>Personal & Work Background</AppText>
+              <AppText style={styles.stepSub}>
                 {step6Completed
                   ? "Education, marital status & app details completed"
                   : "Specify education, marital status & other app work"}
-              </Text>
+              </AppText>
             </View>
             {step6Completed ? (
               <Ionicons name="lock-closed" size={16} color="#10B981" />
             ) : step5Completed ? (
-              <Ionicons name="chevron-forward" size={16} color="#2563EB" />
+              <DirectionalIcon name="chevron-forward" size={16} color="#2563EB" />
             ) : (
               <Ionicons name="lock-closed-outline" size={16} color="#94A3B8" />
             )}
@@ -412,8 +414,8 @@ export default function Step1Intro() {
             style={styles.startBtnGradient}
           >
             <Ionicons name="sparkles" size={18} color="#FFFFFF" />
-            <Text style={styles.startBtnText}>{buttonTitle}</Text>
-            <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+            <AppText style={styles.startBtnText}>{buttonTitle}</AppText>
+            <DirectionalIcon name="arrow-forward" size={18} color="#FFFFFF" />
           </LinearGradient>
         </TouchableOpacity>
 

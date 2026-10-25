@@ -1,5 +1,6 @@
+import AppText from "@/components/common/AppText";
 import React from "react";
-import { View, TouchableOpacity, Text, StyleSheet } from "react-native";
+import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 
@@ -20,9 +21,9 @@ export default function LoginTypeToggle({ value, onChange }: LoginTypeToggleProp
           size={18}
           color={value === "vendor" ? "#FFFFFF" : Colors.themes.provider.primary}
         />
-        <Text style={[styles.text, value === "vendor" && styles.textActive]}>
+        <AppText style={[styles.text, value === "vendor" && styles.textActive]}>
           Vendor
-        </Text>
+        </AppText>
       </TouchableOpacity>
       <TouchableOpacity
         style={[styles.button, value === "staff" && styles.buttonActive]}
@@ -33,9 +34,9 @@ export default function LoginTypeToggle({ value, onChange }: LoginTypeToggleProp
           size={18}
           color={value === "staff" ? "#FFFFFF" : Colors.themes.provider.primary}
         />
-        <Text style={[styles.text, value === "staff" && styles.textActive]}>
+        <AppText style={[styles.text, value === "staff" && styles.textActive]}>
           Staff
-        </Text>
+        </AppText>
       </TouchableOpacity>
     </View>
   );

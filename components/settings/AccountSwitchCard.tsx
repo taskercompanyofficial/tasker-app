@@ -1,9 +1,10 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useEffect, useRef } from "react";
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, Pressable, StyleSheet, View } from "react-native";
 
 interface AccountSwitchCardProps {
   isVendor: boolean;
@@ -39,10 +40,10 @@ export default function AccountSwitchCard({
       {/* Header Info */}
       <View style={styles.headerRow}>
         <View style={styles.titleColumn}>
-          <Text style={styles.cardTitle}>Account Role</Text>
-          <Text style={styles.cardSubtitle}>
+          <AppText style={styles.cardTitle}>Account Role</AppText>
+          <AppText style={styles.cardSubtitle}>
             Select your active mode to switch features
-          </Text>
+          </AppText>
         </View>
         <View
           style={[
@@ -59,14 +60,14 @@ export default function AccountSwitchCard({
               { backgroundColor: isVendor ? providerColor : customerColor },
             ]}
           />
-          <Text
+          <AppText
             style={[
               styles.activeRoleText,
               { color: isVendor ? providerColor : customerColor },
             ]}
           >
             {isVendor ? "Service Provider" : "Customer"}
-          </Text>
+          </AppText>
         </View>
       </View>
 
@@ -85,14 +86,14 @@ export default function AccountSwitchCard({
             size={18}
             color={!isVendor ? Colors.neutral.white : Colors.text.secondary}
           />
-          <Text
+          <AppText
             style={[
               styles.segmentText,
               !isVendor ? styles.segmentTextActive : styles.segmentTextInactive,
             ]}
           >
             Customer
-          </Text>
+          </AppText>
         </Pressable>
 
         {/* Service Provider Segment Option */}
@@ -108,14 +109,14 @@ export default function AccountSwitchCard({
             size={18}
             color={isVendor ? Colors.neutral.white : Colors.text.secondary}
           />
-          <Text
+          <AppText
             style={[
               styles.segmentText,
               isVendor ? styles.segmentTextActive : styles.segmentTextInactive,
             ]}
           >
             Service Provider
-          </Text>
+          </AppText>
         </Pressable>
       </View>
 
@@ -134,11 +135,11 @@ export default function AccountSwitchCard({
           size={14}
           color={isVendor ? providerColor : customerColor}
         />
-        <Text style={styles.infoBannerText}>
+        <AppText style={styles.infoBannerText}>
           {isVendor
             ? "Currently managing jobs, services & provider dashboard."
             : "Currently booking technicians & tracking orders."}
-        </Text>
+        </AppText>
       </View>
     </View>
   );

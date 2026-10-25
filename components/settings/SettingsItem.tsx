@@ -1,8 +1,10 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Spacing, Typography } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 
 interface SettingsItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -46,17 +48,17 @@ export default function SettingsItem({
         </View>
 
         <View style={styles.textColumn}>
-          <Text style={[styles.title, danger && styles.dangerTitle]}>
+          <AppText style={[styles.title, danger && styles.dangerTitle]}>
             {title}
-          </Text>
-          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+          </AppText>
+          {subtitle ? <AppText style={styles.subtitle}>{subtitle}</AppText> : null}
         </View>
       </View>
 
       <View style={styles.rightContent}>
         {rightComponent}
         {onPress && showChevron && !rightComponent && (
-          <Ionicons
+          <DirectionalIcon
             name="chevron-forward"
             size={18}
             color={danger ? Colors.error : Colors.text.tertiary}

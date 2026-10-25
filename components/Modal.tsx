@@ -1,7 +1,8 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import React from "react";
-import { Modal as RNModal, StyleSheet, Text, View } from "react-native";
+import { Modal as RNModal, StyleSheet, View } from "react-native";
 import Button from "./Button";
 
 type ModalType = "success" | "error" | "warning" | "info" | "confirm";
@@ -83,18 +84,18 @@ const Modal: React.FC<ModalProps> = ({
               { backgroundColor: getIconColor() + "20" },
             ]}
           >
-            <Text
+            <AppText
               style={[styles.icon, { backgroundColor: getIconColor() + "20" }]}
             >
               {getIcon()}
-            </Text>
+            </AppText>
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>{title}</Text>
+          <AppText style={styles.title}>{title}</AppText>
 
           {/* Message */}
-          {message && <Text style={styles.message}>{message}</Text>}
+          {message && <AppText style={styles.message}>{message}</AppText>}
 
           {/* Children */}
           {children && <View style={styles.childrenContainer}>{children}</View>}

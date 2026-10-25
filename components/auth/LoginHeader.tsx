@@ -1,5 +1,6 @@
+import AppText from "@/components/common/AppText";
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
 import Colors from "@/constants/Colors";
 
 interface LoginHeaderProps {
@@ -16,11 +17,11 @@ export default function LoginHeader({ title, subtitle, theme = "vendor", hideIco
     <View style={styles.container}>
       {!hideIcon && (
         <View style={[styles.iconCircle, { backgroundColor: themeColor + "15" }]}>
-          <Text style={[styles.iconText, { color: themeColor }]}>T</Text>
+          <AppText style={[styles.iconText, { color: themeColor }]}>T</AppText>
         </View>
       )}
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.subtitle}>{subtitle}</Text>
+      <AppText style={styles.title}>{title}</AppText>
+      <AppText style={styles.subtitle}>{subtitle}</AppText>
     </View>
   );
 }

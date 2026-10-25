@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import Header from "@/components/Header";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing, Typography } from "@/constants/Styles";
@@ -12,7 +13,6 @@ import {
   FlatList,
   RefreshControl,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -164,9 +164,9 @@ export default function VendorChatList() {
         <View style={styles.chatInfo}>
           <View style={styles.chatHeader}>
             <View style={styles.titleRow}>
-              <Text style={styles.chatTitle} numberOfLines={1}>
+              <AppText style={styles.chatTitle} numberOfLines={1}>
                 {item.title}
-              </Text>
+              </AppText>
               {isSupport && (
                 <MaterialCommunityIcons
                   name="check-decagram"
@@ -175,18 +175,18 @@ export default function VendorChatList() {
                 />
               )}
             </View>
-            <Text style={styles.chatTime}>{item.time}</Text>
+            <AppText style={styles.chatTime}>{item.time}</AppText>
           </View>
-          <Text style={styles.chatSubtitle} numberOfLines={1}>
+          <AppText style={styles.chatSubtitle} numberOfLines={1}>
             {item.subtitle}
-          </Text>
+          </AppText>
           <View style={styles.messageRow}>
-            <Text style={styles.lastMessage} numberOfLines={1}>
+            <AppText style={styles.lastMessage} numberOfLines={1}>
               {item.lastMessage}
-            </Text>
+            </AppText>
             {item.unreadCountCount > 0 && (
               <View style={styles.unreadBadge}>
-                <Text style={styles.unreadText}>{item.unreadCountCount}</Text>
+                <AppText style={styles.unreadText}>{item.unreadCountCount}</AppText>
               </View>
             )}
           </View>
@@ -201,7 +201,7 @@ export default function VendorChatList() {
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={Colors.themes.provider.primary} />
-          <Text style={styles.loadingText}>Loading conversations...</Text>
+          <AppText style={styles.loadingText}>Loading conversations...</AppText>
         </View>
       ) : (
         <FlatList
@@ -219,7 +219,7 @@ export default function VendorChatList() {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="chatbubbles-outline" size={64} color={Colors.text.tertiary} />
-              <Text style={styles.emptyText}>No active conversations</Text>
+              <AppText style={styles.emptyText}>No active conversations</AppText>
             </View>
           }
         />

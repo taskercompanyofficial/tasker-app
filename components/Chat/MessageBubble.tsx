@@ -1,5 +1,7 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Image, TouchableOpacity, Linking } from "react-native";
+import { View, StyleSheet, Image, TouchableOpacity, Linking } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 import { AppMessage } from "@/types/chat";
@@ -93,9 +95,9 @@ export function MessageBubble({ message, isSender, onSelectQuickReply }: Message
     switch (message.type) {
       case "text":
         return (
-          <Text style={[styles.text, isSender ? styles.senderText : styles.receiverText]}>
+          <AppText style={[styles.text, isSender ? styles.senderText : styles.receiverText]}>
             {message.content}
-          </Text>
+          </AppText>
         );
       case "image":
         return (
@@ -106,9 +108,9 @@ export function MessageBubble({ message, isSender, onSelectQuickReply }: Message
               resizeMode="cover"
             />
             {message.content ? (
-              <Text style={[styles.caption, isSender ? styles.senderText : styles.receiverText]}>
+              <AppText style={[styles.caption, isSender ? styles.senderText : styles.receiverText]}>
                 {message.content}
-              </Text>
+              </AppText>
             ) : null}
           </View>
         );
@@ -128,7 +130,7 @@ export function MessageBubble({ message, isSender, onSelectQuickReply }: Message
           />
         );
       default:
-        return <Text style={styles.text}>[Unsupported Message Type]</Text>;
+        return <AppText style={styles.text}>[Unsupported Message Type]</AppText>;
     }
   };
 
@@ -142,11 +144,11 @@ export function MessageBubble({ message, isSender, onSelectQuickReply }: Message
                 source={require("@/assets/images/tasker-ai-avatar.jpg")}
                 style={styles.botAvatarMini}
               />
-              <Text style={styles.botTagText}>Tasky AI</Text>
+              <AppText style={styles.botTagText}>Tasky AI</AppText>
               <Ionicons name="sparkles" size={9} color={Colors.themes.customer.primary} />
             </View>
           ) : (
-            <Text style={styles.senderName}>{message.sender?.name || "Support"}</Text>
+            <AppText style={styles.senderName}>{message.sender?.name || "Support"}</AppText>
           )}
         </View>
       )}
@@ -177,7 +179,7 @@ export function MessageBubble({ message, isSender, onSelectQuickReply }: Message
                 <View style={styles.orderCardHeader}>
                   <View style={styles.orderCardTitleRow}>
                     <Ionicons name="receipt-outline" size={13} color={Colors.themes.customer.primary} />
-                    <Text style={styles.orderCardNumber}>#{card.order_number}</Text>
+                    <AppText style={styles.orderCardNumber}>#{card.order_number}</AppText>
                   </View>
                   <View
                     style={[
@@ -185,37 +187,37 @@ export function MessageBubble({ message, isSender, onSelectQuickReply }: Message
                       { backgroundColor: (card.status_color || "#22C55E") + "18" },
                     ]}
                   >
-                    <Text
+                    <AppText
                       style={[
                         styles.orderCardStatusText,
                         { color: card.status_color || "#16A34A" },
                       ]}
                     >
                       {card.status}
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
 
-                <Text style={styles.orderCardService}>{card.service_name}</Text>
+                <AppText style={styles.orderCardService}>{card.service_name}</AppText>
 
                 <View style={styles.orderCardMetaRow}>
                   <View style={styles.orderCardMetaItem}>
                     <Ionicons name="calendar-outline" size={11} color="#64748B" />
-                    <Text style={styles.orderCardMetaText}>
+                    <AppText style={styles.orderCardMetaText}>
                       {card.date} {card.time ? `• ${card.time}` : ""}
-                    </Text>
+                    </AppText>
                   </View>
                   {card.technician && card.technician !== "Pending Assignment" && (
                     <View style={styles.orderCardMetaItem}>
                       <Ionicons name="person-outline" size={11} color="#64748B" />
-                      <Text style={styles.orderCardMetaText}>{card.technician}</Text>
+                      <AppText style={styles.orderCardMetaText}>{card.technician}</AppText>
                     </View>
                   )}
                 </View>
 
                 <View style={styles.orderCardAction}>
-                  <Text style={styles.orderCardActionText}>Track Order</Text>
-                  <Ionicons name="chevron-forward" size={12} color={Colors.themes.customer.primary} />
+                  <AppText style={styles.orderCardActionText}>Track Order</AppText>
+                  <DirectionalIcon name="chevron-forward" size={12} color={Colors.themes.customer.primary} />
                 </View>
               </TouchableOpacity>
             ))}
@@ -226,18 +228,18 @@ export function MessageBubble({ message, isSender, onSelectQuickReply }: Message
         <View style={styles.footer}>
           {copied && (
             <View style={styles.copiedPill}>
-              <Text style={styles.copiedPillText}>Copied</Text>
+              <AppText style={styles.copiedPillText}>Copied</AppText>
             </View>
           )}
 
-          <Text style={[styles.time, isSender ? styles.senderTime : styles.receiverTime]}>
+          <AppText style={[styles.time, isSender ? styles.senderTime : styles.receiverTime]}>
             {message.created_at
               ? new Date(message.created_at).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
                 })
               : ""}
-          </Text>
+          </AppText>
 
           {isSender && (
             <View style={styles.statusTicks}>
@@ -263,7 +265,7 @@ export function MessageBubble({ message, isSender, onSelectQuickReply }: Message
               onPress={() => handleQuickReply(qr)}
               activeOpacity={0.7}
             >
-              <Text style={styles.quickReplyChipText}>{qr.label}</Text>
+              <AppText style={styles.quickReplyChipText}>{qr.label}</AppText>
             </TouchableOpacity>
           ))}
         </View>

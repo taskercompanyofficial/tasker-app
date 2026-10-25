@@ -1,7 +1,8 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import React, { useState, useCallback } from "react";
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
@@ -106,7 +107,7 @@ export default function StaffDetailScreen() {
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={48} color={Colors.text.tertiary} />
-          <Text style={styles.errorText}>Staff member not found</Text>
+          <AppText style={styles.errorText}>Staff member not found</AppText>
         </View>
       </SafeAreaView>
     );
@@ -120,9 +121,9 @@ export default function StaffDetailScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+          <DirectionalIcon name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Staff Progress</Text>
+        <AppText style={styles.headerTitle}>Staff Progress</AppText>
         <View style={{ width: 40 }} />
       </View>
 
@@ -148,19 +149,19 @@ export default function StaffDetailScreen() {
                   style={styles.avatarImage}
                 />
               ) : (
-                <Text style={styles.avatarText}>
+                <AppText style={styles.avatarText}>
                   {staff.name.charAt(0).toUpperCase()}
-                </Text>
+                </AppText>
               )}
             </View>
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{staff.name}</Text>
+              <AppText style={styles.profileName}>{staff.name}</AppText>
               {staff.experience ? (
-                <Text style={styles.experienceText}>{staff.experience}</Text>
+                <AppText style={styles.experienceText}>{staff.experience}</AppText>
               ) : null}
               <View style={styles.contactRow}>
                 <Ionicons name="call-outline" size={13} color={Colors.text.tertiary} />
-                <Text style={styles.profilePhone}>{staff.phone}</Text>
+                <AppText style={styles.profilePhone}>{staff.phone}</AppText>
               </View>
             </View>
             <View
@@ -175,14 +176,14 @@ export default function StaffDetailScreen() {
                   { backgroundColor: isApproved ? Colors.success : Colors.warning },
                 ]}
               />
-              <Text
+              <AppText
                 style={[
                   styles.statusChipText,
                   { color: isApproved ? Colors.success : Colors.warning },
                 ]}
               >
                 {isApproved ? "Active" : "Suspended"}
-              </Text>
+              </AppText>
             </View>
           </View>
         </View>
@@ -193,35 +194,35 @@ export default function StaffDetailScreen() {
             <View style={[styles.statIcon, { backgroundColor: Colors.themes.provider.primary + "15" }]}>
               <Ionicons name="briefcase" size={20} color={Colors.themes.provider.primary} />
             </View>
-            <Text style={styles.statNumber}>{stats.total_assigned || 0}</Text>
-            <Text style={styles.statTitle}>Total Assigned</Text>
+            <AppText style={styles.statNumber}>{stats.total_assigned || 0}</AppText>
+            <AppText style={styles.statTitle}>Total Assigned</AppText>
           </View>
           <View style={styles.statCard}>
             <View style={[styles.statIcon, { backgroundColor: Colors.warning + "15" }]}>
               <Ionicons name="construct" size={20} color={Colors.warning} />
             </View>
-            <Text style={styles.statNumber}>{stats.active || 0}</Text>
-            <Text style={styles.statTitle}>In Progress</Text>
+            <AppText style={styles.statNumber}>{stats.active || 0}</AppText>
+            <AppText style={styles.statTitle}>In Progress</AppText>
           </View>
           <View style={styles.statCard}>
             <View style={[styles.statIcon, { backgroundColor: Colors.success + "15" }]}>
               <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
             </View>
-            <Text style={styles.statNumber}>{stats.completed || 0}</Text>
-            <Text style={styles.statTitle}>Completed</Text>
+            <AppText style={styles.statNumber}>{stats.completed || 0}</AppText>
+            <AppText style={styles.statTitle}>Completed</AppText>
           </View>
           <View style={styles.statCard}>
             <View style={[styles.statIcon, { backgroundColor: Colors.info + "15" }]}>
               <Ionicons name="calendar" size={20} color={Colors.info} />
             </View>
-            <Text style={styles.statNumber}>{stats.completed_this_month || 0}</Text>
-            <Text style={styles.statTitle}>This Month</Text>
+            <AppText style={styles.statNumber}>{stats.completed_this_month || 0}</AppText>
+            <AppText style={styles.statTitle}>This Month</AppText>
           </View>
         </View>
 
         {/* Work Orders Section */}
         <View style={styles.woSection}>
-          <Text style={styles.woSectionTitle}>Assigned Work Orders</Text>
+          <AppText style={styles.woSectionTitle}>Assigned Work Orders</AppText>
 
           {/* Tabs */}
           <View style={styles.tabsRow}>
@@ -245,14 +246,14 @@ export default function StaffDetailScreen() {
                       : Colors.text.secondary
                   }
                 />
-                <Text
+                <AppText
                   style={[
                     styles.tabText,
                     activeTab === tab.key && styles.tabTextActive,
                   ]}
                 >
                   {tab.label}
-                </Text>
+                </AppText>
               </TouchableOpacity>
             ))}
           </View>
@@ -265,9 +266,9 @@ export default function StaffDetailScreen() {
           ) : workOrders.length === 0 ? (
             <View style={styles.emptyWo}>
               <Ionicons name="document-outline" size={36} color={Colors.text.tertiary} />
-              <Text style={styles.emptyWoText}>
+              <AppText style={styles.emptyWoText}>
                 No {activeTab !== "all" ? activeTab : ""} work orders assigned
-              </Text>
+              </AppText>
             </View>
           ) : (
             workOrders.map((wo) => (
@@ -284,23 +285,23 @@ export default function StaffDetailScreen() {
               >
                 <View style={styles.woCardTop}>
                   <View style={styles.woInfo}>
-                    <Text style={styles.woNumber}>{wo.work_order_number}</Text>
-                    <Text style={styles.woService}>
+                    <AppText style={styles.woNumber}>{wo.work_order_number}</AppText>
+                    <AppText style={styles.woService}>
                       {wo.parent_service?.name || wo.service?.name || "Service"}
-                    </Text>
+                    </AppText>
                     {wo.customer && (
-                      <Text style={styles.woCustomer}>
+                      <AppText style={styles.woCustomer}>
                         <Ionicons name="person-outline" size={11} />
                         {"  "}
                         {wo.customer.name}
-                      </Text>
+                      </AppText>
                     )}
                     {wo.address && (
-                      <Text style={styles.woAddress}>
+                      <AppText style={styles.woAddress}>
                         <Ionicons name="location-outline" size={11} />
                         {"  "}
                         {wo.address.city}, {wo.address.state}
-                      </Text>
+                      </AppText>
                     )}
                   </View>
                   <View>
@@ -313,21 +314,21 @@ export default function StaffDetailScreen() {
                         },
                       ]}
                     >
-                      <Text
+                      <AppText
                         style={[
                           styles.woStatusText,
                           { color: getStatusColor(wo.status?.slug || "") },
                         ]}
                       >
                         {wo.status?.name || "Unknown"}
-                      </Text>
+                      </AppText>
                     </View>
-                    <Text style={styles.woDate}>
+                    <AppText style={styles.woDate}>
                       {new Date(wo.created_at).toLocaleDateString("en-US", {
                         month: "short",
                         day: "numeric",
                       })}
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
               </TouchableOpacity>

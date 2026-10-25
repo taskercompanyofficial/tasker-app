@@ -1,3 +1,5 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing, Typography } from "@/constants/Styles";
 import { WorkOrder } from "@/types/work-order";
@@ -9,7 +11,6 @@ import {
   Modal,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -46,7 +47,7 @@ export default function WorkOrderShareModal({
 
       const isAvailable = await Sharing.isAvailableAsync();
       if (!isAvailable) {
-        Toast.show({
+        localizedToast({
           type: "error",
           text1: "Sharing Unavailable",
           text2: "Sharing is not supported on this device.",
@@ -65,7 +66,7 @@ export default function WorkOrderShareModal({
       onClose();
     } catch (err: any) {
       console.error("[Share] Failed to capture or share work order:", err);
-      Toast.show({
+      localizedToast({
         type: "error",
         text1: "Failed to Share",
         text2: err?.message || "Could not generate work order image.",
@@ -100,10 +101,10 @@ export default function WorkOrderShareModal({
                 />
               </View>
               <View>
-                <Text style={styles.headerTitle}>Share Work Order</Text>
-                <Text style={styles.headerSubtitle}>
+                <AppText style={styles.headerTitle}>Share Work Order</AppText>
+                <AppText style={styles.headerSubtitle}>
                   Generates an official complaint voucher image
-                </Text>
+                </AppText>
               </View>
             </View>
             <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
@@ -122,92 +123,92 @@ export default function WorkOrderShareModal({
               <View style={styles.voucherHeader}>
                 <View style={styles.voucherBrandRow}>
                   <View style={styles.voucherBrandDot} />
-                  <Text style={styles.voucherBrandTitle}>TASKER SERVICE PROVIDER</Text>
+                  <AppText style={styles.voucherBrandTitle}>TASKER SERVICE PROVIDER</AppText>
                 </View>
                 <View style={styles.voucherStatusChip}>
-                  <Text style={styles.voucherStatusChipText}>
+                  <AppText style={styles.voucherStatusChipText}>
                     {workOrder.status?.name?.toUpperCase() || "JOB ORDER"}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
 
-              <Text style={styles.voucherWorkOrderNo}>
+              <AppText style={styles.voucherWorkOrderNo}>
                 WO #{workOrder.work_order_number}
-              </Text>
-              <Text style={styles.voucherDateText}>
+              </AppText>
+              <AppText style={styles.voucherDateText}>
                 Date: {workOrder.created_at ? new Date(workOrder.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "N/A"}
-              </Text>
+              </AppText>
 
               <View style={styles.dividerLine} />
 
               {/* Service & Category Details */}
               <View style={styles.detailSection}>
-                <Text style={styles.sectionHeaderTitle}>SERVICE DETAILS</Text>
+                <AppText style={styles.sectionHeaderTitle}>SERVICE DETAILS</AppText>
                 <View style={styles.kvRow}>
-                  <Text style={styles.kLabel}>Service:</Text>
-                  <Text style={styles.vVal}>{workOrder.service?.name || "N/A"}</Text>
+                  <AppText style={styles.kLabel}>Service:</AppText>
+                  <AppText style={styles.vVal}>{workOrder.service?.name || "N/A"}</AppText>
                 </View>
                 {workOrder.parent_service?.name ? (
                   <View style={styles.kvRow}>
-                    <Text style={styles.kLabel}>Category:</Text>
-                    <Text style={styles.vVal}>{workOrder.parent_service.name}</Text>
+                    <AppText style={styles.kLabel}>Category:</AppText>
+                    <AppText style={styles.vVal}>{workOrder.parent_service.name}</AppText>
                   </View>
                 ) : null}
                 <View style={styles.kvRow}>
-                  <Text style={styles.kLabel}>Priority:</Text>
-                  <Text style={[styles.vVal, { color: Colors.error, fontWeight: "700" }]}>
+                  <AppText style={styles.kLabel}>Priority:</AppText>
+                  <AppText style={[styles.vVal, { color: Colors.error, fontWeight: "700" }]}>
                     {workOrder.priority?.toUpperCase() || "NORMAL"}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
 
               {/* Customer Details */}
               <View style={styles.detailSection}>
-                <Text style={styles.sectionHeaderTitle}>CUSTOMER & LOCATION</Text>
+                <AppText style={styles.sectionHeaderTitle}>CUSTOMER & LOCATION</AppText>
                 <View style={styles.kvRow}>
-                  <Text style={styles.kLabel}>Customer:</Text>
-                  <Text style={styles.vVal}>{workOrder.customer?.name || "N/A"}</Text>
+                  <AppText style={styles.kLabel}>Customer:</AppText>
+                  <AppText style={styles.vVal}>{workOrder.customer?.name || "N/A"}</AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <Text style={styles.kLabel}>Mobile:</Text>
-                  <Text style={styles.vVal}>{workOrder.customer?.phone || "N/A"}</Text>
+                  <AppText style={styles.kLabel}>Mobile:</AppText>
+                  <AppText style={styles.vVal}>{workOrder.customer?.phone || "N/A"}</AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <Text style={styles.kLabel}>Address:</Text>
-                  <Text style={[styles.vVal, { flex: 1 }]}>{fullAddress}</Text>
+                  <AppText style={styles.kLabel}>Address:</AppText>
+                  <AppText style={[styles.vVal, { flex: 1 }]}>{fullAddress}</AppText>
                 </View>
               </View>
 
               {/* Product & Complaint Info */}
               {(workOrder.brand?.name || workOrder.product?.name || workOrder.customer_description) && (
                 <View style={styles.detailSection}>
-                  <Text style={styles.sectionHeaderTitle}>PRODUCT & COMPLAINT</Text>
+                  <AppText style={styles.sectionHeaderTitle}>PRODUCT & COMPLAINT</AppText>
                   {workOrder.brand?.name ? (
                     <View style={styles.kvRow}>
-                      <Text style={styles.kLabel}>Brand:</Text>
-                      <Text style={styles.vVal}>{workOrder.brand.name}</Text>
+                      <AppText style={styles.kLabel}>Brand:</AppText>
+                      <AppText style={styles.vVal}>{workOrder.brand.name}</AppText>
                     </View>
                   ) : null}
                   {workOrder.product?.name ? (
                     <View style={styles.kvRow}>
-                      <Text style={styles.kLabel}>Model:</Text>
-                      <Text style={styles.vVal}>{workOrder.product.name}</Text>
+                      <AppText style={styles.kLabel}>Model:</AppText>
+                      <AppText style={styles.vVal}>{workOrder.product.name}</AppText>
                     </View>
                   ) : null}
                   {workOrder.is_warranty_case ? (
                     <View style={styles.kvRow}>
-                      <Text style={styles.kLabel}>Warranty:</Text>
-                      <Text style={[styles.vVal, { color: "#10B981", fontWeight: "700" }]}>
+                      <AppText style={styles.kLabel}>Warranty:</AppText>
+                      <AppText style={[styles.vVal, { color: "#10B981", fontWeight: "700" }]}>
                         Warranty Case ({workOrder.warrentyStatus || "Active"})
-                      </Text>
+                      </AppText>
                     </View>
                   ) : null}
                   {workOrder.customer_description ? (
                     <View style={{ marginTop: 4 }}>
-                      <Text style={styles.kLabel}>Problem Description:</Text>
-                      <Text style={styles.complaintDescText}>
+                      <AppText style={styles.kLabel}>Problem Description:</AppText>
+                      <AppText style={styles.complaintDescText}>
                         {workOrder.customer_description}
-                      </Text>
+                      </AppText>
                     </View>
                   ) : null}
                 </View>
@@ -216,9 +217,9 @@ export default function WorkOrderShareModal({
               {/* Footer Stamp */}
               <View style={styles.voucherFooter}>
                 <Ionicons name="checkmark" size={16} color={Colors.themes.provider.primary} />
-                <Text style={styles.voucherFooterText}>
+                <AppText style={styles.voucherFooterText}>
                   Verified Tasker Service Provider Complaint Document
-                </Text>
+                </AppText>
               </View>
             </View>
           </ScrollView>
@@ -235,7 +236,7 @@ export default function WorkOrderShareModal({
             ) : (
               <>
                 <Ionicons name="share" size={18} color={Colors.neutral.white} />
-                <Text style={styles.shareBtnText}>Share Work Order Voucher</Text>
+                <AppText style={styles.shareBtnText}>Share Work Order Voucher</AppText>
               </>
             )}
           </TouchableOpacity>

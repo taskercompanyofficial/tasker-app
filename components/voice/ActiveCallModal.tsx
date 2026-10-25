@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,7 +9,6 @@ import {
   Image,
   Modal,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -82,10 +82,10 @@ export default function ActiveCallModal({
           <View style={styles.topHeader}>
             <View style={styles.securityBadge}>
               <Ionicons name="shield-checkmark" size={13} color="#10B981" />
-              <Text style={styles.securityText}>End-to-End Encrypted Call</Text>
+              <AppText style={styles.securityText}>End-to-End Encrypted Call</AppText>
             </View>
             {workOrderNumber && (
-              <Text style={styles.orderNumber}>Work Order #{workOrderNumber}</Text>
+              <AppText style={styles.orderNumber}>Work Order #{workOrderNumber}</AppText>
             )}
           </View>
 
@@ -96,7 +96,7 @@ export default function ActiveCallModal({
                 <Image source={{ uri: avatarUri }} style={styles.avatar} />
               ) : (
                 <View style={styles.fallbackAvatar}>
-                  <Text style={styles.fallbackText}>{initialLetter}</Text>
+                  <AppText style={styles.fallbackText}>{initialLetter}</AppText>
                 </View>
               )}
               <View
@@ -108,10 +108,10 @@ export default function ActiveCallModal({
               />
             </View>
 
-            <Text style={styles.participantName} numberOfLines={1}>
+            <AppText style={styles.participantName} numberOfLines={1}>
               {participantName}
-            </Text>
-            <Text
+            </AppText>
+            <AppText
               style={[
                 styles.timerText,
                 statusText === "Calling..." && styles.callingText,
@@ -119,7 +119,7 @@ export default function ActiveCallModal({
               ]}
             >
               {statusText || formatDuration(durationSecs)}
-            </Text>
+            </AppText>
           </View>
 
           {/* Bottom Call Controls: Mute, Speaker, End */}
@@ -142,7 +142,7 @@ export default function ActiveCallModal({
                   size={26}
                   color={isMuted ? "#EF4444" : "#FFFFFF"}
                 />
-                <Text style={styles.controlBtnText}>{isMuted ? "Unmute" : "Mute"}</Text>
+                <AppText style={styles.controlBtnText}>{isMuted ? "Unmute" : "Mute"}</AppText>
               </TouchableOpacity>
 
               {/* Speakerphone Button */}
@@ -161,14 +161,14 @@ export default function ActiveCallModal({
                   size={26}
                   color={isSpeakerOn ? "#10B981" : "#D1D5DB"}
                 />
-                <Text
+                <AppText
                   style={[
                     styles.controlBtnText,
                     isSpeakerOn && { color: "#10B981", fontWeight: "700" },
                   ]}
                 >
                   {isSpeakerOn ? "Speaker" : "Earpiece"}
-                </Text>
+                </AppText>
               </TouchableOpacity>
             </View>
 

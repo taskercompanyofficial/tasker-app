@@ -1,6 +1,8 @@
+import AppTextInput from "@/components/common/AppTextInput";
+import AppText from "@/components/common/AppText";
 import Button from "@/components/Button";
 import React, { useState } from "react";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { modalStyles } from "./styles";
 
 interface ReasonModalProps {
@@ -43,9 +45,9 @@ export default function ReasonModal({
   return (
     <View style={modalStyles.overlay}>
       <View style={modalStyles.container}>
-        <Text style={modalStyles.title}>{title}</Text>
-        <Text style={modalStyles.message}>{message}</Text>
-        <TextInput
+        <AppText style={modalStyles.title}>{title}</AppText>
+        <AppText style={modalStyles.message}>{message}</AppText>
+        <AppTextInput
           style={modalStyles.textInput}
           placeholder={placeholder}
           value={reason}

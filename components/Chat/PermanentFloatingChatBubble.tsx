@@ -1,35 +1,57 @@
-import React, { useEffect, useRef } from "react";
+import Colors from "@/constants/Colors";
+import { useSession } from "@/context/ctx";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import { usePathname, useRouter, useSegments } from "expo-router";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-  View,
-  Text,
   Animated,
   Easing,
   Image,
+  Keyboard,
+  Platform,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { usePathname, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Colors from "@/constants/Colors";
-import * as Haptics from "expo-haptics";
-import { useSession } from "@/context/ctx";
 
 interface PermanentFloatingChatBubbleProps {
   workOrderId?: number | string;
   conversationId?: number | string;
 }
 
-export function PermanentFloatingChatBubble({ workOrderId, conversationId }: PermanentFloatingChatBubbleProps = {}) {
+export function PermanentFloatingChatBubble({
+  workOrderId,
+  conversationId,
+}: PermanentFloatingChatBubbleProps = {}) {
   const router = useRouter();
   const pathname = usePathname();
+  const segments = useSegments();
   const insets = useSafeAreaInsets();
   const { session } = useSession();
 
   // Animation values
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // Keyboard visibility state (hide bubble when typing so it never blocks inputs)
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      () => setKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => setKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Pulse animation for online indicator
   useEffect(() => {
@@ -53,47 +75,113 @@ export function PermanentFloatingChatBubble({ workOrderId, conversationId }: Per
     return () => pulse.stop();
   }, [pulseAnim]);
 
-  // Hide floating bubble if currently on any active chat screen
+  // Hide floating bubble if currently on any active chat screen or during keyboard typing
   const isChatScreen =
     pathname.includes("support-chat") ||
     pathname.includes("order-chat") ||
     pathname.includes("work-order-chat") ||
     pathname.endsWith("/chat");
 
-  if (isChatScreen) {
+  // Robust check for whether current screen has bottom tab navigation
+  const isTabScreen = useMemo(() => {
+    // 1. Segment inspection: check if '(tabs)' is part of the active route hierarchy
+    if (segments.some((seg) => seg === "(tabs)")) {
+      return true;
+    }
+
+    if (pathname.includes("(tabs)")) {
+      return true;
+    }
+
+    // 2. Customer Tab routes
+    if (pathname.startsWith("/customer")) {
+      // Explicit tab pages
+      if (
+        pathname === "/customer/orders" ||
+        pathname === "/customer/services" ||
+        pathname === "/customer/settings" ||
+        pathname === "/customer/wallet"
+      ) {
+        return true;
+      }
+
+      // Check if it's the customer category hub tab: e.g. /customer/cleaning, /customer/solar-system
+      // (which is outside known non-tab stack subpaths)
+      const nonTabCustomerPrefixes = [
+        "/customer/services/",
+        "/customer/orders/",
+        "/customer/profile/",
+        "/customer/notifications",
+        "/customer/commercial-quote",
+        "/customer/contact-us",
+        "/customer/free-installation",
+        "/customer/shop",
+        "/customer/gifts",
+        "/customer/support-chat",
+        "/customer/order-chat",
+        "/customer/complete-profile",
+      ];
+
+      const isNonTabPath = nonTabCustomerPrefixes.some((prefix) =>
+        pathname.startsWith(prefix)
+      );
+
+      // If not the landing screen (/customer or /customer/) and not a non-tab stack route,
+      // then it's the main category hub tab [slug]!
+      if (!isNonTabPath && pathname !== "/customer" && pathname !== "/customer/") {
+        return true;
+      }
+    }
+
+    // 3. Vendor Tab routes
+    if (pathname.startsWith("/vendor")) {
+      const vendorTabPaths = [
+        "/vendor/dashboard",
+        "/vendor/jobs",
+        "/vendor/ledger",
+        "/vendor/earnings",
+        "/vendor/settings",
+      ];
+      if (
+        vendorTabPaths.some(
+          (p) => pathname === p || pathname.startsWith(`${p}/`)
+        )
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  }, [segments, pathname]);
+
+  // Accurate bottom offset based on bottom tabs + safe area insets
+  const targetBottomOffset = useMemo(() => {
+    if (isTabScreen) {
+      // Sits safely above the NativeTabs bar (~65-75px height)
+      return Math.max(insets.bottom + 85, 96);
+    }
+    // On regular stack screens without bottom tabs
+    return Math.max(insets.bottom + 24, 28);
+  }, [isTabScreen, insets.bottom]);
+
+  if (isChatScreen || keyboardVisible) {
     return null;
   }
-
-  // Determine if on a tab screen to offset above bottom tab navigation
-  const isTabScreen =
-    pathname.includes("(tabs)") ||
-    pathname === "/customer" ||
-    pathname === "/customer/" ||
-    pathname.includes("/customer/home") ||
-    pathname.includes("/customer/orders") ||
-    pathname.includes("/customer/services") ||
-    pathname.includes("/customer/wallet") ||
-    pathname.includes("/customer/settings");
-
-  const bottomOffset = isTabScreen
-    ? Math.max(insets.bottom + 95, 115)
-    : Math.max(insets.bottom + 25, 40);
-
 
   const handlePress = () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    } catch { }
+    } catch {}
 
     Animated.sequence([
       Animated.timing(scaleAnim, {
         toValue: 0.88,
-        duration: 90,
+        duration: 80,
         useNativeDriver: true,
       }),
       Animated.timing(scaleAnim, {
         toValue: 1,
-        duration: 90,
+        duration: 80,
         useNativeDriver: true,
       }),
     ]).start();
@@ -106,51 +194,56 @@ export function PermanentFloatingChatBubble({ workOrderId, conversationId }: Per
   };
 
   return (
-    <Animated.View
+    <View
       style={[
         styles.container,
         {
-          bottom: bottomOffset,
-          transform: [{ scale: scaleAnim }],
+          bottom: targetBottomOffset,
         },
       ]}
       pointerEvents="box-none"
     >
-      <TouchableOpacity
-        style={styles.bubbleButton}
-        onPress={handlePress}
-        activeOpacity={0.9}
+      <Animated.View
+        style={{
+          transform: [{ scale: scaleAnim }],
+        }}
       >
-        {/* Pulse glow background ring */}
-        <Animated.View
-          style={[
-            styles.pulseRing,
-            {
-              transform: [{ scale: pulseAnim }],
-              opacity: pulseAnim.interpolate({
-                inputRange: [1, 1.4],
-                outputRange: [0.35, 0],
-              }),
-            },
-          ]}
-        />
-
-        {/* Main Icon and badge */}
-        <View style={styles.iconWrapper}>
-          <Image
-            source={require("@/assets/images/tasker-ai-avatar.jpg")}
-            style={styles.avatarImg}
-            resizeMode="cover"
+        <TouchableOpacity
+          style={styles.bubbleButton}
+          onPress={handlePress}
+          activeOpacity={0.9}
+        >
+          {/* Pulse glow background ring */}
+          <Animated.View
+            style={[
+              styles.pulseRing,
+              {
+                transform: [{ scale: pulseAnim }],
+                opacity: pulseAnim.interpolate({
+                  inputRange: [1, 1.4],
+                  outputRange: [0.35, 0],
+                }),
+              },
+            ]}
           />
-          <View style={styles.sparkleBadge}>
-            <Ionicons name="sparkles" size={10} color="#FFFFFF" />
-          </View>
-        </View>
 
-        {/* Online Status Dot */}
-        <View style={styles.onlineDot} />
-      </TouchableOpacity>
-    </Animated.View>
+          {/* Main Icon and badge */}
+          <View style={styles.iconWrapper}>
+            <Image
+              source={require("@/assets/images/tasker-ai-avatar.jpg")}
+              style={styles.avatarImg}
+              resizeMode="cover"
+            />
+            <View style={styles.sparkleBadge}>
+              <Ionicons name="sparkles" size={10} color="#FFFFFF" />
+            </View>
+          </View>
+
+          {/* Online Status Dot */}
+          <View style={styles.onlineDot} />
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -158,7 +251,6 @@ const styles = StyleSheet.create({
   container: {
     position: "absolute",
     right: 18,
-    bottom: -20,
     zIndex: 99999,
     elevation: 99999,
     alignItems: "center",

@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing, Typography } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
@@ -11,7 +12,6 @@ import {
   Modal,
   Platform,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -87,13 +87,7 @@ export default function VendorLocationGateModal({
     try {
       if (!perms.hasForeground) {
         const fg = await Location.requestForegroundPermissionsAsync();
-        if (fg.status === "granted") {
-          await Location.requestBackgroundPermissionsAsync();
-        }
-      } else if (!perms.hasBackground) {
-        // Direct to background permission request
-        const bg = await Location.requestBackgroundPermissionsAsync();
-        if (bg.status !== "granted") {
+        if (fg.status !== "granted") {
           await Linking.openSettings();
         }
       }
@@ -102,18 +96,6 @@ export default function VendorLocationGateModal({
     } finally {
       setLoading(false);
       await checkStatus();
-    }
-  };
-
-  const handleFixOverlay = async () => {
-    setLoading(true);
-    try {
-      await requestSystemOverlayPermission();
-      setTimeout(checkStatus, 1000);
-    } catch (e) {
-      console.warn("[VendorLocationGateModal] Overlay error:", e);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -132,30 +114,37 @@ export default function VendorLocationGateModal({
             <View style={styles.shieldBadge}>
               <Ionicons name="shield-checkmark" size={30} color={Colors.themes.provider.primary} />
             </View>
-            <Text style={styles.title}>Required to Go Online</Text>
-            <Text style={styles.subtitle}>
+            <AppText style={styles.title}>Required to Go Online</AppText>
+            <AppText style={styles.subtitle}>
               Customers and dispatch require active real-time tracking while you are on-duty.
-            </Text>
+            </AppText>
           </View>
 
           {/* Checklist */}
           <View style={styles.checklist}>
-            {/* 1. Location Always Allow */}
+            {/* 1. Location Permission */}
             <View style={styles.itemRow}>
-              <View style={[styles.iconCircle, { backgroundColor: perms.hasBackground ? "#ECFDF5" : "#FEF3C7" }]}>
+              <View
+                style={[
+                  styles.iconCircle,
+                  {
+                    backgroundColor: perms.hasForeground ? "#ECFDF5" : "#FEF3C7",
+                  },
+                ]}
+              >
                 <Ionicons
                   name="location"
                   size={20}
-                  color={perms.hasBackground ? "#10B981" : "#D97706"}
+                  color={perms.hasForeground ? "#10B981" : "#D97706"}
                 />
               </View>
               <View style={styles.itemContent}>
-                <Text style={styles.itemTitle}>Location: "Allow all the time"</Text>
-                <Text style={styles.itemDesc}>
-                  Keeps live GPS active when your screen is locked or app is minimized.
-                </Text>
+                <AppText style={styles.itemTitle}>Location: "While Using App"</AppText>
+                <AppText style={styles.itemDesc}>
+                  Enables real-time navigation and job dispatch while using Tasker.
+                </AppText>
               </View>
-              {perms.hasBackground ? (
+              {perms.hasForeground ? (
                 <Ionicons name="checkmark-circle" size={24} color="#10B981" />
               ) : (
                 <TouchableOpacity
@@ -164,60 +153,29 @@ export default function VendorLocationGateModal({
                   disabled={loading}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.enableBtnText}>Enable</Text>
+                  <AppText style={styles.enableBtnText}>Enable</AppText>
                 </TouchableOpacity>
               )}
             </View>
 
-            {/* 2. Display Over Other Apps (Android Only) */}
-            {Platform.OS === "android" && (
-              <View style={styles.itemRow}>
-                <View style={[styles.iconCircle, { backgroundColor: perms.hasOverlay ? "#ECFDF5" : "#EFF6FF" }]}>
-                  <Ionicons
-                    name="layers"
-                    size={20}
-                    color={perms.hasOverlay ? "#10B981" : "#2563EB"}
-                  />
-                </View>
-                <View style={styles.itemContent}>
-                  <Text style={styles.itemTitle}>Display Over Other Apps</Text>
-                  <Text style={styles.itemDesc}>
-                    Shows floating navigation bubble over Google Maps & Waze.
-                  </Text>
-                </View>
-                {perms.hasOverlay ? (
-                  <Ionicons name="checkmark-circle" size={24} color="#10B981" />
-                ) : (
-                  <TouchableOpacity
-                    style={[styles.enableBtn, { backgroundColor: "#2563EB" }]}
-                    onPress={handleFixOverlay}
-                    disabled={loading}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.enableBtnText}>Enable</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-
-            {/* 3. Battery Optimization (Android) */}
+            {/* 2. Battery Optimization (Android) */}
             {Platform.OS === "android" && (
               <View style={[styles.itemRow, { borderBottomWidth: 0 }]}>
                 <View style={[styles.iconCircle, { backgroundColor: "#F3F4F6" }]}>
                   <Ionicons name="battery-charging-outline" size={20} color="#4B5563" />
                 </View>
                 <View style={styles.itemContent}>
-                  <Text style={styles.itemTitle}>Battery Optimization (Recommended)</Text>
-                  <Text style={styles.itemDesc}>
+                  <AppText style={styles.itemTitle}>Battery Optimization (Recommended)</AppText>
+                  <AppText style={styles.itemDesc}>
                     Set Tasker to Unrestricted so Android doesn't stop location in sleep.
-                  </Text>
+                  </AppText>
                 </View>
                 <TouchableOpacity
                   style={[styles.enableBtn, { backgroundColor: "#4B5563" }]}
                   onPress={handleFixBattery}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.enableBtnText}>Setup</Text>
+                  <AppText style={styles.enableBtnText}>Setup</AppText>
                 </TouchableOpacity>
               </View>
             )}
@@ -235,15 +193,15 @@ export default function VendorLocationGateModal({
             {loading ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={styles.primaryBtnText}>
+              <AppText style={styles.primaryBtnText}>
                 {perms.isReady ? "Go Online Now 🟢" : "Check Permissions Again"}
-              </Text>
+              </AppText>
             )}
           </TouchableOpacity>
 
           {onClose && (
             <TouchableOpacity style={styles.cancelBtn} onPress={onClose} activeOpacity={0.7}>
-              <Text style={styles.cancelBtnText}>Stay Offline for Now</Text>
+              <AppText style={styles.cancelBtnText}>Stay Offline for Now</AppText>
             </TouchableOpacity>
           )}
         </View>

@@ -1,8 +1,9 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import getImageUrl from "@/lib/utils";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 
 interface ServiceHeaderCardProps {
   serviceName: string;
@@ -86,9 +87,9 @@ export default function ServiceHeaderCard({
         </View>
         <View style={styles.headerInfo}>
           <View style={styles.titleRow}>
-            <Text style={styles.serviceName} numberOfLines={1}>
+            <AppText style={styles.serviceName} numberOfLines={1}>
               {parentServiceName || serviceName}
-            </Text>
+            </AppText>
             {priority && (
               <View
                 style={[
@@ -96,19 +97,19 @@ export default function ServiceHeaderCard({
                   { backgroundColor: priorityStyle.bg },
                 ]}
               >
-                <Text
+                <AppText
                   style={[styles.priorityText, { color: priorityStyle.text }]}
                 >
                   {priority}
-                </Text>
+                </AppText>
               </View>
             )}
           </View>
-          <Text style={styles.workOrderNumber}>{workOrderNumber}</Text>
+          <AppText style={styles.workOrderNumber}>{workOrderNumber}</AppText>
           {brandComplaintNo && (
-            <Text style={styles.brandComplaintNo}>
+            <AppText style={styles.brandComplaintNo}>
               Brand Complaint: {brandComplaintNo}
-            </Text>
+            </AppText>
           )}
         </View>
       </View>
@@ -122,15 +123,15 @@ export default function ServiceHeaderCard({
               size={12}
               color="#6B7280"
             />
-            <Text style={styles.infoLabel}>Brand:</Text>
-            <Text style={styles.infoValue}>{brandName}</Text>
+            <AppText style={styles.infoLabel}>Brand:</AppText>
+            <AppText style={styles.infoValue}>{brandName}</AppText>
           </View>
         )}
         {categoryName && (
           <View style={styles.infoItem}>
             <Ionicons name="grid-outline" size={12} color="#6B7280" />
-            <Text style={styles.infoLabel}>Category:</Text>
-            <Text style={styles.infoValue}>{categoryName}</Text>
+            <AppText style={styles.infoLabel}>Category:</AppText>
+            <AppText style={styles.infoValue}>{categoryName}</AppText>
           </View>
         )}
       </View>
@@ -139,16 +140,16 @@ export default function ServiceHeaderCard({
       <View style={styles.timestampRow}>
         <View style={styles.timestampItem}>
           <Ionicons name="calendar-outline" size={11} color="#9CA3AF" />
-          <Text style={styles.timestampLabel}>Created:</Text>
-          <Text style={styles.timestampValue}>{formatDateTime(createdAt)}</Text>
+          <AppText style={styles.timestampLabel}>Created:</AppText>
+          <AppText style={styles.timestampValue}>{formatDateTime(createdAt)}</AppText>
         </View>
         {assignedAt && (
           <View style={styles.timestampItem}>
             <Ionicons name="person-outline" size={11} color="#9CA3AF" />
-            <Text style={styles.timestampLabel}>Assigned:</Text>
-            <Text style={styles.timestampValue}>
+            <AppText style={styles.timestampLabel}>Assigned:</AppText>
+            <AppText style={styles.timestampValue}>
               {formatDateTime(assignedAt)}
-            </Text>
+            </AppText>
           </View>
         )}
       </View>

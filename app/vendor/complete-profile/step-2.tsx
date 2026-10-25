@@ -1,158 +1,152 @@
-import DocumentScanner, { ResponseType } from "react-native-document-scanner-plugin";
-import Colors from "@/constants/Colors";
-import { BorderRadius, Shadows, Spacing } from "@/constants/Styles";
-import { useSession } from "@/context/ctx";
-import { Ionicons } from "@expo/vector-icons";
+import { localizedToast } from "@/lib/i18n/localized-toast";
 import React, { useState } from "react";
-import { useRouter } from "expo-router";
-import * as ImagePicker from "expo-image-picker";
-import { compressImage } from "@/lib/image";
-import { LinearGradient } from "expo-linear-gradient";
-import CnicScannerModal from "@/components/vendor/CnicScannerModal";
-import myAxios from "@/lib/axios.config";
-import { VENDOR_EXTRACT_CNIC_URL } from "@/lib/api-endpoints";
-import * as Haptics from "expo-haptics";
 import {
   ActivityIndicator,
+  Alert,
+  Image,
   ScrollView,
   StatusBar,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
-  Image,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Toast from "react-native-toast-message";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import DocumentScanner, {
+  ResponseType,
+  ScanDocumentResponseStatus,
+} from "react-native-document-scanner-plugin";
+import * as ImagePicker from "expo-image-picker";
+import * as Haptics from "expo-haptics";
+
+import Colors from "@/constants/Colors";
+import { BorderRadius, Spacing } from "@/constants/Styles";
+import { useSession } from "@/context/ctx";
+import { useLanguage } from "@/context/language-context";
+import AppText from "@/components/common/AppText";
+import { compressImage } from "@/lib/image";
+import myAxios from "@/lib/axios.config";
+import { VENDOR_EXTRACT_CNIC_URL } from "@/lib/api-endpoints";
+
+interface DocFile {
+  uri: string;
+  name: string;
+  type: string;
+}
 
 export default function Step2CnicScan() {
   const router = useRouter();
-  const { session, refetchUser } = useSession();
+  const { session, refetchUser, signOutMode } = useSession();
+  const { t, isRTL } = useLanguage();
   const user = session.vendorUser;
 
-  // Camera Scanner Modal State
-  const [scannerVisible, setScannerVisible] = useState(false);
-  const [scannerTargetSide, setScannerTargetSide] = useState<"front" | "back">("front");
-
-  // Local Scanned File State
-  const [frontFile, setFrontFile] = useState<{ uri: string; name: string; type: string } | null>(null);
-  const [backFile, setBackFile] = useState<{ uri: string; name: string; type: string } | null>(null);
-
-  // AI Extraction State
-  const [isExtracting, setIsExtracting] = useState(false);
-
-  // Gallery Picker
-  const pickGalleryImage = async (side: "front" | "back") => {
-    if (Platform.OS !== "android") {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        Toast.show({ type: "error", text1: "Permission to access gallery is required" });
-        return;
-      }
-    }
-
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.85,
-    });
-
-    if (!result.canceled) {
-      const asset = result.assets[0];
-      let uri = await compressImage(asset.uri, 1600, 0.82);
-
-      const fileData = {
-        uri: uri,
-        name: uri.split("/").pop() || `cnic_${side}_upload.jpg`,
-        type: "image/jpeg",
-      };
-
-      if (side === "front") {
-        setFrontFile(fileData);
-      } else {
-        setBackFile(fileData);
-      }
-
-      Toast.show({
-        type: "success",
-        text1: "CNIC Image Added",
-        text2: side === "front" ? "CNIC Front side uploaded" : "CNIC Back side uploaded",
-      });
-    }
+  const handleLogout = () => {
+    Alert.alert("Log Out", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log Out",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await signOutMode("vendor");
+          } catch (_) {}
+          router.replace("/vendor/login" as any);
+        },
+      },
+    ]);
   };
 
-  // Open Document Scanner (Native Google ML Kit / VisionKit Scanner on Dev Build, fallback to in-app scanner)
-  const openCameraScanner = async (side: "front" | "back") => {
-    try {
-      try {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      } catch (_) {}
+  const [frontFile, setFrontFile] = useState<DocFile | null>(null);
+  const [backFile, setBackFile] = useState<DocFile | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
 
-      const result = await DocumentScanner.scanDocument({
+  // Scan document using Google Document Scanner with base mode (natural color, no filters)
+  const handleScanDocument = async (side: "front" | "back") => {
+    try {
+      const { scannedImages, status } = await DocumentScanner.scanDocument({
         maxNumDocuments: 1,
+        croppedImageQuality: 95,
         responseType: ResponseType.ImageFilePath,
-        croppedImageQuality: 92,
+        scannerMode: "base",
       });
 
-      if (result?.scannedImages && result.scannedImages.length > 0) {
-        const rawUri = result.scannedImages[0];
-        const compressedUri = await compressImage(rawUri, 1600, 0.85);
-
-        const fileData = {
+      if (status === ScanDocumentResponseStatus.Success && scannedImages && scannedImages.length > 0) {
+        const compressedUri = await compressImage(scannedImages[0], 1600, 0.88);
+        const fileData: DocFile = {
           uri: compressedUri,
-          name: `cnic_${side}_scan_${Date.now()}.jpg`,
+          name: `cnic_${side}_docscan_${Date.now()}.jpg`,
           type: "image/jpeg",
         };
 
-        if (side === "front") {
-          setFrontFile(fileData);
-        } else {
-          setBackFile(fileData);
-        }
+        if (side === "front") setFrontFile(fileData);
+        else setBackFile(fileData);
 
         try {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch (_) {}
+        return;
+      }
+    } catch (err: any) {
+      console.warn("[Step2CnicScan] Document scanner fallback to camera:", err?.message || err);
+      await handleCameraFallback(side);
+    }
+  };
 
-        Toast.show({
-          type: "success",
-          text1: `CNIC ${side === "front" ? "Front" : "Back"} Scanned!`,
-          text2: "Document auto-detected and cropped.",
+  // Fallback to camera
+  const handleCameraFallback = async (side: "front" | "back") => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        localizedToast({
+          type: "error",
+          text1: "Camera Permission Required",
+          text2: "Please allow camera access to capture your CNIC.",
         });
         return;
       }
-    } catch (error: any) {
-      console.log("[Step2CnicScan] Native DocumentScanner fallback:", error?.message);
-      // Fallback to custom in-app camera scanner modal
-      setScannerTargetSide(side);
-      setScannerVisible(true);
-    }
-  };
 
-  const handleScannerCapture = (side: "front" | "back", fileData: { uri: string; name: string; type: string }) => {
-    if (side === "front") {
-      setFrontFile(fileData);
-    } else {
-      setBackFile(fileData);
-    }
-    Toast.show({
-      type: "success",
-      text1: `CNIC ${side === "front" ? "Front" : "Back"} Captured!`,
-      text2: "Document cropped and saved",
-    });
-  };
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [16, 10],
+        quality: 0.9,
+      });
 
-  // -------------------------------------------------------------
-  // AI Extraction & Database Auto-Save
-  // -------------------------------------------------------------
-  const handleExtractAndSave = async () => {
-    if (!frontFile && !user?.cnic_front_image) {
-      Toast.show({
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const compressedUri = await compressImage(result.assets[0].uri, 1600, 0.85);
+        const fileData: DocFile = {
+          uri: compressedUri,
+          name: `cnic_${side}_${Date.now()}.jpg`,
+          type: "image/jpeg",
+        };
+
+        if (side === "front") setFrontFile(fileData);
+        else setBackFile(fileData);
+
+        try {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch (_) {}
+      }
+    } catch (err: any) {
+      console.warn("[Step2CnicScan] Camera error:", err);
+      localizedToast({
         type: "error",
-        text1: "Front CNIC Required",
-        text2: "Please scan or upload the front side of your CNIC.",
+        text1: "Camera Error",
+        text2: err?.message || "Failed to capture photo.",
+      });
+    }
+  };
+
+  // Upload to server and continue
+  const handleUploadAndExtract = async () => {
+    const hasFront = frontFile || user?.cnic_front_image;
+    if (!hasFront) {
+      localizedToast({
+        type: "error",
+        text1: "CNIC Front Required",
+        text2: "Please upload the front side of your CNIC.",
       });
       return;
     }
@@ -165,64 +159,56 @@ export default function Step2CnicScan() {
       setIsExtracting(true);
 
       const formData = new FormData();
-
       if (frontFile) {
         formData.append("cnic_front_file", {
           uri: frontFile.uri,
-          name: frontFile.name || "cnic_front.jpg",
-          type: frontFile.type || "image/jpeg",
+          name: frontFile.name,
+          type: frontFile.type,
         } as any);
       }
-
       if (backFile) {
         formData.append("cnic_back_file", {
           uri: backFile.uri,
-          name: backFile.name || "cnic_back.jpg",
-          type: backFile.type || "image/jpeg",
+          name: backFile.name,
+          type: backFile.type,
         } as any);
       }
 
       const res = await myAxios.post(VENDOR_EXTRACT_CNIC_URL, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
-      if (res.data?.status === "success") {
-        // Refetch user so state has the fresh saved CNIC and extracted database details
-        try {
-          await refetchUser("vendor");
-        } catch (_) {}
+      const extractedData = res.data?.data || null;
 
-        try {
-          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        } catch (_) {}
+      try {
+        await refetchUser("vendor");
+      } catch (_) {}
 
-        if (res.data?.fallback) {
-          Toast.show({
-            type: "info",
-            text1: "CNIC Images Saved",
-            text2: "Please review or enter your details manually in Step 3.",
-          });
-        } else {
-          Toast.show({
-            type: "success",
-            text1: "✨ CNIC Verified & Saved!",
-            text2: "Details extracted. Please confirm in Step 3.",
-          });
-        }
+      try {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch (_) {}
 
-        // Navigate to Step 3 Review Page
-        router.push("/vendor/complete-profile/step-3" as any);
-      } else {
-        router.push("/vendor/complete-profile/step-3" as any);
-      }
+      // Pass extracted details to Step 3
+      router.push({
+        pathname: "/vendor/complete-profile/step-3" as any,
+        params: extractedData
+          ? {
+              extractedCnic: extractedData.cnic || "",
+              extractedName: extractedData.full_name || "",
+              extractedFatherName: extractedData.father_name || "",
+              extractedDob: extractedData.dob || "",
+              extractedExpiry: extractedData.expiry_date || "",
+              extractedGender: extractedData.gender || "",
+              extractedAddress: extractedData.address || "",
+            }
+          : {},
+      });
     } catch (error: any) {
-      console.warn("[Step2CnicScan] Extraction error:", error?.response?.data || error?.message);
-      Toast.show({
+      console.warn("[Step2CnicScan] Upload error:", error?.response?.data || error?.message);
+      localizedToast({
         type: "info",
-        text1: "Manual Verification",
-        text2: "Please verify or fill in your details manually in Step 3.",
+        text1: "Proceeding to Details Review",
+        text2: "Please enter your details manually in the next step.",
       });
       router.push("/vendor/complete-profile/step-3" as any);
     } finally {
@@ -230,25 +216,27 @@ export default function Step2CnicScan() {
     }
   };
 
-  const hasFront = Boolean(frontFile || user?.cnic_front_image);
-  const hasBack = Boolean(backFile || user?.cnic_back_image);
+  const currentFrontUri = frontFile?.uri || user?.cnic_front_image || null;
+  const currentBackUri = backFile?.uri || user?.cnic_back_image || null;
+  const canSubmit = Boolean(currentFrontUri);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Top Header */}
-      <View style={styles.customHeader}>
+      {/* Header */}
+      <View style={[styles.header, isRTL && styles.rtlRow]}>
         <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backBtn}
+          onPress={handleLogout}
+          style={[styles.logoutBtn, isRTL && styles.rtlRow]}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={20} color={Colors.text.primary} />
+          <Ionicons name="log-out-outline" size={16} color="#DC2626" />
+          <AppText style={styles.logoutBtnText}>Logout</AppText>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>CNIC Document Scan</Text>
-        <View style={styles.stepIndicatorPill}>
-          <Text style={styles.stepIndicatorText}>Step 2 of 6</Text>
+        <AppText style={styles.headerTitle}>Upload CNIC</AppText>
+        <View style={styles.stepBadge}>
+          <AppText style={styles.stepBadgeText}>Step 1 of 5</AppText>
         </View>
       </View>
 
@@ -256,176 +244,124 @@ export default function Step2CnicScan() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.stepSectionContainer}>
-          <Text style={styles.stepSectionHeading}>Scan Your CNIC</Text>
-          <Text style={styles.stepSectionSub}>
-            Front and back sides required for verification
-          </Text>
-
-          {/* CNIC Front Card */}
-          <View style={styles.cnicUploadCard}>
-            <View style={styles.cnicCardHeader}>
-              <View style={styles.cnicCardTitleRow}>
-                <Ionicons
-                  name={hasFront ? "checkmark-circle" : "card-outline"}
-                  size={20}
-                  color={hasFront ? "#10B981" : Colors.themes.provider.primary}
-                />
-                <Text style={styles.cnicCardTitle}>CNIC Front Side</Text>
-              </View>
-            </View>
-
-            {hasFront ? (
-              <View style={styles.cnicImagePreviewWrapper}>
-                <Image
-                  source={{ uri: frontFile ? frontFile.uri : user?.cnic_front_image }}
-                  style={styles.cnicImagePreview}
-                />
-                <View style={styles.retakeRow}>
-                  <TouchableOpacity
-                    style={styles.retakeMiniBtn}
-                    onPress={() => openCameraScanner("front")}
-                  >
-                    <Ionicons name="scan" size={14} color="#2563EB" />
-                    <Text style={styles.retakeMiniText}>Rescan Photo</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.retakeMiniBtn}
-                    onPress={() => pickGalleryImage("front")}
-                  >
-                    <Ionicons name="images" size={14} color="#6B7280" />
-                    <Text style={[styles.retakeMiniText, { color: "#6B7280" }]}>From Gallery</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.cnicActionRow}>
-                <TouchableOpacity
-                  style={styles.autoCaptureBtn}
-                  activeOpacity={0.88}
-                  onPress={() => openCameraScanner("front")}
-                >
-                  <Ionicons name="scan" size={20} color="#FFFFFF" />
-                  <Text style={styles.autoCaptureBtnText}>Scan CNIC Front</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.galleryUploadBtn}
-                  activeOpacity={0.8}
-                  onPress={() => pickGalleryImage("front")}
-                >
-                  <Ionicons name="image-outline" size={18} color={Colors.themes.provider.primary} />
-                  <Text style={styles.galleryUploadBtnText}>Upload</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-
-          {/* CNIC Back Card */}
-          <View style={styles.cnicUploadCard}>
-            <View style={styles.cnicCardHeader}>
-              <View style={styles.cnicCardTitleRow}>
-                <Ionicons
-                  name={hasBack ? "checkmark-circle" : "card-outline"}
-                  size={20}
-                  color={hasBack ? "#10B981" : Colors.themes.provider.primary}
-                />
-                <Text style={styles.cnicCardTitle}>CNIC Back Side</Text>
-              </View>
-            </View>
-
-            {hasBack ? (
-              <View style={styles.cnicImagePreviewWrapper}>
-                <Image
-                  source={{ uri: backFile ? backFile.uri : user?.cnic_back_image }}
-                  style={styles.cnicImagePreview}
-                />
-                <View style={styles.retakeRow}>
-                  <TouchableOpacity
-                    style={styles.retakeMiniBtn}
-                    onPress={() => openCameraScanner("back")}
-                  >
-                    <Ionicons name="scan" size={14} color="#2563EB" />
-                    <Text style={styles.retakeMiniText}>Rescan Photo</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.retakeMiniBtn}
-                    onPress={() => pickGalleryImage("back")}
-                  >
-                    <Ionicons name="images" size={14} color="#6B7280" />
-                    <Text style={[styles.retakeMiniText, { color: "#6B7280" }]}>From Gallery</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.cnicActionRow}>
-                <TouchableOpacity
-                  style={styles.autoCaptureBtn}
-                  activeOpacity={0.88}
-                  onPress={() => openCameraScanner("back")}
-                >
-                  <Ionicons name="scan" size={20} color="#FFFFFF" />
-                  <Text style={styles.autoCaptureBtnText}>Scan CNIC Back</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.galleryUploadBtn}
-                  activeOpacity={0.8}
-                  onPress={() => pickGalleryImage("back")}
-                >
-                  <Ionicons name="image-outline" size={18} color={Colors.themes.provider.primary} />
-                  <Text style={styles.galleryUploadBtnText}>Upload</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-
-          {/* Action Button: Extract & Save */}
-          <TouchableOpacity
-            style={[
-              styles.extractActionBtn,
-              (!hasFront || isExtracting) && styles.disabledBtn,
-            ]}
-            disabled={!hasFront || isExtracting}
-            activeOpacity={0.88}
-            onPress={handleExtractAndSave}
-          >
-            <LinearGradient
-              colors={
-                !hasFront
-                  ? ["#94A3B8", "#64748B"]
-                  : ["#1E3A8A", "#2563EB"]
-              }
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.extractActionGradient}
-            >
-              {isExtracting ? (
-                <>
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                  <Text style={styles.extractActionBtnText}>
-                    Reading & saving your CNIC...
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Ionicons name="sparkles" size={18} color="#FFFFFF" />
-                  <Text style={styles.extractActionBtnText}>
-                    Extract Details & Continue
-                  </Text>
-                  <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
-                </>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
+        <View style={styles.introBox}>
+          <AppText style={styles.heading}>Upload CNIC</AppText>
+          <AppText style={styles.subtitle}>
+            Please upload clear photos of your CNIC front and back.
+          </AppText>
         </View>
-      </ScrollView>
 
-      {/* Camera Scanner Modal */}
-      <CnicScannerModal
-        visible={scannerVisible}
-        targetSide={scannerTargetSide}
-        onCaptured={handleScannerCapture}
-        onClose={() => setScannerVisible(false)}
-      />
+        {/* ============================================================ */}
+        {/* CNIC FRONT CARD */}
+        {/* ============================================================ */}
+        <TouchableOpacity
+          style={[styles.card, currentFrontUri ? styles.cardFilled : styles.cardEmpty]}
+          activeOpacity={0.8}
+          onPress={() => handleScanDocument("front")}
+        >
+          {currentFrontUri ? (
+            <View style={styles.imageContainer}>
+              <Image
+                source={{ uri: currentFrontUri }}
+                style={styles.cardImage}
+                resizeMode="cover"
+              />
+              <View style={[styles.imageOverlayTop, isRTL && styles.rtlRow]}>
+                <View style={styles.badgeSuccess}>
+                  <Ionicons name="checkmark-circle" size={12} color="#059669" />
+                  <AppText style={styles.badgeSuccessText}>Front Ready</AppText>
+                </View>
+                <View style={styles.changePill}>
+                  <Ionicons name="camera-reverse-outline" size={12} color="#FFFFFF" />
+                  <AppText style={styles.changePillText}>Change</AppText>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.placeholderContainer}>
+              <View style={styles.iconCircle}>
+                <Ionicons name="card-outline" size={22} color="#1E3A8A" />
+              </View>
+              <AppText style={styles.cardTitle}>Front Side</AppText>
+              <AppText style={styles.cardDesc}>Tap to scan or upload CNIC front</AppText>
+              <View style={styles.requiredTag}>
+                <AppText style={styles.requiredTagText}>Required</AppText>
+              </View>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        {/* ============================================================ */}
+        {/* CNIC BACK CARD */}
+        {/* ============================================================ */}
+        <TouchableOpacity
+          style={[styles.card, currentBackUri ? styles.cardFilled : styles.cardEmpty]}
+          activeOpacity={0.8}
+          onPress={() => handleScanDocument("back")}
+        >
+          {currentBackUri ? (
+            <View style={styles.imageContainer}>
+              <Image
+                source={{ uri: currentBackUri }}
+                style={styles.cardImage}
+                resizeMode="cover"
+              />
+              <View style={[styles.imageOverlayTop, isRTL && styles.rtlRow]}>
+                <View style={styles.badgeSuccess}>
+                  <Ionicons name="checkmark-circle" size={12} color="#059669" />
+                  <AppText style={styles.badgeSuccessText}>Back Ready</AppText>
+                </View>
+                <View style={styles.changePill}>
+                  <Ionicons name="camera-reverse-outline" size={12} color="#FFFFFF" />
+                  <AppText style={styles.changePillText}>Change</AppText>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.placeholderContainer}>
+              <View style={styles.iconCircle}>
+                <Ionicons name="barcode-outline" size={22} color="#1E3A8A" />
+              </View>
+              <AppText style={styles.cardTitle}>Back Side</AppText>
+              <AppText style={styles.cardDesc}>Tap to scan or upload CNIC back</AppText>
+              <View style={styles.recommendedTag}>
+                <AppText style={styles.recommendedTagText}>Recommended</AppText>
+              </View>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        {/* Continue Button */}
+        <TouchableOpacity
+          style={[styles.submitActionBtn, (!canSubmit || isExtracting) && styles.disabledBtn]}
+          disabled={!canSubmit || isExtracting}
+          activeOpacity={0.88}
+          onPress={handleUploadAndExtract}
+        >
+          <LinearGradient
+            colors={!canSubmit ? ["#94A3B8", "#64748B"] : ["#1E3A8A", "#2563EB"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.submitGradient, isRTL && styles.rtlRow]}
+          >
+            {isExtracting ? (
+              <>
+                <ActivityIndicator size="small" color="#FFFFFF" />
+                <AppText style={styles.submitBtnText}>Processing...</AppText>
+              </>
+            ) : (
+              <>
+                <AppText style={styles.submitBtnText}>Continue</AppText>
+                <Ionicons
+                  name={isRTL ? "arrow-back" : "arrow-forward"}
+                  size={16}
+                  color="#FFFFFF"
+                />
+              </>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -435,166 +371,201 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
-  customHeader: {
-    paddingHorizontal: Spacing.md,
-    height: 54,
+  rtlRow: {
+    flexDirection: "row-reverse",
+  },
+  header: {
+    paddingHorizontal: 12,
+    height: 46,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral.gray[100],
+    borderBottomColor: "#F1F5F9",
   },
-  backBtn: {
-    padding: 6,
+  logoutBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: "#FEF2F2",
+  },
+  logoutBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#DC2626",
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 15,
+    fontWeight: "600",
     color: Colors.text.primary,
   },
-  stepIndicatorPill: {
+  stepBadge: {
     backgroundColor: "#EFF6FF",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: BorderRadius.full,
   },
-  stepIndicatorText: {
+  stepBadgeText: {
     fontSize: 11,
-    fontWeight: "700",
-    color: Colors.themes.provider.primary,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.xl,
-  },
-  stepSectionContainer: {
-    width: "100%",
-  },
-  stepSectionHeading: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: Colors.text.primary,
-    marginBottom: 4,
-  },
-  stepSectionSub: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-    lineHeight: 20,
-    marginBottom: Spacing.xl,
-  },
-  cnicUploadCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    marginBottom: Spacing.lg,
-    ...Shadows.sm,
-  },
-  cnicCardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: Spacing.md,
-  },
-  cnicCardTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  cnicCardTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: Colors.text.primary,
-  },
-  cnicActionRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  autoCaptureBtn: {
-    flex: 1.4,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.themes.provider.primary,
-    paddingVertical: 14,
-    borderRadius: BorderRadius.md,
-    gap: 8,
-    ...Shadows.sm,
-  },
-  autoCaptureBtnText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  galleryUploadBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F1F5F9",
-    paddingVertical: 14,
-    borderRadius: BorderRadius.md,
-    gap: 8,
-  },
-  galleryUploadBtnText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: Colors.themes.provider.primary,
-  },
-  cnicImagePreviewWrapper: {
-    borderRadius: BorderRadius.md,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  cnicImagePreview: {
-    width: "100%",
-    height: 160,
-    resizeMode: "cover",
-  },
-  retakeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    backgroundColor: "#F8FAFC",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
-  },
-  retakeMiniBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  retakeMiniText: {
-    fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#2563EB",
   },
-  extractActionBtn: {
-    width: "100%",
-    borderRadius: BorderRadius.lg,
-    overflow: "hidden",
-    ...Shadows.md,
-    marginTop: Spacing.md,
+  scrollContent: {
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: Spacing.xl,
   },
-  extractActionGradient: {
-    flexDirection: "row",
+  introBox: {
+    marginBottom: 12,
+  },
+  heading: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: Colors.text.primary,
+    marginBottom: 2,
+  },
+  subtitle: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    lineHeight: 16,
+  },
+  card: {
+    width: "100%",
+    aspectRatio: 1.586,
+    borderRadius: 14,
+    marginBottom: 14,
+    overflow: "hidden",
+  },
+  cardEmpty: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#CBD5E1",
+    borderStyle: "dashed",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cardFilled: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderStyle: "solid",
+  },
+  placeholderContainer: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16,
-    gap: 10,
+    paddingHorizontal: 16,
   },
-  extractActionBtnText: {
-    fontSize: 15,
-    fontWeight: "800",
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 6,
+  },
+  cardTitle: {
+    fontSize: 13.5,
+    fontWeight: "600",
+    color: Colors.text.primary,
+    marginBottom: 2,
+  },
+  cardDesc: {
+    fontSize: 11.5,
+    color: Colors.text.secondary,
+    marginBottom: 6,
+  },
+  requiredTag: {
+    backgroundColor: "#FEF2F2",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+  },
+  requiredTagText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#DC2626",
+  },
+  recommendedTag: {
+    backgroundColor: "#F1F5F9",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+  },
+  recommendedTagText: {
+    fontSize: 10,
+    fontWeight: "500",
+    color: "#64748B",
+  },
+  imageContainer: {
+    width: "100%",
+    height: "100%",
+    position: "relative",
+  },
+  cardImage: {
+    width: "100%",
+    height: "100%",
+  },
+  imageOverlayTop: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    right: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  badgeSuccess: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.92)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.full,
+  },
+  badgeSuccessText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#059669",
+  },
+  changePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.full,
+  },
+  changePillText: {
+    fontSize: 11,
+    fontWeight: "500",
     color: "#FFFFFF",
+  },
+  submitActionBtn: {
+    borderRadius: 10,
+    overflow: "hidden",
+    marginTop: 4,
+    elevation: 1,
   },
   disabledBtn: {
     opacity: 0.65,
+  },
+  submitGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    gap: 6,
+  },
+  submitBtnText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

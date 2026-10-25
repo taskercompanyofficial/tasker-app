@@ -1,7 +1,7 @@
+import AppText from "@/components/common/AppText";
 import React from "react";
 import {
   TouchableOpacity,
-  Text,
   StyleSheet,
   ActivityIndicator,
   View,
@@ -119,7 +119,7 @@ export default function Button({
       ) : (
         <View style={styles.content}>
           {icon && <View style={styles.icon}>{icon}</View>}
-          <Text style={getTextStyle()}>{title}</Text>
+          <AppText style={getTextStyle()}>{title}</AppText>
         </View>
       )}
     </TouchableOpacity>

@@ -1,8 +1,9 @@
+import AppText from "@/components/common/AppText";
 import Colors from '@/constants/Colors'
 import { Spacing } from '@/constants/Styles'
 import { Ionicons } from '@expo/vector-icons'
 import React, { useState } from 'react'
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 interface SelectOption {
     label: string
@@ -34,7 +35,7 @@ export default function Select({
 
     return (
         <View style={styles.container}>
-            {label && <Text style={styles.label}>{label}</Text>}
+            {label && <AppText style={styles.label}>{label}</AppText>}
 
             <TouchableOpacity
                 style={[styles.selectButton, error && styles.selectButtonError]}
@@ -42,12 +43,12 @@ export default function Select({
             >
                 {leftIcon && <View style={styles.leftIconContainer}>{leftIcon}</View>}
 
-                <Text style={[
+                <AppText style={[
                     styles.selectText,
                     !selectedOption && styles.placeholderText
                 ]}>
                     {selectedOption ? selectedOption.label : placeholder}
-                </Text>
+                </AppText>
 
                 <Ionicons
                     name="chevron-down"
@@ -56,7 +57,7 @@ export default function Select({
                 />
             </TouchableOpacity>
 
-            {error && <Text style={styles.errorText}>{error}</Text>}
+            {error && <AppText style={styles.errorText}>{error}</AppText>}
 
             {/* Modal */}
             <Modal
@@ -72,7 +73,7 @@ export default function Select({
                 >
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>{label || 'Select'}</Text>
+                            <AppText style={styles.modalTitle}>{label || 'Select'}</AppText>
                             <TouchableOpacity onPress={() => setModalVisible(false)}>
                                 <Ionicons name="close" size={24} color={Colors.text.primary} />
                             </TouchableOpacity>
@@ -91,12 +92,12 @@ export default function Select({
                                         setModalVisible(false)
                                     }}
                                 >
-                                    <Text style={[
+                                    <AppText style={[
                                         styles.optionText,
                                         value === option.value && styles.optionTextSelected
                                     ]}>
                                         {option.label}
-                                    </Text>
+                                    </AppText>
                                     {value === option.value && (
                                         <Ionicons name="checkmark" size={20} color={Colors.themes.customer.primary} />
                                     )}

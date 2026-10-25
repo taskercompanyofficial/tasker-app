@@ -1,25 +1,29 @@
+import AppText from "@/components/common/AppText";
+import { useLanguage } from "@/context/language-context";
+import { translateStaticCopy } from "@/lib/i18n/static-copy";
 import { Link, Stack } from "expo-router";
-import { StyleSheet, Text, View, Image } from "react-native";
+import { StyleSheet, View, Image } from "react-native";
 import Colors from "@/constants/Colors";
 import { Spacing, BorderRadius, Typography, Shadows } from "@/constants/Styles";
 
 export default function NotFoundScreen() {
+  const { language } = useLanguage();
   return (
     <>
-      <Stack.Screen options={{ title: "Oops! Page Not Found" }} />
+      <Stack.Screen options={{ title: translateStaticCopy("Oops! Page Not Found", language) }} />
       <View style={styles.container}>
         <Image
           source={require("@/assets/images/not-found.png")}
           style={styles.image}
           resizeMode="contain"
         />
-        <Text style={styles.title}>Page Not Found</Text>
-        <Text style={styles.subtitle}>
+        <AppText style={styles.title}>Page Not Found</AppText>
+        <AppText style={styles.subtitle}>
           Sorry, we couldn&apos;t find the page you&apos;re looking for.
-        </Text>
+        </AppText>
 
         <Link href="/customer" style={styles.link}>
-          <Text style={styles.linkText}>Go to Home</Text>
+          <AppText style={styles.linkText}>Go to Home</AppText>
         </Link>
       </View>
     </>

@@ -1,6 +1,7 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 interface TaskyTypewriterTextProps {
   text: string;
@@ -40,10 +41,10 @@ export default function TaskyTypewriterText({
   }, [text, speedMs, onComplete]);
 
   return (
-    <Text style={[styles.text, style]}>
+    <AppText style={[styles.text, style]}>
       {displayedText}
-      {isTyping ? <Text style={{ color: cursorColor, fontWeight: "900" }}> ▌</Text> : null}
-    </Text>
+      {isTyping ? <AppText style={{ color: cursorColor, fontWeight: "900" }}> ▌</AppText> : null}
+    </AppText>
   );
 }
 

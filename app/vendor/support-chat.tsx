@@ -1,3 +1,5 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import { ChatRoom } from "@/components/Chat/ChatRoom";
@@ -6,7 +8,6 @@ import { router } from "expo-router";
 import React from "react";
 import {
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
   StatusBar,
@@ -40,7 +41,7 @@ export default function VendorSupportChatScreen() {
       {/* App Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color={Colors.text.primary} />
+          <DirectionalIcon name="chevron-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
 
         {/* Profile Info */}
@@ -55,9 +56,9 @@ export default function VendorSupportChatScreen() {
 
           <View style={styles.headerTextContainer}>
             <View style={styles.headerTitleRow}>
-              <Text style={styles.headerTitle} numberOfLines={1}>
+              <AppText style={styles.headerTitle} numberOfLines={1}>
                 Vendor Partner Helpdesk
-              </Text>
+              </AppText>
               <MaterialCommunityIcons
                 name="check-decagram"
                 size={14}
@@ -66,9 +67,9 @@ export default function VendorSupportChatScreen() {
             </View>
             <View style={styles.statusRow}>
               <View style={styles.statusDot} />
-              <Text style={styles.headerSubtitle} numberOfLines={1}>
+              <AppText style={styles.headerSubtitle} numberOfLines={1}>
                 ⚡ 24/7 AI Operations Assistant • Online
-              </Text>
+              </AppText>
             </View>
           </View>
         </View>

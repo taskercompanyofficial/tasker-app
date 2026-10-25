@@ -1,7 +1,7 @@
+import AppText from "@/components/common/AppText";
 import React, { useState, useMemo } from "react";
 import {
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   GestureResponderEvent,
@@ -154,11 +154,11 @@ export function VoiceMessage({ uri, isSender }: VoiceMessageProps) {
               color={timeTextColor}
               style={{ marginRight: 3 }}
             />
-            <Text style={[styles.timeText, { color: timeTextColor }]}>
+            <AppText style={[styles.timeText, { color: timeTextColor }]}>
               {status.playing
                 ? `${formatSeconds(currentSec)} / ${formatSeconds(totalSec)}`
                 : formatSeconds(totalSec || currentSec)}
-            </Text>
+            </AppText>
           </View>
 
           {/* Speed Toggle Pill Button */}
@@ -167,9 +167,9 @@ export function VoiceMessage({ uri, isSender }: VoiceMessageProps) {
             style={[styles.speedBadge, { backgroundColor: speedBadgeBg }]}
             activeOpacity={0.7}
           >
-            <Text style={[styles.speedText, { color: speedBadgeText }]}>
+            <AppText style={[styles.speedText, { color: speedBadgeText }]}>
               {speed}x
-            </Text>
+            </AppText>
           </TouchableOpacity>
         </View>
       </View>

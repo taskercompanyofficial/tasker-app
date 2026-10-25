@@ -1,9 +1,9 @@
+import AppText from "@/components/common/AppText";
 import React, { useEffect, useState } from "react";
 import {
   Modal,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -48,13 +48,13 @@ export default function DebugPanel() {
           setVisible(true);
         }}
       >
-        <Text style={styles.fabText}>DBG</Text>
+        <AppText style={styles.fabText}>DBG</AppText>
       </TouchableOpacity>
 
       <Modal visible={visible} animationType="slide" onRequestClose={() => setVisible(false)}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.title}>Debug Monitor ({logs.length})</Text>
+            <AppText style={styles.title}>Debug Monitor ({logs.length})</AppText>
             <View style={styles.actions}>
               <TouchableOpacity
                 onPress={() => {
@@ -63,27 +63,27 @@ export default function DebugPanel() {
                 }}
                 style={[styles.actionBtn, styles.clearBtn]}
               >
-                <Text style={styles.actionText}>Clear</Text>
+                <AppText style={styles.actionText}>Clear</AppText>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setVisible(false)}
                 style={[styles.actionBtn, styles.closeBtn]}
               >
-                <Text style={styles.actionText}>Close</Text>
+                <AppText style={styles.actionText}>Close</AppText>
               </TouchableOpacity>
             </View>
           </View>
 
           <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
             {logs.length === 0 ? (
-              <Text style={styles.empty}>No logs yet</Text>
+              <AppText style={styles.empty}>No logs yet</AppText>
             ) : (
               logs.map((item) => (
                 <View key={item.id} style={styles.logItem}>
-                  <Text style={styles.event}>{item.event}</Text>
-                  <Text style={styles.ts}>{item.ts}</Text>
+                  <AppText style={styles.event}>{item.event}</AppText>
+                  <AppText style={styles.ts}>{item.ts}</AppText>
                   {!!item.payload && (
-                    <Text style={styles.payload}>{safeSerialize(item.payload)}</Text>
+                    <AppText style={styles.payload}>{safeSerialize(item.payload)}</AppText>
                   )}
                 </View>
               ))

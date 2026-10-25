@@ -1,7 +1,7 @@
+import AppText from "@/components/common/AppText";
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
   KeyboardAvoidingView,
@@ -98,7 +98,7 @@ export function ChatRoom({
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={Colors.themes.customer.primary} />
-        <Text style={styles.loadingText}>Connecting to secure chat...</Text>
+        <AppText style={styles.loadingText}>Connecting to secure chat...</AppText>
       </View>
     );
   }
@@ -107,7 +107,7 @@ export function ChatRoom({
     return (
       <View style={styles.center}>
         <Ionicons name="alert-circle-outline" size={48} color={Colors.error} />
-        <Text style={styles.errorText}>{error}</Text>
+        <AppText style={styles.errorText}>{error}</AppText>
       </View>
     );
   }
@@ -138,11 +138,11 @@ export function ChatRoom({
         {!isSupport && (
           <View style={styles.safetyBanner}>
             <Ionicons name="shield-checkmark" size={13} color="#D97706" />
-            <Text style={styles.safetyText} numberOfLines={1}>
+            <AppText style={styles.safetyText} numberOfLines={1}>
               {isVendor
                 ? "Deal only via Tasker app for verified commission & warranty protection."
                 : "Deal only via Tasker app for your warranty & security protection."}
-            </Text>
+            </AppText>
           </View>
         )}
 
@@ -175,9 +175,9 @@ export function ChatRoom({
                     style={styles.typingAvatar}
                   />
                   <ActivityIndicator size="small" color={Colors.themes.customer.primary} />
-                  <Text style={styles.typingText}>
+                  <AppText style={styles.typingText}>
                     {isVendor ? "Tasker Helpdesk is typing..." : "Tasky is typing..."}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
             ) : null
@@ -190,32 +190,32 @@ export function ChatRoom({
                   style={styles.welcomeMinimalAvatar}
                 />
                 <View style={styles.aiPillBadge}>
-                  <Text style={styles.aiPillText}>
+                  <AppText style={styles.aiPillText}>
                     {isVendor ? "VENDOR PARTNER SUPPORT" : "24/7 AI SUPPORT"}
-                  </Text>
+                  </AppText>
                 </View>
-                <Text style={styles.welcomeMinimalTitle}>
+                <AppText style={styles.welcomeMinimalTitle}>
                   {isVendor ? "Vendor Operations Helpdesk" : "How can we help today?"}
-                </Text>
-                <Text style={styles.welcomeMinimalSubtitle}>
+                </AppText>
+                <AppText style={styles.welcomeMinimalSubtitle}>
                   {isVendor
                     ? "Ask any question about your assigned jobs, commissions, completion steps, or policies."
                     : "Ask any question about services, active orders, or pricing."}
-                </Text>
+                </AppText>
               </View>
             ) : (
               <View style={styles.orderStartMinimal}>
                 <View style={styles.orderEncryptedBadge}>
                   <Ionicons name="lock-closed" size={11} color="#64748B" />
-                  <Text style={styles.orderEncryptedText}>
+                  <AppText style={styles.orderEncryptedText}>
                     Order #{workOrderId} • End-to-end encrypted
-                  </Text>
+                  </AppText>
                 </View>
-                <Text style={styles.orderEncryptedHint}>
+                <AppText style={styles.orderEncryptedHint}>
                   {isVendor
                     ? "Tap the top header to view customer profile, call, or open WhatsApp"
                     : "Tap the top profile header to view technician credentials & call"}
-                </Text>
+                </AppText>
               </View>
             )
           }

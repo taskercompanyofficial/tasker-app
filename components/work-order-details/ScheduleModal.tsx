@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
 import Colors from "@/constants/Colors";
@@ -9,7 +10,6 @@ import {
   Modal,
   Platform,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -62,8 +62,8 @@ export default function ScheduleModal({
         <View style={styles.container}>
           <View style={styles.header}>
             <View>
-              <Text style={styles.title}>Schedule Appointment</Text>
-              <Text style={styles.subtitle}>Set date and time for service</Text>
+              <AppText style={styles.title}>Schedule Appointment</AppText>
+              <AppText style={styles.subtitle}>Set date and time for service</AppText>
             </View>
             <TouchableOpacity
               onPress={onCancel}
@@ -92,8 +92,8 @@ export default function ScheduleModal({
                   />
                 </View>
                 <View>
-                  <Text style={styles.pickerLabel}>Date</Text>
-                  <Text style={styles.pickerValue}>{formatDate(date)}</Text>
+                  <AppText style={styles.pickerLabel}>Date</AppText>
+                  <AppText style={styles.pickerValue}>{formatDate(date)}</AppText>
                 </View>
               </TouchableOpacity>
 
@@ -116,8 +116,8 @@ export default function ScheduleModal({
                   />
                 </View>
                 <View>
-                  <Text style={styles.pickerLabel}>Time</Text>
-                  <Text style={styles.pickerValue}>{formatTime(time)}</Text>
+                  <AppText style={styles.pickerLabel}>Time</AppText>
+                  <AppText style={styles.pickerValue}>{formatTime(time)}</AppText>
                 </View>
               </TouchableOpacity>
             </View>

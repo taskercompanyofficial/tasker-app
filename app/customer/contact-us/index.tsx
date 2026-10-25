@@ -1,4 +1,8 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import ContactSupportModal from "@/components/orders/ContactSupportModal";
+import { useLanguage } from "@/context/language-context";
+import { translateStaticCopy } from "@/lib/i18n/static-copy";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,13 +12,13 @@ import {
   Linking,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ContactUsPage() {
+  const { language } = useLanguage();
   const [showContactModal, setShowContactModal] = useState(false);
 
   const contactMethods = [
@@ -32,7 +36,7 @@ export default function ContactUsPage() {
       color: Colors.social.whatsapp,
       onPress: () => {
         const phoneNumber = "923041112717";
-        const message = "Hello, I need help with...";
+        const message = translateStaticCopy("Hello, I need help with...", language);
         Linking.openURL(
           `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`,
         ).catch(() => {
@@ -94,9 +98,9 @@ export default function ContactUsPage() {
           onPress={() => router.back()}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+          <DirectionalIcon name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Contact Us</Text>
+        <AppText style={styles.headerTitle}>Contact Us</AppText>
         <View style={styles.placeholder} />
       </View>
 
@@ -113,15 +117,15 @@ export default function ContactUsPage() {
               color={Colors.themes.customer.primary}
             />
           </View>
-          <Text style={styles.heroTitle}>We&apos;re Here to Help</Text>
-          <Text style={styles.heroSubtitle}>
+          <AppText style={styles.heroTitle}>We&apos;re Here to Help</AppText>
+          <AppText style={styles.heroSubtitle}>
             Get in touch with us through any of the following methods
-          </Text>
+          </AppText>
         </View>
 
         {/* Contact Methods */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Contact Methods</Text>
+          <AppText style={styles.sectionTitle}>Contact Methods</AppText>
           {contactMethods.map((method, index) => (
             <TouchableOpacity
               key={index}
@@ -142,10 +146,10 @@ export default function ContactUsPage() {
                 />
               </View>
               <View style={styles.contactInfo}>
-                <Text style={styles.contactTitle}>{method.title}</Text>
-                <Text style={styles.contactSubtitle}>{method.subtitle}</Text>
+                <AppText style={styles.contactTitle}>{method.title}</AppText>
+                <AppText style={styles.contactSubtitle}>{method.subtitle}</AppText>
               </View>
-              <Ionicons
+              <DirectionalIcon
                 name="chevron-forward"
                 size={20}
                 color={Colors.text.tertiary}
@@ -161,13 +165,13 @@ export default function ContactUsPage() {
             onPress={() => setShowContactModal(true)}
           >
             <Ionicons name="call" size={20} color={Colors.neutral.white} />
-            <Text style={styles.quickContactText}>Quick Contact</Text>
+            <AppText style={styles.quickContactText}>Quick Contact</AppText>
           </TouchableOpacity>
         </View>
 
         {/* Social Media */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Follow Us</Text>
+          <AppText style={styles.sectionTitle}>Follow Us</AppText>
           <View style={styles.socialContainer}>
             {socialMedia.map((social, index) => (
               <TouchableOpacity
@@ -190,19 +194,19 @@ export default function ContactUsPage() {
 
         {/* Business Hours */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Business Hours</Text>
+          <AppText style={styles.sectionTitle}>Business Hours</AppText>
           <View style={styles.hoursCard}>
             <View style={styles.hourRow}>
-              <Text style={styles.dayText}>Monday - Friday</Text>
-              <Text style={styles.timeText}>9:00 AM - 6:00 PM</Text>
+              <AppText style={styles.dayText}>Monday - Friday</AppText>
+              <AppText style={styles.timeText}>9:00 AM - 6:00 PM</AppText>
             </View>
             <View style={styles.hourRow}>
-              <Text style={styles.dayText}>Saturday</Text>
-              <Text style={styles.timeText}>10:00 AM - 4:00 PM</Text>
+              <AppText style={styles.dayText}>Saturday</AppText>
+              <AppText style={styles.timeText}>10:00 AM - 4:00 PM</AppText>
             </View>
             <View style={styles.hourRow}>
-              <Text style={styles.dayText}>Sunday</Text>
-              <Text style={styles.timeText}>Closed</Text>
+              <AppText style={styles.dayText}>Sunday</AppText>
+              <AppText style={styles.timeText}>Closed</AppText>
             </View>
           </View>
         </View>

@@ -1,32 +1,31 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppText from "@/components/common/AppText";
 import Input from "@/components/Input";
 import Colors from "@/constants/Colors";
-import { BorderRadius, Shadows, Spacing } from "@/constants/Styles";
+import { BorderRadius, Spacing } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
 import { useAuthStore } from "@/context/auth-store";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import TaskyTypewriterText from "@/components/vendor/TaskyTypewriterText";
 import OptionPickerModal from "@/components/vendor/OptionPickerModal";
 import myAxios from "@/lib/axios.config";
 import { VENDOR_UPDATE_PROFILE_URL } from "@/lib/api-endpoints";
 import * as Haptics from "expo-haptics";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
   Switch,
-  Text,
   TouchableOpacity,
   View,
-  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Toast from "react-native-toast-message";
 
 const EDUCATION_OPTIONS = [
   "Under-Matric",
@@ -47,8 +46,24 @@ const MARITAL_STATUS_OPTIONS = [
 
 export default function Step6BackgroundInfo() {
   const router = useRouter();
-  const { session, refetchUser } = useSession();
+  const { session, refetchUser, signOutMode } = useSession();
   const user = session.vendorUser as any;
+
+  const handleLogout = () => {
+    Alert.alert("Log Out", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log Out",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await signOutMode("vendor");
+          } catch (_) {}
+          router.replace("/vendor/login" as any);
+        },
+      },
+    ]);
+  };
 
   const [education, setEducation] = useState<string>(user?.education || "Matric (10th)");
   const [maritalStatus, setMaritalStatus] = useState<string>(user?.marital_status || "Single");
@@ -61,16 +76,16 @@ export default function Step6BackgroundInfo() {
 
   const handleFinish = async () => {
     if (!education) {
-      Toast.show({ type: "error", text1: "Education Required", text2: "Please select your highest education level." });
+      localizedToast({ type: "error", text1: "Education Required", text2: "Please select your highest education level." });
       return;
     }
     if (!maritalStatus) {
-      Toast.show({ type: "error", text1: "Marital Status Required", text2: "Please select your marital status." });
+      localizedToast({ type: "error", text1: "Marital Status Required", text2: "Please select your marital status." });
       return;
     }
 
     if (isWorkingOtherApps && !otherAppsNames.trim()) {
-      Toast.show({ type: "error", text1: "App Names Required", text2: "Please enter the names of the other apps/platforms you work with." });
+      localizedToast({ type: "error", text1: "App Names Required", text2: "Please enter the names of the other apps/platforms you work with." });
       return;
     }
 
@@ -102,17 +117,17 @@ export default function Step6BackgroundInfo() {
         const vendorStatus = currentVendor?.status || res.data?.data?.status || res.data?.user?.status;
 
         if (vendorStatus === "active") {
-          Toast.show({
+          localizedToast({
             type: "success",
-            text1: "🎉 Profile Completed & Active!",
+            text1: "Profile Completed & Active!",
             text2: "Welcome to Tasker Partner Dashboard.",
             visibilityTime: 4000,
           });
           router.replace("/vendor/(tabs)" as any);
         } else {
-          Toast.show({
+          localizedToast({
             type: "success",
-            text1: "🎉 Profile Submitted for Review!",
+            text1: "Profile Submitted for Review!",
             text2: "Your details have been submitted. Account is now under review.",
             visibilityTime: 4000,
           });
@@ -121,7 +136,7 @@ export default function Step6BackgroundInfo() {
       }
     } catch (error: any) {
       console.warn("[Step6BackgroundInfo] Submit error:", error?.response?.data || error?.message);
-      Toast.show({
+      localizedToast({
         type: "error",
         text1: "Submission Failed",
         text2: error?.response?.data?.message || "Please check your inputs and try again.",
@@ -136,50 +151,18 @@ export default function Step6BackgroundInfo() {
       <StatusBar barStyle="dark-content" />
 
       {/* Header */}
-      <View style={styles.customHeader}>
+      <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backBtn}
+          onPress={handleLogout}
+          style={styles.logoutBtn}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={20} color={Colors.text.primary} />
+          <Ionicons name="log-out-outline" size={16} color="#DC2626" />
+          <AppText style={styles.logoutBtnText}>Logout</AppText>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Personal & Work Background</Text>
-        <View style={styles.stepIndicatorPill}>
-          <Text style={styles.stepIndicatorText}>Step 6 of 6</Text>
-        </View>
-      </View>
-
-      {/* Progress Bar */}
-      <View style={styles.progressStickyBar}>
-        <View style={styles.progressLabelRow}>
-          <Text style={styles.progressStatusLabel}>Final Step: Education & Work Background</Text>
-          <Text style={styles.progressPercentLabel}>100% Final Step</Text>
-        </View>
-        <View style={styles.progressBarTrack}>
-          <View style={[styles.progressBarFill, { width: "100%" }]} />
-        </View>
-      </View>
-
-      {/* Conversational Bubble */}
-      <View style={styles.conversationalSpeechBar}>
-        <Image
-          source={require("@/assets/images/tasky-ai-clipboard.png")}
-          style={styles.conversationalAvatar}
-          resizeMode="contain"
-        />
-        <View style={styles.conversationalContent}>
-          <View style={styles.taskyNameRow}>
-            <Text style={styles.taskyNameLabel}>Tasky Assistant</Text>
-            <View style={styles.aiBadgePill}>
-              <Ionicons name="sparkles" size={10} color="#2563EB" />
-              <Text style={styles.aiBadgeText}>Final Details</Text>
-            </View>
-          </View>
-          <TaskyTypewriterText
-            text="Almost done! Tell us a bit about your education, marital status, and whether you currently work with any other apps."
-            speedMs={15}
-          />
+        <AppText style={styles.headerTitle}>Work & Education</AppText>
+        <View style={styles.stepBadge}>
+          <AppText style={styles.stepBadgeText}>Step 5 of 5</AppText>
         </View>
       </View>
 
@@ -192,11 +175,18 @@ export default function Step6BackgroundInfo() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          <View style={styles.introBox}>
+            <AppText style={styles.heading}>Work & Education</AppText>
+            <AppText style={styles.subtitle}>
+              Confirm your educational background and work preferences.
+            </AppText>
+          </View>
+
           {/* Education Card */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="school-outline" size={18} color="#2563EB" />
-              <Text style={styles.sectionTitle}>Highest Education Level *</Text>
+              <Ionicons name="school-outline" size={16} color="#1E3A8A" />
+              <AppText style={styles.sectionTitle}>Highest Education Level *</AppText>
             </View>
 
             <TouchableOpacity
@@ -205,18 +195,18 @@ export default function Step6BackgroundInfo() {
               activeOpacity={0.75}
             >
               <View style={styles.selectTriggerContent}>
-                <Ionicons name="school-outline" size={18} color="#2563EB" />
-                <Text style={styles.selectTriggerValue}>{education || "Select Education"}</Text>
+                <Ionicons name="school-outline" size={16} color="#1E3A8A" />
+                <AppText style={styles.selectTriggerValue}>{education || "Select Education"}</AppText>
               </View>
-              <Ionicons name="chevron-down" size={18} color="#64748B" />
+              <Ionicons name="chevron-down" size={15} color="#64748B" />
             </TouchableOpacity>
           </View>
 
           {/* Marital Status Card */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="heart-outline" size={18} color="#EC4899" />
-              <Text style={styles.sectionTitle}>Marital Status *</Text>
+              <Ionicons name="heart-outline" size={16} color="#1E3A8A" />
+              <AppText style={styles.sectionTitle}>Marital Status *</AppText>
             </View>
 
             <TouchableOpacity
@@ -225,10 +215,10 @@ export default function Step6BackgroundInfo() {
               activeOpacity={0.75}
             >
               <View style={styles.selectTriggerContent}>
-                <Ionicons name="heart-outline" size={18} color="#EC4899" />
-                <Text style={styles.selectTriggerValue}>{maritalStatus || "Select Marital Status"}</Text>
+                <Ionicons name="heart-outline" size={16} color="#1E3A8A" />
+                <AppText style={styles.selectTriggerValue}>{maritalStatus || "Select Marital Status"}</AppText>
               </View>
-              <Ionicons name="chevron-down" size={18} color="#64748B" />
+              <Ionicons name="chevron-down" size={15} color="#64748B" />
             </TouchableOpacity>
           </View>
 
@@ -236,8 +226,8 @@ export default function Step6BackgroundInfo() {
           <View style={styles.sectionCard}>
             <View style={styles.switchRow}>
               <View style={{ flex: 1, paddingRight: Spacing.sm }}>
-                <Text style={styles.switchTitle}>Currently working with any other apps?</Text>
-                <Text style={styles.switchSub}>e.g. Delivery, ride-hailing or technician platforms</Text>
+                <AppText style={styles.switchTitle}>Currently working with any other apps?</AppText>
+                <AppText style={styles.switchSub}>e.g. Delivery, ride-hailing or technician platforms</AppText>
               </View>
               <Switch
                 value={isWorkingOtherApps}
@@ -246,7 +236,7 @@ export default function Step6BackgroundInfo() {
                   if (!val) setOtherAppsNames("");
                 }}
                 trackColor={{ false: "#CBD5E1", true: "#93C5FD" }}
-                thumbColor={isWorkingOtherApps ? "#2563EB" : "#F8FAFC"}
+                thumbColor={isWorkingOtherApps ? "#1E3A8A" : "#F8FAFC"}
               />
             </View>
 
@@ -257,7 +247,7 @@ export default function Step6BackgroundInfo() {
                   placeholder="e.g. InDrive, Bykea, Foodpanda"
                   value={otherAppsNames}
                   onChangeText={setOtherAppsNames}
-                  leftIcon={<Ionicons name="grid-outline" size={18} color="#64748B" />}
+                  leftIcon={<Ionicons name="grid-outline" size={16} color="#64748B" />}
                 />
               </View>
             )}
@@ -280,14 +270,12 @@ export default function Step6BackgroundInfo() {
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
                 <>
-                  <Ionicons name="checkmark-done-circle" size={20} color="#FFFFFF" />
-                  <Text style={styles.submitBtnText}>Complete & Activate Profile</Text>
+                  <Ionicons name="checkmark-done-circle" size={18} color="#FFFFFF" />
+                  <AppText style={styles.submitBtnText}>Complete & Submit Profile</AppText>
                 </>
               )}
             </LinearGradient>
           </TouchableOpacity>
-
-          <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -319,142 +307,82 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
-  customHeader: {
+  header: {
+    paddingHorizontal: 12,
+    height: 46,
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#F1F5F9",
-    justifyContent: "center",
     alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  stepIndicatorPill: {
-    backgroundColor: "#EFF6FF",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: "#DBEAFE",
-  },
-  stepIndicatorText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#2563EB",
-  },
-  progressStickyBar: {
     backgroundColor: "#FFFFFF",
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
-  progressLabelRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  progressStatusLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#64748B",
-  },
-  progressPercentLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#10B981",
-  },
-  progressBarTrack: {
-    height: 4,
-    backgroundColor: "#E2E8F0",
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  progressBarFill: {
-    height: "100%",
-    backgroundColor: "#10B981",
-    borderRadius: 2,
-  },
-  conversationalSpeechBar: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: "#FFFFFF",
-    marginHorizontal: Spacing.md,
-    marginTop: Spacing.sm,
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    ...Shadows.sm,
-  },
-  conversationalAvatar: {
-    width: 44,
-    height: 44,
-    marginRight: Spacing.sm,
-  },
-  conversationalContent: {
-    flex: 1,
-  },
-  taskyNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 3,
-  },
-  taskyNameLabel: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#0F172A",
-  },
-  aiBadgePill: {
+  logoutBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: "#FEF2F2",
+  },
+  logoutBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#DC2626",
+  },
+  headerTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: Colors.text.primary,
+  },
+  stepBadge: {
     backgroundColor: "#EFF6FF",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: BorderRadius.full,
   },
-  aiBadgeText: {
-    fontSize: 9,
-    fontWeight: "700",
+  stepBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
     color: "#2563EB",
   },
   scrollContent: {
-    padding: Spacing.md,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: Spacing.xl,
+  },
+  introBox: {
+    marginBottom: 12,
+  },
+  heading: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: Colors.text.primary,
+    marginBottom: 2,
+  },
+  subtitle: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    lineHeight: 16,
   },
   sectionCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    ...Shadows.sm,
   },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: Spacing.sm,
+    gap: 6,
+    marginBottom: 8,
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "600",
     color: "#0F172A",
   },
   selectTrigger: {
@@ -462,20 +390,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: "#F8FAFC",
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: "#E2E8F0",
-    borderRadius: BorderRadius.lg,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    height: 39,
   },
   selectTriggerContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
   selectTriggerValue: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "500",
     color: "#0F172A",
   },
   switchRow: {
@@ -484,26 +412,26 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   switchTitle: {
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "600",
     color: "#0F172A",
   },
   switchSub: {
     fontSize: 11,
     color: "#64748B",
-    marginTop: 2,
+    marginTop: 1,
   },
   otherAppsBox: {
-    marginTop: Spacing.md,
-    paddingTop: Spacing.sm,
+    marginTop: 8,
+    paddingTop: 6,
     borderTopWidth: 1,
     borderTopColor: "#F1F5F9",
   },
   submitBtn: {
-    marginTop: Spacing.sm,
-    borderRadius: BorderRadius.lg,
+    marginTop: 6,
+    borderRadius: 10,
     overflow: "hidden",
-    ...Shadows.md,
+    elevation: 1,
   },
   submitBtnDisabled: {
     opacity: 0.6,
@@ -512,12 +440,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
+    gap: 6,
+    paddingVertical: 12,
   },
   submitBtnText: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "600",
     color: "#FFFFFF",
   },
 });

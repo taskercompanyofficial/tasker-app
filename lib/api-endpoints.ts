@@ -16,6 +16,7 @@ export const UPDATE_PROFILE_URL = `${APP_URL}/auth/update-profile`;
 export const DELETE_ACCOUNT_URL = `${APP_URL}/auth/delete-account`;
 
 // Website URLs
+export const GET_MAIN_CATEGORIES_URL = `${APP_URL}/main-categories`;
 export const GET_CATEGORIES_URL = `${APP_URL}/categories`;
 export const PROMOTIONS_URL = `${APP_URL}/promotions`;
 export const GET_SERVICES_URL = `${APP_URL}/services`;
@@ -31,6 +32,7 @@ export const WALLET_URL = `${APP_URL}/wallet`;
 export const GIFTS_URL = `${APP_URL}/gifts`;
 export const FREE_INSTALLATION_URL = `${APP_URL}/free-installations`;
 export const CITIES_URL = `${APP_URL}/cities`;
+export const WEBSITE_BRANCHES_URL = `${API_URL}/website/branches`;
 export const VENDOR_LOGIN_URL = `${API_URL}/vendor/login`;
 export const VENDOR_REGISTER_URL = `${API_URL}/vendor/register`;
 export const VENDOR_ME_URL = `${API_URL}/vendor/me`;

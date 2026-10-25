@@ -1,7 +1,10 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import { localizedAlert } from "@/lib/i18n/localized-alert";
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import React, { useState, useCallback } from "react";
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   FlatList,
@@ -68,13 +71,13 @@ export default function VendorStaffList() {
   const handleToggleStatus = async (id: number) => {
     try {
       const res = await myAxios.post(VENDOR_STAFF_TOGGLE_STATUS_URL(id));
-      Toast.show({
+      localizedToast({
         type: "success",
         text1: res.data?.message || "Status updated",
       });
       fetchStaff();
     } catch (e: any) {
-      Toast.show({
+      localizedToast({
         type: "error",
         text1: e.response?.data?.message || "Failed",
       });
@@ -83,7 +86,7 @@ export default function VendorStaffList() {
   };
 
   const handleDelete = (id: number, name: string) => {
-    Alert.alert(
+    localizedAlert(
       "Remove Staff",
       `Are you sure you want to remove ${name}? This will unassign them from all work orders.`,
       [
@@ -94,10 +97,10 @@ export default function VendorStaffList() {
           onPress: async () => {
             try {
               await myAxios.delete(VENDOR_STAFF_DELETE_URL(id));
-              Toast.show({ type: "success", text1: "Staff member removed" });
+              localizedToast({ type: "success", text1: "Staff member removed" });
               fetchStaff();
             } catch (e: any) {
-              Toast.show({
+              localizedToast({
                 type: "error",
                 text1: e.response?.data?.message || "Failed",
               });
@@ -112,14 +115,14 @@ export default function VendorStaffList() {
   const handleResetPassword = async (id: number) => {
     try {
       const res = await myAxios.post(VENDOR_STAFF_RESET_PASSWORD_URL(id));
-      Toast.show({
+      localizedToast({
         type: "success",
         text1: "Password Reset",
         text2: `New password: ${res.data?.default_password}`,
         visibilityTime: 6000,
       });
     } catch (e: any) {
-      Toast.show({
+      localizedToast({
         type: "error",
         text1: e.response?.data?.message || "Failed",
       });
@@ -130,8 +133,8 @@ export default function VendorStaffList() {
   const StatBadge = ({ icon, count, label, color }: any) => (
     <View style={[styles.statBadge, { backgroundColor: color + "10" }]}>
       <Ionicons name={icon} size={12} color={color} />
-      <Text style={[styles.statCount, { color }]}>{count}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <AppText style={[styles.statCount, { color }]}>{count}</AppText>
+      <AppText style={styles.statLabel}>{label}</AppText>
     </View>
   );
 
@@ -157,15 +160,15 @@ export default function VendorStaffList() {
                   style={styles.avatarImage}
                 />
               ) : (
-                <Text style={styles.avatarText}>
+                <AppText style={styles.avatarText}>
                   {item.name.charAt(0).toUpperCase()}
-                </Text>
+                </AppText>
               )}
             </View>
             <View style={styles.staffInfo}>
-              <Text style={styles.staffName}>{item.name}</Text>
+              <AppText style={styles.staffName}>{item.name}</AppText>
               {item.experience ? (
-                <Text style={styles.experienceText}>{item.experience}</Text>
+                <AppText style={styles.experienceText}>{item.experience}</AppText>
               ) : null}
               <View style={styles.contactRow}>
                 <Ionicons
@@ -173,7 +176,7 @@ export default function VendorStaffList() {
                   size={12}
                   color={Colors.text.tertiary}
                 />
-                <Text style={styles.staffPhone}>{item.phone}</Text>
+                <AppText style={styles.staffPhone}>{item.phone}</AppText>
               </View>
             </View>
           </View>
@@ -194,7 +197,7 @@ export default function VendorStaffList() {
                   },
                 ]}
               />
-              <Text
+              <AppText
                 style={[
                   styles.statusText,
                   isApproved
@@ -207,7 +210,7 @@ export default function VendorStaffList() {
                   : item.status === "rejected"
                     ? "Suspended"
                     : "Pending"}
-              </Text>
+              </AppText>
             </View>
             <TouchableOpacity
               style={styles.moreBtn}
@@ -255,10 +258,10 @@ export default function VendorStaffList() {
             size={16}
             color={Colors.themes.provider.primary}
           />
-          <Text style={styles.viewProgressText}>
+          <AppText style={styles.viewProgressText}>
             View Progress & Work Orders
-          </Text>
-          <Ionicons
+          </AppText>
+          <DirectionalIcon
             name="chevron-forward"
             size={16}
             color={Colors.themes.provider.primary}
@@ -279,25 +282,25 @@ export default function VendorStaffList() {
                 size={18}
                 color={isApproved ? Colors.warning : Colors.success}
               />
-              <Text style={styles.actionText}>
+              <AppText style={styles.actionText}>
                 {isApproved ? "Suspend" : "Activate"}
-              </Text>
+              </AppText>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionItem}
               onPress={() => handleResetPassword(item.id)}
             >
               <Ionicons name="key-outline" size={18} color={Colors.info} />
-              <Text style={styles.actionText}>Reset Password</Text>
+              <AppText style={styles.actionText}>Reset Password</AppText>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionItem}
               onPress={() => handleDelete(item.id, item.name)}
             >
               <Ionicons name="trash-outline" size={18} color={Colors.error} />
-              <Text style={[styles.actionText, { color: Colors.error }]}>
+              <AppText style={[styles.actionText, { color: Colors.error }]}>
                 Remove
-              </Text>
+              </AppText>
             </TouchableOpacity>
           </View>
         )}
@@ -313,42 +316,42 @@ export default function VendorStaffList() {
           style={styles.backBtn}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+          <DirectionalIcon name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Staff Management</Text>
+        <AppText style={styles.headerTitle}>Staff Management</AppText>
         <TouchableOpacity
           onPress={() => router.push("/vendor/staff/add" as any)}
           style={styles.addBtn}
           activeOpacity={0.7}
         >
-          <Ionicons
-            name="add-circle"
-            size={28}
-            color={Colors.themes.provider.primary}
-          />
-        </TouchableOpacity>
+            <Ionicons
+              name="add-circle"
+              size={28}
+              color={Colors.themes.provider.primary}
+            />
+          </TouchableOpacity>
       </View>
 
       {/* Summary bar */}
       {!loading && staff.length > 0 && (
         <View style={styles.summaryBar}>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryCount}>{staff.length}</Text>
-            <Text style={styles.summaryLabel}>Total</Text>
+            <AppText style={styles.summaryCount}>{staff.length}</AppText>
+            <AppText style={styles.summaryLabel}>Total</AppText>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryItem}>
-            <Text style={[styles.summaryCount, { color: Colors.success }]}>
+            <AppText style={[styles.summaryCount, { color: Colors.success }]}>
               {staff.filter((s) => s.status === "approved").length}
-            </Text>
-            <Text style={styles.summaryLabel}>Active</Text>
+            </AppText>
+            <AppText style={styles.summaryLabel}>Active</AppText>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryItem}>
-            <Text style={[styles.summaryCount, { color: Colors.warning }]}>
+            <AppText style={[styles.summaryCount, { color: Colors.warning }]}>
               {staff.reduce((a, s) => a + (s.active_work_orders_count || 0), 0)}
-            </Text>
-            <Text style={styles.summaryLabel}>Jobs Active</Text>
+            </AppText>
+            <AppText style={styles.summaryLabel}>Jobs Active</AppText>
           </View>
         </View>
       )}
@@ -385,17 +388,17 @@ export default function VendorStaffList() {
                   color={Colors.themes.provider.primary}
                 />
               </View>
-              <Text style={styles.emptyTitle}>No Team Members Yet</Text>
-              <Text style={styles.emptyText}>
+              <AppText style={styles.emptyTitle}>No Team Members Yet</AppText>
+              <AppText style={styles.emptyText}>
                 Add staff members to your team and assign them to work orders.
-              </Text>
+              </AppText>
               <TouchableOpacity
                 style={styles.emptyButton}
                 onPress={() => router.push("/vendor/staff/add" as any)}
                 activeOpacity={0.8}
               >
                 <Ionicons name="add" size={20} color={Colors.neutral.white} />
-                <Text style={styles.emptyButtonText}>Add First Staff</Text>
+                <AppText style={styles.emptyButtonText}>Add First Staff</AppText>
               </TouchableOpacity>
             </View>
           }

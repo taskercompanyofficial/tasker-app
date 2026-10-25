@@ -1,30 +1,29 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppText from "@/components/common/AppText";
 import Input from "@/components/Input";
 import Colors from "@/constants/Colors";
-import { BorderRadius, Shadows, Spacing } from "@/constants/Styles";
+import { BorderRadius, Spacing } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import TaskyTypewriterText from "@/components/vendor/TaskyTypewriterText";
 import OptionPickerModal from "@/components/vendor/OptionPickerModal";
 import myAxios from "@/lib/axios.config";
 import { VENDOR_UPDATE_PROFILE_URL } from "@/lib/api-endpoints";
 import * as Haptics from "expo-haptics";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
-  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Toast from "react-native-toast-message";
 
 const RELATION_OPTIONS = [
   "Brother",
@@ -47,11 +46,24 @@ interface ReferenceData {
 
 export default function Step5References() {
   const router = useRouter();
-  const { session, refetchUser } = useSession();
+  const { session, refetchUser, signOutMode } = useSession();
   const user = session.vendorUser as any;
 
-  // Step guard: ensure step 4 (live selfie) is completed
-  const hasSelfie = Boolean(user?.profile_image);
+  const handleLogout = () => {
+    Alert.alert("Log Out", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log Out",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await signOutMode("vendor");
+          } catch (_) {}
+          router.replace("/vendor/login" as any);
+        },
+      },
+    ]);
+  };
 
   // Initialize from DB if already filled
   const existingRefs: ReferenceData[] = Array.isArray(user?.references) && user.references.length >= 2
@@ -73,27 +85,26 @@ export default function Step5References() {
   };
 
   const handleSubmit = async () => {
-    // Validation
     if (!ref1.name.trim()) {
-      Toast.show({ type: "error", text1: "Reference 1 Required", text2: "Please enter the full name for Reference 1." });
+      localizedToast({ type: "error", text1: "Reference 1 Required", text2: "Please enter the full name for Reference 1." });
       return;
     }
     if (!ref1.phone.trim() || ref1.phone.trim().length < 10) {
-      Toast.show({ type: "error", text1: "Reference 1 Phone", text2: "Please enter a valid phone number for Reference 1." });
+      localizedToast({ type: "error", text1: "Reference 1 Phone", text2: "Please enter a valid phone number for Reference 1." });
       return;
     }
 
     if (!ref2.name.trim()) {
-      Toast.show({ type: "error", text1: "Reference 2 Required", text2: "Please enter the full name for Reference 2." });
+      localizedToast({ type: "error", text1: "Reference 2 Required", text2: "Please enter the full name for Reference 2." });
       return;
     }
     if (!ref2.phone.trim() || ref2.phone.trim().length < 10) {
-      Toast.show({ type: "error", text1: "Reference 2 Phone", text2: "Please enter a valid phone number for Reference 2." });
+      localizedToast({ type: "error", text1: "Reference 2 Phone", text2: "Please enter a valid phone number for Reference 2." });
       return;
     }
 
     if (ref1.phone.trim() === ref2.phone.trim()) {
-      Toast.show({ type: "error", text1: "Duplicate Phone Numbers", text2: "Reference 1 and Reference 2 must have different phone numbers." });
+      localizedToast({ type: "error", text1: "Duplicate Phone Numbers", text2: "Reference 1 and Reference 2 must have different phone numbers." });
       return;
     }
 
@@ -121,17 +132,17 @@ export default function Step5References() {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch (_) {}
 
-        Toast.show({
+        localizedToast({
           type: "success",
-          text1: "✨ References Saved!",
-          text2: "Proceeding to final background details.",
+          text1: "References Saved",
+          text2: "Proceeding to background details.",
         });
 
         router.push("/vendor/complete-profile/step-6" as any);
       }
     } catch (error: any) {
       console.warn("[Step5References] Error saving references:", error?.response?.data || error?.message);
-      Toast.show({
+      localizedToast({
         type: "error",
         text1: "Failed to Save References",
         text2: error?.response?.data?.message || "Please check your inputs and try again.",
@@ -146,50 +157,18 @@ export default function Step5References() {
       <StatusBar barStyle="dark-content" />
 
       {/* Header */}
-      <View style={styles.customHeader}>
+      <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backBtn}
+          onPress={handleLogout}
+          style={styles.logoutBtn}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={20} color={Colors.text.primary} />
+          <Ionicons name="log-out-outline" size={16} color="#DC2626" />
+          <AppText style={styles.logoutBtnText}>Logout</AppText>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Reference Contacts</Text>
-        <View style={styles.stepIndicatorPill}>
-          <Text style={styles.stepIndicatorText}>Step 5 of 6</Text>
-        </View>
-      </View>
-
-      {/* Progress Bar */}
-      <View style={styles.progressStickyBar}>
-        <View style={styles.progressLabelRow}>
-          <Text style={styles.progressStatusLabel}>2 Reference Contacts</Text>
-          <Text style={styles.progressPercentLabel}>83% Complete</Text>
-        </View>
-        <View style={styles.progressBarTrack}>
-          <View style={[styles.progressBarFill, { width: "83%" }]} />
-        </View>
-      </View>
-
-      {/* Conversational Bubble */}
-      <View style={styles.conversationalSpeechBar}>
-        <Image
-          source={require("@/assets/images/tasky-ai-clipboard.png")}
-          style={styles.conversationalAvatar}
-          resizeMode="contain"
-        />
-        <View style={styles.conversationalContent}>
-          <View style={styles.taskyNameRow}>
-            <Text style={styles.taskyNameLabel}>Tasky Assistant</Text>
-            <View style={styles.aiBadgePill}>
-              <Ionicons name="shield-checkmark" size={10} color="#2563EB" />
-              <Text style={styles.aiBadgeText}>Security Verification</Text>
-            </View>
-          </View>
-          <TaskyTypewriterText
-            text="Please provide 2 reference contacts (such as your brother, sister, father, mother, or spouse) for verification."
-            speedMs={15}
-          />
+        <AppText style={styles.headerTitle}>Reference Contacts</AppText>
+        <View style={styles.stepBadge}>
+          <AppText style={styles.stepBadgeText}>Step 4 of 5</AppText>
         </View>
       </View>
 
@@ -202,12 +181,19 @@ export default function Step5References() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          <View style={styles.introBox}>
+            <AppText style={styles.heading}>Reference Contacts</AppText>
+            <AppText style={styles.subtitle}>
+              Please provide 2 family or emergency reference contacts.
+            </AppText>
+          </View>
+
           {/* Reference 1 Card */}
           <View style={styles.refCard}>
             <View style={styles.refCardHeader}>
               <View style={styles.refBadge}>
-                <Ionicons name="person" size={14} color="#2563EB" />
-                <Text style={styles.refBadgeText}>REFERENCE 1 (PRIMARY)</Text>
+                <Ionicons name="person" size={13} color="#1E3A8A" />
+                <AppText style={styles.refBadgeText}>Reference 1 (Primary)</AppText>
               </View>
             </View>
 
@@ -216,30 +202,30 @@ export default function Step5References() {
               placeholder="e.g. Muhammad Aslam"
               value={ref1.name}
               onChangeText={(text) => setRef1((prev) => ({ ...prev, name: text }))}
-              leftIcon={<Ionicons name="person-outline" size={18} color="#64748B" />}
+              leftIcon={<Ionicons name="person-outline" size={16} color="#64748B" />}
             />
 
-            <Text style={styles.fieldLabel}>Relationship *</Text>
+            <AppText style={styles.fieldLabel}>Relationship *</AppText>
             <TouchableOpacity
               style={styles.selectTrigger}
               onPress={() => setPickerRef1Visible(true)}
               activeOpacity={0.75}
             >
               <View style={styles.selectTriggerContent}>
-                <Ionicons name="people-outline" size={18} color="#2563EB" />
-                <Text style={styles.selectTriggerValue}>{ref1.relation || "Select Relationship"}</Text>
+                <Ionicons name="people-outline" size={16} color="#1E3A8A" />
+                <AppText style={styles.selectTriggerValue}>{ref1.relation || "Select Relationship"}</AppText>
               </View>
-              <Ionicons name="chevron-down" size={18} color="#64748B" />
+              <Ionicons name="chevron-down" size={15} color="#64748B" />
             </TouchableOpacity>
 
-            <View style={{ marginTop: Spacing.md }}>
+            <View style={{ marginTop: 10 }}>
               <Input
                 label="Mobile Phone Number *"
                 placeholder="03001234567"
                 value={ref1.phone}
                 onChangeText={(text) => setRef1((prev) => ({ ...prev, phone: formatPhone(text) }))}
                 keyboardType="phone-pad"
-                leftIcon={<Ionicons name="call-outline" size={18} color="#64748B" />}
+                leftIcon={<Ionicons name="call-outline" size={16} color="#64748B" />}
               />
             </View>
           </View>
@@ -247,9 +233,9 @@ export default function Step5References() {
           {/* Reference 2 Card */}
           <View style={styles.refCard}>
             <View style={styles.refCardHeader}>
-              <View style={[styles.refBadge, { backgroundColor: "rgba(16, 185, 129, 0.1)", borderColor: "rgba(16, 185, 129, 0.25)" }]}>
-                <Ionicons name="person" size={14} color="#10B981" />
-                <Text style={[styles.refBadgeText, { color: "#10B981" }]}>REFERENCE 2 (SECONDARY)</Text>
+              <View style={[styles.refBadge, { backgroundColor: "#ECFDF5", borderColor: "#A7F3D0" }]}>
+                <Ionicons name="person" size={13} color="#059669" />
+                <AppText style={[styles.refBadgeText, { color: "#059669" }]}>Reference 2 (Secondary)</AppText>
               </View>
             </View>
 
@@ -258,30 +244,30 @@ export default function Step5References() {
               placeholder="e.g. Tariq Mehmood"
               value={ref2.name}
               onChangeText={(text) => setRef2((prev) => ({ ...prev, name: text }))}
-              leftIcon={<Ionicons name="person-outline" size={18} color="#64748B" />}
+              leftIcon={<Ionicons name="person-outline" size={16} color="#64748B" />}
             />
 
-            <Text style={styles.fieldLabel}>Relationship *</Text>
+            <AppText style={styles.fieldLabel}>Relationship *</AppText>
             <TouchableOpacity
               style={styles.selectTrigger}
               onPress={() => setPickerRef2Visible(true)}
               activeOpacity={0.75}
             >
               <View style={styles.selectTriggerContent}>
-                <Ionicons name="people-outline" size={18} color="#10B981" />
-                <Text style={styles.selectTriggerValue}>{ref2.relation || "Select Relationship"}</Text>
+                <Ionicons name="people-outline" size={16} color="#059669" />
+                <AppText style={styles.selectTriggerValue}>{ref2.relation || "Select Relationship"}</AppText>
               </View>
-              <Ionicons name="chevron-down" size={18} color="#64748B" />
+              <Ionicons name="chevron-down" size={15} color="#64748B" />
             </TouchableOpacity>
 
-            <View style={{ marginTop: Spacing.md }}>
+            <View style={{ marginTop: 10 }}>
               <Input
                 label="Mobile Phone Number *"
                 placeholder="03121234567"
                 value={ref2.phone}
                 onChangeText={(text) => setRef2((prev) => ({ ...prev, phone: formatPhone(text) }))}
                 keyboardType="phone-pad"
-                leftIcon={<Ionicons name="call-outline" size={18} color="#64748B" />}
+                leftIcon={<Ionicons name="call-outline" size={16} color="#64748B" />}
               />
             </View>
           </View>
@@ -303,21 +289,19 @@ export default function Step5References() {
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
                 <>
-                  <Text style={styles.submitBtnText}>Save & Continue to Step 6</Text>
-                  <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                  <AppText style={styles.submitBtnText}>Save & Continue</AppText>
+                  <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
                 </>
               )}
             </LinearGradient>
           </TouchableOpacity>
-
-          <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
 
       {/* Reference 1 Relationship Picker Modal */}
       <OptionPickerModal
         visible={pickerRef1Visible}
-        title="Select Reference 1 Relationship"
+        title="Select Relationship"
         options={RELATION_OPTIONS}
         selectedValue={ref1.relation}
         onSelect={(val) => setRef1((prev) => ({ ...prev, relation: val }))}
@@ -327,7 +311,7 @@ export default function Step5References() {
       {/* Reference 2 Relationship Picker Modal */}
       <OptionPickerModal
         visible={pickerRef2Visible}
-        title="Select Reference 2 Relationship"
+        title="Select Relationship"
         options={RELATION_OPTIONS}
         selectedValue={ref2.relation}
         onSelect={(val) => setRef2((prev) => ({ ...prev, relation: val }))}
@@ -342,188 +326,127 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
-  customHeader: {
+  header: {
+    paddingHorizontal: 12,
+    height: 46,
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#F1F5F9",
-    justifyContent: "center",
     alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  stepIndicatorPill: {
-    backgroundColor: "#EFF6FF",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: "#DBEAFE",
-  },
-  stepIndicatorText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#2563EB",
-  },
-  progressStickyBar: {
     backgroundColor: "#FFFFFF",
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
-  progressLabelRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  progressStatusLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#64748B",
-  },
-  progressPercentLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#2563EB",
-  },
-  progressBarTrack: {
-    height: 4,
-    backgroundColor: "#E2E8F0",
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  progressBarFill: {
-    height: "100%",
-    backgroundColor: "#2563EB",
-    borderRadius: 2,
-  },
-  conversationalSpeechBar: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: "#FFFFFF",
-    marginHorizontal: Spacing.md,
-    marginTop: Spacing.sm,
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    ...Shadows.sm,
-  },
-  conversationalAvatar: {
-    width: 44,
-    height: 44,
-    marginRight: Spacing.sm,
-  },
-  conversationalContent: {
-    flex: 1,
-  },
-  taskyNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 3,
-  },
-  taskyNameLabel: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#0F172A",
-  },
-  aiBadgePill: {
+  logoutBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: "#FEF2F2",
+  },
+  logoutBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#DC2626",
+  },
+  headerTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: Colors.text.primary,
+  },
+  stepBadge: {
     backgroundColor: "#EFF6FF",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: BorderRadius.full,
   },
-  aiBadgeText: {
-    fontSize: 9,
-    fontWeight: "700",
+  stepBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
     color: "#2563EB",
   },
   scrollContent: {
-    padding: Spacing.md,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: Spacing.xl,
+  },
+  introBox: {
+    marginBottom: 12,
+  },
+  heading: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: Colors.text.primary,
+    marginBottom: 2,
+  },
+  subtitle: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    lineHeight: 16,
   },
   refCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    ...Shadows.sm,
   },
   refCardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: Spacing.sm,
+    marginBottom: 8,
   },
   refBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(37, 99, 235, 0.08)",
-    paddingHorizontal: 9,
-    paddingVertical: 3.5,
+    gap: 5,
+    backgroundColor: "#EFF6FF",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    borderColor: "rgba(37, 99, 235, 0.2)",
+    borderColor: "#DBEAFE",
   },
   refBadgeText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#2563EB",
-    letterSpacing: 0.5,
+    fontSize: 10.5,
+    fontWeight: "600",
+    color: "#1E3A8A",
   },
   fieldLabel: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#334155",
-    marginBottom: 6,
-    marginTop: 4,
+    marginBottom: 4,
+    marginTop: 6,
   },
   selectTrigger: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: "#F8FAFC",
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: "#E2E8F0",
-    borderRadius: BorderRadius.lg,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    height: 39,
   },
   selectTriggerContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
   selectTriggerValue: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "500",
     color: "#0F172A",
   },
   submitBtn: {
-    marginTop: Spacing.sm,
-    borderRadius: BorderRadius.lg,
+    marginTop: 6,
+    borderRadius: 10,
     overflow: "hidden",
-    ...Shadows.md,
+    elevation: 1,
   },
   submitBtnDisabled: {
     opacity: 0.6,
@@ -532,12 +455,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
+    gap: 6,
+    paddingVertical: 12,
   },
   submitBtnText: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "600",
     color: "#FFFFFF",
   },
 });

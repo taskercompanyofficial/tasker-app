@@ -1,8 +1,12 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Spacing, Typography } from "@/constants/Styles";
-import { BACKEND_URL, GET_CATEGORIES_URL } from "@/lib/api-endpoints";
+import { BACKEND_URL, GET_MAIN_CATEGORIES_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
+import { localizeCategoryDescription } from "@/lib/i18n/category-copy";
+import { useLanguage } from "@/context/language-context";
 import { Category } from "@/types/category";
+import { MainCategory } from "@/types/main-category";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -10,7 +14,6 @@ import {
   Dimensions,
   Image,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -23,13 +26,14 @@ const SINGLE_CARD_WIDTH = width - Spacing.md * 2;
 const DOUBLE_CARD_WIDTH = (width - Spacing.md * 2 - CARD_GAP) / 2;
 
 export default function CategoriesCards() {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { language } = useLanguage();
+  const [categories, setCategories] = useState<MainCategory[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchCategories = async () => {
     try {
-      const res = await myAxios.get(GET_CATEGORIES_URL);
-      const fetchedCategories: Category[] = res.data.data || [];
+      const res = await myAxios.get(GET_MAIN_CATEGORIES_URL);
+      const fetchedCategories: MainCategory[] = res.data.data || [];
       setCategories(fetchedCategories);
     } catch (error) {
       console.error("Failed to fetch categories:", error);
@@ -41,7 +45,7 @@ export default function CategoriesCards() {
     fetchCategories();
   }, []);
 
-  const renderCategoryCard = (item: Category, isFullWidth: boolean) => {
+  const renderCategoryCard = (item: MainCategory, isFullWidth: boolean) => {
     const imageUrl = item.image ? `${BACKEND_URL}/storage/${item.image}` : null;
     const tagCount = Array.isArray(item.tags) ? item.tags.length : 0;
     const cardWidth = isFullWidth ? SINGLE_CARD_WIDTH : DOUBLE_CARD_WIDTH;
@@ -60,20 +64,20 @@ export default function CategoriesCards() {
 
           {/* Left Content */}
           <View style={styles.contentFullWidth}>
-            <Text style={styles.categoryNameFull} numberOfLines={1}>
+            <AppText style={styles.categoryNameFull} numberOfLines={1}>
               {item.name}
-            </Text>
+            </AppText>
             {item.description && (
-              <Text style={styles.description} numberOfLines={2}>
-                {item.description}
-              </Text>
+              <AppText style={styles.description} numberOfLines={2}>
+                {localizeCategoryDescription(item.description, language)}
+              </AppText>
             )}
 
             {/* Tags Badge */}
             {tagCount > 0 && (
               <View style={styles.tagBadge}>
                 <Ionicons name="pricetag" size={8} color={Colors.themes.customer.primary} />
-                <Text style={styles.tagCount}>{tagCount} services</Text>
+                <AppText style={styles.tagCount}>{tagCount} services</AppText>
               </View>
             )}
           </View>
@@ -96,9 +100,6 @@ export default function CategoriesCards() {
               </View>
             )}
           </View>
-
-          {/* Status Indicator */}
-          {item.status === "active" && <View style={styles.activeIndicator} />}
         </TouchableOpacity>
       );
     }
@@ -135,20 +136,20 @@ export default function CategoriesCards() {
 
         {/* Content */}
         <View style={styles.content}>
-          <Text style={styles.categoryName} numberOfLines={1}>
+          <AppText style={styles.categoryName} numberOfLines={2}>
             {item.name}
-          </Text>
+          </AppText>
           {item.description && (
-            <Text style={styles.description} numberOfLines={1}>
-              {item.description.slice(0, 20).concat("...")}
-            </Text>
+            <AppText style={styles.description} numberOfLines={1}>
+              {localizeCategoryDescription(item.description, language)}
+            </AppText>
           )}
 
           {/* Tags Badge */}
           {tagCount > 0 && (
             <View style={styles.tagBadge}>
               <Ionicons name="pricetag" size={8} color={Colors.themes.customer.primary} />
-              <Text style={styles.tagCount}>{tagCount} services</Text>
+              <AppText style={styles.tagCount}>{tagCount} services</AppText>
             </View>
           )}
         </View>
@@ -176,7 +177,7 @@ export default function CategoriesCards() {
             size={40}
             color={Colors.text.tertiary}
           />
-          <Text style={styles.emptyText}>No categories available</Text>
+          <AppText style={styles.emptyText}>No categories available</AppText>
         </View>
       ) : (
         <View style={styles.listContent}>
@@ -244,7 +245,7 @@ const styles = StyleSheet.create({
   },
   contentFullWidth: {
     flex: 1,
-    paddingRight: Spacing.sm,
+    paddingEnd: Spacing.sm,
   },
   imageContainerFull: {
     width: 65,

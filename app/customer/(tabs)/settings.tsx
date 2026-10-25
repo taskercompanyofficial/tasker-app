@@ -1,3 +1,5 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppText from "@/components/common/AppText";
 import AlertModal from "@/components/common/AlertModal";
 import NotificationBell from "@/components/common/NotificationBell";
 import AccountSwitchCard from "@/components/settings/AccountSwitchCard";
@@ -6,6 +8,8 @@ import SettingsItem from "@/components/settings/SettingsItem";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
+import { useLanguage } from "@/context/language-context";
+import LanguageSwitcherModal from "@/components/common/LanguageSwitcherModal";
 import getImageUrl from "@/lib/utils";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -16,7 +20,6 @@ import { useCallback, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -26,6 +29,8 @@ import { getAppVersionDisplay } from "@/lib/appVersion";
 
 export default function Settings() {
   const { signOutMode, session, setAppMode } = useSession();
+  const { language, t } = useLanguage();
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showSwitchConfirm, setShowSwitchConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -73,7 +78,7 @@ export default function Settings() {
     setDeletingAccount(false);
     setShowDeleteConfirm(false);
 
-    Toast.show({
+    localizedToast({
       type: "success",
       text1: "Account Deleted",
       text2: "Your account has been permanently removed.",
@@ -108,10 +113,10 @@ export default function Settings() {
           {/* Top Row */}
           <View style={styles.topRow}>
             <View>
-              <Text style={styles.headerTitle}>Settings</Text>
-              <Text style={styles.headerSubHeading}>
+              <AppText style={styles.headerTitle}>Settings</AppText>
+              <AppText style={styles.headerSubHeading}>
                 Manage your account preferences & security
-              </Text>
+              </AppText>
             </View>
             <NotificationBell variant="default" />
           </View>
@@ -131,17 +136,17 @@ export default function Settings() {
                   />
                 ) : (
                   <View style={styles.avatarPlaceholder}>
-                    <Text style={styles.avatarText}>{getUserInitials()}</Text>
+                    <AppText style={styles.avatarText}>{getUserInitials()}</AppText>
                   </View>
                 )}
               </View>
               <View style={styles.profileInfo}>
-                <Text style={styles.profileName}>
+                <AppText style={styles.profileName}>
                   {session.user?.name || "User"}
-                </Text>
-                <Text style={styles.profileEmail}>
+                </AppText>
+                <AppText style={styles.profileEmail}>
                   {session.user?.email || session.user?.phone}
-                </Text>
+                </AppText>
               </View>
               <TouchableOpacity
                 style={styles.editBtn}
@@ -176,7 +181,7 @@ export default function Settings() {
           />
 
           {/* Account Settings Section */}
-          <Text style={styles.sectionHeaderTitle}>Account Management</Text>
+          <AppText style={styles.sectionHeaderTitle}>Account Management</AppText>
           <SettingsItem
             icon="person-outline"
             iconColor={Colors.themes.customer.primary}
@@ -188,13 +193,23 @@ export default function Settings() {
           <SettingsItem
             icon="location-outline"
             iconColor={Colors.themes.customer.primaryLight}
-            title="Manage Addresses"
+            title={t.customer.settings.savedAddresses}
             subtitle="Add or edit your saved delivery & service locations"
             onPress={() => router.push("/customer/profile/addresses")}
           />
 
+          {/* Language & Preferences */}
+          <AppText style={styles.sectionHeaderTitle}>Preferences & Language</AppText>
+          <SettingsItem
+            icon="globe-outline"
+            iconColor="#2563EB"
+            title={t.customer.settings.languageSettings}
+            subtitle={language === "ur" ? "اردو (Urdu) - فعال ہے" : language === "ur-Latn" ? "Roman Urdu - Selected" : "English - Active"}
+            onPress={() => setShowLanguageModal(true)}
+          />
+
           {/* Support Section */}
-          <Text style={styles.sectionHeaderTitle}>Support & Assistance</Text>
+          <AppText style={styles.sectionHeaderTitle}>{t.customer.settings.helpSupport}</AppText>
           <SettingsItem
             icon="chatbubble-outline"
             iconColor={Colors.themes.customer.primary}
@@ -204,9 +219,9 @@ export default function Settings() {
           />
 
           {/* Danger Zone Section */}
-          <Text style={[styles.sectionHeaderTitle, { color: Colors.error }]}>
+          <AppText style={[styles.sectionHeaderTitle, { color: Colors.error }]}>
             Danger Zone
-          </Text>
+          </AppText>
 
           <SettingsItem
             icon="log-out-outline"
@@ -229,7 +244,7 @@ export default function Settings() {
           />
 
           {/* App Version */}
-          <Text style={styles.versionText}>{getAppVersionDisplay("Tasker App")}</Text>
+          <AppText style={styles.versionText}>{getAppVersionDisplay("Tasker App")}</AppText>
         </ScrollView>
       </View>
 
@@ -248,6 +263,11 @@ export default function Settings() {
           text: "Cancel",
           onPress: () => { },
         }}
+      />
+
+      <LanguageSwitcherModal
+        visible={showLanguageModal}
+        onClose={() => setShowLanguageModal(false)}
       />
 
       {/* Mode Switch Confirmation Modal */}

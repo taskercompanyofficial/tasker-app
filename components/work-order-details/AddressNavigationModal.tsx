@@ -1,3 +1,6 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing, Typography } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,7 +11,6 @@ import {
   Modal,
   Platform,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -74,7 +76,7 @@ export default function AddressNavigationModal({
       )}`;
     }
     Linking.openURL(url).catch(() => {
-      Toast.show({ type: "error", text1: "Could not open Google Maps" });
+      localizedToast({ type: "error", text1: "Could not open Google Maps" });
     });
   };
 
@@ -100,14 +102,14 @@ export default function AddressNavigationModal({
   const handleCopyCoords = async () => {
     if (hasValidCoords) {
       await Clipboard.setStringAsync(`${lat}, ${lng}`);
-      Toast.show({
+      localizedToast({
         type: "success",
         text1: "Coordinates Copied",
         text2: `${lat.toFixed(5)}, ${lng.toFixed(5)} copied to clipboard`,
       });
     } else {
       await Clipboard.setStringAsync(fullAddress);
-      Toast.show({
+      localizedToast({
         type: "success",
         text1: "Address Copied",
         text2: "Address text copied to clipboard",
@@ -147,13 +149,13 @@ export default function AddressNavigationModal({
                 />
               </View>
               <View>
-                <Text style={styles.headerTitle}>Navigation & Location</Text>
+                <AppText style={styles.headerTitle}>Navigation & Location</AppText>
                 {customerName ? (
-                  <Text style={styles.headerSubtitle}>
+                  <AppText style={styles.headerSubtitle}>
                     Job Location • {customerName}
-                  </Text>
+                  </AppText>
                 ) : (
-                  <Text style={styles.headerSubtitle}>Destination Details</Text>
+                  <AppText style={styles.headerSubtitle}>Destination Details</AppText>
                 )}
               </View>
             </View>
@@ -194,17 +196,17 @@ export default function AddressNavigationModal({
                   size={48}
                   color={Colors.themes.provider.primary}
                 />
-                <Text style={styles.mapFallbackTitle}>Address Location</Text>
-                <Text style={styles.mapFallbackSubtitle}>{fullAddress}</Text>
+                <AppText style={styles.mapFallbackTitle}>Address Location</AppText>
+                <AppText style={styles.mapFallbackSubtitle}>{fullAddress}</AppText>
               </View>
             )}
 
             {hasValidCoords && (
               <View style={styles.coordBadge}>
                 <Ionicons name="pin-outline" size={12} color="#10B981" />
-                <Text style={styles.coordBadgeText}>
+                <AppText style={styles.coordBadgeText}>
                   {lat.toFixed(5)}, {lng.toFixed(5)}
-                </Text>
+                </AppText>
               </View>
             )}
           </View>
@@ -218,7 +220,7 @@ export default function AddressNavigationModal({
                 color={Colors.themes.provider.primary}
                 style={{ marginTop: 2 }}
               />
-              <Text style={styles.addressText}>{fullAddress}</Text>
+              <AppText style={styles.addressText}>{fullAddress}</AppText>
             </View>
 
             {hasValidCoords && (
@@ -232,7 +234,7 @@ export default function AddressNavigationModal({
                   size={14}
                   color={Colors.themes.provider.primary}
                 />
-                <Text style={styles.copyCoordsText}>Copy Coordinates</Text>
+                <AppText style={styles.copyCoordsText}>Copy Coordinates</AppText>
               </TouchableOpacity>
             )}
           </View>
@@ -246,10 +248,10 @@ export default function AddressNavigationModal({
               activeOpacity={0.85}
             >
               <Ionicons name="map" size={18} color={Colors.neutral.white} />
-              <Text style={styles.primaryNavBtnText}>
+              <AppText style={styles.primaryNavBtnText}>
                 Navigate in Google Maps
-              </Text>
-              <Ionicons
+              </AppText>
+              <DirectionalIcon
                 name="arrow-forward"
                 size={16}
                 color={Colors.neutral.white}
@@ -268,9 +270,9 @@ export default function AddressNavigationModal({
                   size={18}
                   color={Colors.text.primary}
                 />
-                <Text style={styles.secondaryBtnText}>
+                <AppText style={styles.secondaryBtnText}>
                   {Platform.OS === "ios" ? "Apple Maps" : "Native Maps"}
-                </Text>
+                </AppText>
               </TouchableOpacity>
 
               {/* Call Customer Button */}
@@ -281,9 +283,9 @@ export default function AddressNavigationModal({
                   activeOpacity={0.75}
                 >
                   <Ionicons name="call-outline" size={18} color="#10B981" />
-                  <Text style={[styles.secondaryBtnText, { color: "#10B981" }]}>
+                  <AppText style={[styles.secondaryBtnText, { color: "#10B981" }]}>
                     Call Customer
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ) : null}
             </View>

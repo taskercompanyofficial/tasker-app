@@ -1,3 +1,6 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppTextInput from "@/components/common/AppTextInput";
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { Spacing, BorderRadius, Typography } from "@/constants/Styles";
 import { WORK_ORDER_URL } from "@/lib/api-endpoints";
@@ -9,8 +12,6 @@ import {
   Modal,
   Pressable,
   StyleSheet,
-  Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -37,7 +38,7 @@ export default function ReviewModal({
 
   const handleSubmit = async () => {
     if (rating === 0) {
-      Toast.show({ type: "error", text1: "Please select a rating" });
+      localizedToast({ type: "error", text1: "Please select a rating" });
       return;
     }
     setSubmitting(true);
@@ -50,7 +51,7 @@ export default function ReviewModal({
         }
       );
       if (res.data.status === "success") {
-        Toast.show({
+        localizedToast({
           type: "success",
           text1: "Thank you!",
           text2: "Your feedback has been submitted.",
@@ -63,7 +64,7 @@ export default function ReviewModal({
     } catch (error: any) {
       const msg =
         error.response?.data?.message || "Failed to submit review.";
-      Toast.show({ type: "error", text1: msg });
+      localizedToast({ type: "error", text1: msg });
     } finally {
       setSubmitting(false);
     }
@@ -99,10 +100,10 @@ export default function ReviewModal({
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>Job Completed! 🎉</Text>
-          <Text style={styles.subtitle}>
+          <AppText style={styles.title}>Job Completed! 🎉</AppText>
+          <AppText style={styles.subtitle}>
             Your job has been completed. Please rate our service.
-          </Text>
+          </AppText>
 
           {/* Star Rating */}
           <View style={styles.starsContainer}>
@@ -122,11 +123,11 @@ export default function ReviewModal({
             ))}
           </View>
           {rating > 0 && (
-            <Text style={styles.ratingLabel}>{starLabels[rating]}</Text>
+            <AppText style={styles.ratingLabel}>{starLabels[rating]}</AppText>
           )}
 
           {/* Comment */}
-          <TextInput
+          <AppTextInput
             style={styles.commentInput}
             placeholder="Share your experience (optional)"
             placeholderTextColor={Colors.text.tertiary}
@@ -150,13 +151,13 @@ export default function ReviewModal({
             {submitting ? (
               <ActivityIndicator color={Colors.neutral.white} size="small" />
             ) : (
-              <Text style={styles.submitButtonText}>Submit Review</Text>
+              <AppText style={styles.submitButtonText}>Submit Review</AppText>
             )}
           </TouchableOpacity>
 
           {/* Skip */}
           <TouchableOpacity onPress={onClose} style={styles.skipButton}>
-            <Text style={styles.skipText}>Maybe Later</Text>
+            <AppText style={styles.skipText}>Maybe Later</AppText>
           </TouchableOpacity>
         </Pressable>
       </Pressable>

@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
@@ -5,7 +6,6 @@ import {
   Easing,
   Image,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 
@@ -141,10 +141,10 @@ export default function Splash() {
           },
         ]}
       >
-        <Text style={styles.footerTagline}>
+        <AppText style={styles.footerTagline}>
           Complete Home & Industrial Solutions
-        </Text>
-        <Text style={styles.footerVersion}>Tasker Company v1.0.0</Text>
+        </AppText>
+        <AppText style={styles.footerVersion}>Tasker Company v1.0.0</AppText>
       </Animated.View>
     </View>
   );

@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import AddAddressForm from '@/components/home/AddAddressForm'
 import Colors from '@/constants/Colors'
 import { Spacing } from '@/constants/Styles'
@@ -6,7 +7,7 @@ import { ADDRESS_URL } from '@/lib/api-endpoints'
 import myAxios from '@/lib/axios.config'
 import { Ionicons } from '@expo/vector-icons'
 import React, { useEffect, useState, useImperativeHandle, forwardRef } from 'react'
-import { StyleSheet, Text, TouchableOpacity, View, FlatList, Pressable } from 'react-native'
+import { StyleSheet, TouchableOpacity, View, FlatList, Pressable } from 'react-native'
 
 export interface Address {
     id: number
@@ -71,7 +72,7 @@ export default forwardRef<AddressSelectorRef, AddressSelectorProps>(
         <View style={styles.container}>
                 {loading ? (
                     <View style={styles.loadingContainer}>
-                        <Text style={styles.loadingText}>Loading addresses...</Text>
+                        <AppText style={styles.loadingText}>Loading addresses...</AppText>
                     </View>
                 ) : (
                     <FlatList
@@ -95,12 +96,12 @@ export default forwardRef<AddressSelectorRef, AddressSelectorProps>(
                                             size={16}
                                             color={selectedAddressId === address.id ? Colors.themes.customer.primary : Colors.text.secondary}
                                         />
-                                        <Text style={[
+                                        <AppText style={[
                                             styles.addressLabel,
                                             selectedAddressId === address.id && styles.addressLabelSelected
                                         ]}>
                                             {address.address_type.charAt(0).toUpperCase() + address.address_type.slice(1)}
-                                        </Text>
+                                        </AppText>
                                     </View>
                                     <View style={styles.radioAndInfo}>
                                         {onViewDetails ? (
@@ -122,9 +123,9 @@ export default forwardRef<AddressSelectorRef, AddressSelectorProps>(
                                         </View>
                                     </View>
                                 </View>
-                                <Text style={styles.addressText} numberOfLines={1}>{address.address_line_1}</Text>
-                                {address.address_line_2 ? <Text style={styles.addressText} numberOfLines={1}>{address.address_line_2}</Text> : null}
-                                <Text style={styles.addressText} numberOfLines={1}>{address.city}, {address.state} {address.zip_code || ''}</Text>
+                                <AppText style={styles.addressText} numberOfLines={1}>{address.address_line_1}</AppText>
+                                {address.address_line_2 ? <AppText style={styles.addressText} numberOfLines={1}>{address.address_line_2}</AppText> : null}
+                                <AppText style={styles.addressText} numberOfLines={1}>{address.city}, {address.state} {address.zip_code || ''}</AppText>
                             </TouchableOpacity>
                         )}
                         ListFooterComponent={
@@ -134,13 +135,13 @@ export default forwardRef<AddressSelectorRef, AddressSelectorProps>(
                                     onPress={onAddNewAddress}
                                 >
                                     <Ionicons name="add-circle-outline" size={28} color={Colors.themes.customer.primary} />
-                                    <Text style={styles.addAddressText}>Add New</Text>
+                                    <AppText style={styles.addAddressText}>Add New</AppText>
                                 </TouchableOpacity>
                             ) : null
                         }
                     />
                 )}
-                {error && <Text style={styles.error}>{error}</Text>}
+                {error && <AppText style={styles.error}>{error}</AppText>}
             </View>
     )
 })

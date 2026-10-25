@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing, Typography } from "@/constants/Styles";
 import { useWorkOrder } from "@/hooks/useWorkOrder";
@@ -7,7 +8,6 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
-  Text,
   View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -106,7 +106,7 @@ export default function VendorWorkOrderDetailsScreen() {
             size="large"
             color={Colors.themes.provider.primary}
           />
-          <Text style={styles.loadingText}>Loading details...</Text>
+          <AppText style={styles.loadingText}>Loading details...</AppText>
         </View>
       </SafeAreaView>
     );
@@ -121,8 +121,8 @@ export default function VendorWorkOrderDetailsScreen() {
             size={64}
             color={Colors.text.tertiary}
           />
-          <Text style={styles.errorTitle}>Job Not Found</Text>
-          <Text style={styles.errorText}>Unable to load job details</Text>
+          <AppText style={styles.errorTitle}>Job Not Found</AppText>
+          <AppText style={styles.errorText}>Unable to load job details</AppText>
         </View>
       </SafeAreaView>
     );

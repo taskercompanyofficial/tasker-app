@@ -1,3 +1,6 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,7 +15,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   useWindowDimensions,
   View,
@@ -82,7 +84,7 @@ export default function OrderSuccessModal({
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch {}
       setCopied(true);
-      Toast.show({
+      localizedToast({
         type: "success",
         text1: "Copied to Clipboard",
         text2: `Order #${orderNumber} copied successfully`,
@@ -90,7 +92,7 @@ export default function OrderSuccessModal({
       });
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      Toast.show({
+      localizedToast({
         type: "error",
         text1: "Failed to copy",
       });
@@ -111,7 +113,7 @@ export default function OrderSuccessModal({
     try {
       setCapturing(true);
       if (!receiptRef.current) {
-        Toast.show({
+        localizedToast({
           type: "error",
           text1: "Error",
           text2: "Receipt layout not ready",
@@ -133,14 +135,14 @@ export default function OrderSuccessModal({
           UTI: "public.png",
         });
       } else {
-        Toast.show({
+        localizedToast({
           type: "info",
           text1: "Receipt Saved",
           text2: `Saved at ${uri}`,
         });
       }
     } catch (err: any) {
-      Toast.show({
+      localizedToast({
         type: "error",
         text1: "Failed to save receipt",
         text2: err?.message || "Something went wrong",
@@ -194,12 +196,12 @@ export default function OrderSuccessModal({
                     </View>
                   </View>
                 </View>
-                <Text style={[styles.successTitle, isSmallScreen && { fontSize: 20 }]}>
+                <AppText style={[styles.successTitle, isSmallScreen && { fontSize: 20 }]}>
                   Booking Confirmed!
-                </Text>
-                <Text style={styles.successSubtitle}>
+                </AppText>
+                <AppText style={styles.successSubtitle}>
                   Your service request has been received & assigned.
-                </Text>
+                </AppText>
               </View>
 
               {/* Digital Ticket Card */}
@@ -210,21 +212,21 @@ export default function OrderSuccessModal({
                     <View style={styles.brandLogoPlaceholder}>
                       <Ionicons name="construct" size={14} color={Colors.themes.customer.primary} />
                     </View>
-                    <Text style={styles.brandName}>TASKER COMPANY</Text>
+                    <AppText style={styles.brandName}>TASKER COMPANY</AppText>
                   </View>
                   <View style={styles.statusPill}>
                     <View style={styles.greenDot} />
-                    <Text style={styles.statusPillText}>CONFIRMED</Text>
+                    <AppText style={styles.statusPillText}>CONFIRMED</AppText>
                   </View>
                 </View>
 
                 {/* Order Reference Box */}
                 <View style={styles.orderRefBox}>
                   <View>
-                    <Text style={styles.orderRefLabel}>ORDER REFERENCE</Text>
-                    <Text style={[styles.orderRefValue, isSmallScreen && { fontSize: 14 }]}>
+                    <AppText style={styles.orderRefLabel}>ORDER REFERENCE</AppText>
+                    <AppText style={[styles.orderRefValue, isSmallScreen && { fontSize: 14 }]}>
                       #{orderNumber || "TC-PENDING"}
-                    </Text>
+                    </AppText>
                   </View>
                   <TouchableOpacity
                     style={[styles.copyButton, copied && styles.copyButtonActive]}
@@ -236,11 +238,11 @@ export default function OrderSuccessModal({
                       size={14}
                       color={copied ? "#059669" : Colors.text.secondary}
                     />
-                    <Text
+                    <AppText
                       style={[styles.copyButtonText, copied && { color: "#059669", fontWeight: "700" }]}
                     >
                       {copied ? "Copied" : "Copy"}
-                    </Text>
+                    </AppText>
                   </TouchableOpacity>
                 </View>
 
@@ -260,11 +262,11 @@ export default function OrderSuccessModal({
                         <Ionicons name="person" size={14} color={Colors.themes.customer.primary} />
                       </View>
                       <View style={styles.detailContent}>
-                        <Text style={styles.detailLabel}>CUSTOMER</Text>
-                        <Text style={styles.detailText} numberOfLines={1}>
+                        <AppText style={styles.detailLabel}>CUSTOMER</AppText>
+                        <AppText style={styles.detailText} numberOfLines={1}>
                           {customerName || "Customer"}
                           {customerPhone ? ` • ${customerPhone}` : ""}
-                        </Text>
+                        </AppText>
                       </View>
                     </View>
                   )}
@@ -276,11 +278,11 @@ export default function OrderSuccessModal({
                         <Ionicons name="calendar" size={14} color={Colors.themes.customer.primary} />
                       </View>
                       <View style={styles.detailContent}>
-                        <Text style={styles.detailLabel}>APPOINTMENT SCHEDULE</Text>
-                        <Text style={styles.detailText}>
+                        <AppText style={styles.detailLabel}>APPOINTMENT SCHEDULE</AppText>
+                        <AppText style={styles.detailText}>
                           {scheduledDate}
                           {scheduledTime ? ` at ${scheduledTime}` : ""}
-                        </Text>
+                        </AppText>
                       </View>
                     </View>
                   )}
@@ -292,10 +294,10 @@ export default function OrderSuccessModal({
                         <Ionicons name="location" size={14} color={Colors.themes.customer.primary} />
                       </View>
                       <View style={styles.detailContent}>
-                        <Text style={styles.detailLabel}>SERVICE LOCATION</Text>
-                        <Text style={styles.detailText} numberOfLines={2}>
+                        <AppText style={styles.detailLabel}>SERVICE LOCATION</AppText>
+                        <AppText style={styles.detailText} numberOfLines={2}>
                           {addressText}
-                        </Text>
+                        </AppText>
                       </View>
                     </View>
                   )}
@@ -306,10 +308,10 @@ export default function OrderSuccessModal({
                       <Ionicons name={paymentInfo.icon} size={14} color={Colors.themes.customer.primary} />
                     </View>
                     <View style={styles.detailContent}>
-                      <Text style={styles.detailLabel}>PAYMENT METHOD</Text>
-                      <Text style={styles.detailText}>
+                      <AppText style={styles.detailLabel}>PAYMENT METHOD</AppText>
+                      <AppText style={styles.detailText}>
                         {paymentInfo.name}
-                      </Text>
+                      </AppText>
                     </View>
                   </View>
                 </View>
@@ -324,14 +326,14 @@ export default function OrderSuccessModal({
                 {/* Total Row */}
                 <View style={styles.totalRow}>
                   <View>
-                    <Text style={styles.totalLabel}>TOTAL ESTIMATE</Text>
-                    <Text style={styles.totalSub}>
+                    <AppText style={styles.totalLabel}>TOTAL ESTIMATE</AppText>
+                    <AppText style={styles.totalSub}>
                       {itemsCount} booked service{itemsCount > 1 ? "s" : ""}
-                    </Text>
+                    </AppText>
                   </View>
-                  <Text style={[styles.totalAmountText, isSmallScreen && { fontSize: 22 }]}>
+                  <AppText style={[styles.totalAmountText, isSmallScreen && { fontSize: 22 }]}>
                     ₨{Math.round(totalAmount).toLocaleString()}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
             </View>
@@ -345,8 +347,8 @@ export default function OrderSuccessModal({
                 activeOpacity={0.85}
               >
                 <Ionicons name="receipt-outline" size={18} color={Colors.neutral.white} />
-                <Text style={styles.primaryButtonText}>View Order Details</Text>
-                <Ionicons name="arrow-forward" size={16} color={Colors.neutral.white} />
+                <AppText style={styles.primaryButtonText}>View Order Details</AppText>
+                <DirectionalIcon name="arrow-forward" size={16} color={Colors.neutral.white} />
               </TouchableOpacity>
 
               {/* Share / Save Receipt */}
@@ -365,7 +367,7 @@ export default function OrderSuccessModal({
                       size={18}
                       color={Colors.themes.customer.primary}
                     />
-                    <Text style={styles.shareReceiptText}>Share / Save Receipt</Text>
+                    <AppText style={styles.shareReceiptText}>Share / Save Receipt</AppText>
                   </>
                 )}
               </TouchableOpacity>
@@ -376,7 +378,7 @@ export default function OrderSuccessModal({
                 onPress={handleGoHome}
                 activeOpacity={0.7}
               >
-                <Text style={styles.doneButtonText}>Done</Text>
+                <AppText style={styles.doneButtonText}>Done</AppText>
               </TouchableOpacity>
             </View>
           </ScrollView>

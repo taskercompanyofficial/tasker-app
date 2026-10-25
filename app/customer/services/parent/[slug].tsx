@@ -1,3 +1,5 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { Spacing, BorderRadius, Typography, Shadows } from "@/constants/Styles";
 import getImageUrl from "@/lib/utils";
@@ -10,7 +12,6 @@ import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   StyleSheet,
-  Text,
   View,
   TouchableOpacity,
   ScrollView,
@@ -56,17 +57,17 @@ export default function ParentServiceDetailPage() {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Ionicons
+            <DirectionalIcon
               name="chevron-back"
               size={Typography.sizes.base}
               color={Colors.text.primary}
             />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Service Details</Text>
+          <AppText style={styles.headerTitle}>Service Details</AppText>
           <View style={{ width: 32 }} />
         </View>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading...</Text>
+          <AppText style={styles.loadingText}>Loading...</AppText>
         </View>
       </View>
     );
@@ -80,17 +81,17 @@ export default function ParentServiceDetailPage() {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Ionicons
+            <DirectionalIcon
               name="chevron-back"
               size={Typography.sizes.base}
               color={Colors.text.primary}
             />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Service Details</Text>
+          <AppText style={styles.headerTitle}>Service Details</AppText>
           <View style={{ width: 32 }} />
         </View>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Not found</Text>
+          <AppText style={styles.loadingText}>Not found</AppText>
         </View>
       </View>
     );
@@ -111,13 +112,13 @@ export default function ParentServiceDetailPage() {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Ionicons
+            <DirectionalIcon
               name="chevron-back"
               size={Typography.sizes.base}
               color={Colors.text.primary}
             />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{data.name}</Text>
+          <AppText style={styles.headerTitle}>{data.name}</AppText>
           <View style={{ width: 32 }} />
         </View>
 
@@ -126,20 +127,20 @@ export default function ParentServiceDetailPage() {
             <View style={styles.iconCircle}>
               <Ionicons name="rocket-outline" size={32} color={Colors.themes.customer.primary} />
             </View>
-            <Text style={styles.comingSoonTitle}>Coming Soon!</Text>
-            <Text style={styles.comingSoonText}>
+            <AppText style={styles.comingSoonTitle}>Coming Soon!</AppText>
+            <AppText style={styles.comingSoonText}>
               We're preparing something special for {data.name}. This service will be available in your area very soon.
-            </Text>
+            </AppText>
             <View style={styles.divider} />
             <TouchableOpacity 
               style={styles.backButtonLarge}
               onPress={() => router.back()}
             >
-              <Ionicons name="arrow-back" size={18} color={Colors.neutral.white} />
-              <Text style={styles.backButtonText}>Explore Other Services</Text>
+              <DirectionalIcon name="arrow-back" size={18} color={Colors.neutral.white} />
+              <AppText style={styles.backButtonText}>Explore Other Services</AppText>
             </TouchableOpacity>
           </View>
-          <Text style={styles.stayTuned}>Stay tuned for updates</Text>
+          <AppText style={styles.stayTuned}>Stay tuned for updates</AppText>
         </View>
       </View>
     );
@@ -152,13 +153,13 @@ export default function ParentServiceDetailPage() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons
+          <DirectionalIcon
             name="chevron-back"
             size={Typography.sizes.base}
             color={Colors.text.primary}
           />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Service Details</Text>
+        <AppText style={styles.headerTitle}>Service Details</AppText>
         <View style={{ width: 32 }} />
       </View>
 
@@ -170,20 +171,20 @@ export default function ParentServiceDetailPage() {
             contentFit="cover"
           />
           <View style={{ flex: 1 }}>
-            <Text style={styles.name}>{data.name}</Text>
+            <AppText style={styles.name}>{data.name}</AppText>
             {data.description ? (
-              <Text style={styles.description} numberOfLines={2}>
+              <AppText style={styles.description} numberOfLines={2}>
                 {data.description}
-              </Text>
+              </AppText>
             ) : null}
             <View style={styles.topControls}>
               <View style={styles.priceRow}>
-                <Text style={styles.finalPrice}>
+                <AppText style={styles.finalPrice}>
                   ₨{Math.round(discountedPrice)}
-                </Text>
+                </AppText>
                 {discount > 0 && (
                   <View style={styles.discountRow}>
-                    <Text style={styles.originalPrice}>₨ {price}</Text>
+                    <AppText style={styles.originalPrice}>₨ {price}</AppText>
                   </View>
                 )}
               </View>
@@ -192,14 +193,14 @@ export default function ParentServiceDetailPage() {
                   style={styles.quantityButton}
                   onPress={decrement}
                 >
-                  <Text style={{ color: Colors.text.primary }}>−</Text>
+                  <AppText style={{ color: Colors.text.primary }}>−</AppText>
                 </TouchableOpacity>
-                <Text style={styles.quantityText}>{quantity}</Text>
+                <AppText style={styles.quantityText}>{quantity}</AppText>
                 <TouchableOpacity
                   style={styles.quantityButton}
                   onPress={increment}
                 >
-                  <Text style={{ color: Colors.text.primary }}>+</Text>
+                  <AppText style={{ color: Colors.text.primary }}>+</AppText>
                 </TouchableOpacity>
               </View>
             </View>
@@ -208,7 +209,7 @@ export default function ParentServiceDetailPage() {
 
         {Array.isArray(data.includes) && data.includes.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Includes</Text>
+            <AppText style={styles.sectionTitle}>Includes</AppText>
             <View style={styles.listItems}>
               {data.includes.map((item, idx) => (
                 <View key={`inc-${idx}`} style={styles.listRow}>
@@ -217,7 +218,7 @@ export default function ParentServiceDetailPage() {
                     size={Typography.sizes.sm}
                     color={Colors.success}
                   />
-                  <Text style={styles.listText}>{item}</Text>
+                  <AppText style={styles.listText}>{item}</AppText>
                 </View>
               ))}
             </View>
@@ -226,7 +227,7 @@ export default function ParentServiceDetailPage() {
 
         {Array.isArray(data.excludes) && data.excludes.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Does not includes</Text>
+            <AppText style={styles.sectionTitle}>Does not includes</AppText>
             <View style={styles.listItems}>
               {data.excludes.map((item, idx) => (
                 <View key={`exc-${idx}`} style={styles.listRow}>
@@ -235,7 +236,7 @@ export default function ParentServiceDetailPage() {
                     size={Typography.sizes.sm}
                     color={Colors.error}
                   />
-                  <Text style={styles.listText}>{item}</Text>
+                  <AppText style={styles.listText}>{item}</AppText>
                 </View>
               ))}
             </View>
@@ -244,7 +245,7 @@ export default function ParentServiceDetailPage() {
 
         {Array.isArray(data.images) && data.images.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Gallery</Text>
+            <AppText style={styles.sectionTitle}>Gallery</AppText>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -265,17 +266,17 @@ export default function ParentServiceDetailPage() {
       {quantity === 0 ? (
         <View style={[styles.footerBar, { paddingBottom: Math.max(insets.bottom, 12) + Spacing.sm }]}>
           <View style={styles.footerInfo}>
-            <Text style={styles.footerLabel}>Price</Text>
-            <Text style={styles.footerPrice}>
+            <AppText style={styles.footerLabel}>Price</AppText>
+            <AppText style={styles.footerPrice}>
               ₨{Math.round(Math.max(discountedPrice, 0))}
-            </Text>
+            </AppText>
           </View>
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => setQuantity(1)}
           >
             <Ionicons name="cart" size={18} color={Colors.neutral.white} />
-            <Text style={styles.addButtonText}>Add</Text>
+            <AppText style={styles.addButtonText}>Add</AppText>
           </TouchableOpacity>
         </View>
       ) : (
@@ -283,19 +284,19 @@ export default function ParentServiceDetailPage() {
           <View style={styles.checkoutInfo}>
             <View style={styles.itemsCount}>
               <Ionicons name="cart" size={20} color={Colors.text.secondary} />
-              <Text style={styles.itemsCountText}>{quantity} item(s)</Text>
+              <AppText style={styles.itemsCountText}>{quantity} item(s)</AppText>
             </View>
             <View style={styles.totalSection}>
-              <Text style={styles.totalLabel}>Total</Text>
-              <Text style={styles.totalPrice}>₨{Math.round(totalAmount)}</Text>
+              <AppText style={styles.totalLabel}>Total</AppText>
+              <AppText style={styles.totalPrice}>₨{Math.round(totalAmount)}</AppText>
             </View>
           </View>
           <TouchableOpacity
             style={styles.checkoutButton}
             onPress={() => checkoutModalRef.current?.present()}
           >
-            <Text style={styles.checkoutButtonText}>Checkout</Text>
-            <Ionicons
+            <AppText style={styles.checkoutButtonText}>Checkout</AppText>
+            <DirectionalIcon
               name="arrow-forward"
               size={20}
               color={Colors.neutral.white}

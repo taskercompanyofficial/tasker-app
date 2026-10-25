@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import type { Address } from "@/components/AddressSelector";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
@@ -8,7 +9,6 @@ import {
   Modal,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   useWindowDimensions,
   View,
@@ -114,8 +114,8 @@ export default function ConfirmOrderModal({
                   <Ionicons name="clipboard-outline" size={18} color={Colors.themes.customer.primary} />
                 </View>
                 <View>
-                  <Text style={[styles.title, isSmallScreen && { fontSize: 16 }]}>Review & Confirm</Text>
-                  <Text style={styles.subtitle}>Check your details before placing order</Text>
+                  <AppText style={[styles.title, isSmallScreen && { fontSize: 16 }]}>Review & Confirm</AppText>
+                  <AppText style={styles.subtitle}>Check your details before placing order</AppText>
                 </View>
               </View>
               <TouchableOpacity
@@ -136,10 +136,10 @@ export default function ConfirmOrderModal({
                   <Ionicons name="person" size={14} color={Colors.themes.customer.primary} />
                 </View>
                 <View style={styles.detailTextWrapper}>
-                  <Text style={styles.detailLabel}>CONTACT INFO</Text>
-                  <Text style={styles.detailValue}>
+                  <AppText style={styles.detailLabel}>CONTACT INFO</AppText>
+                  <AppText style={styles.detailValue}>
                     {customerName || "Customer"} • {customerPhone}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
 
@@ -151,12 +151,12 @@ export default function ConfirmOrderModal({
                   <Ionicons name="location" size={14} color={Colors.themes.customer.primary} />
                 </View>
                 <View style={styles.detailTextWrapper}>
-                  <Text style={styles.detailLabel}>SERVICE ADDRESS</Text>
-                  <Text style={styles.detailValue} numberOfLines={2}>
+                  <AppText style={styles.detailLabel}>SERVICE ADDRESS</AppText>
+                  <AppText style={styles.detailValue} numberOfLines={2}>
                     {address?.address_type ? address.address_type.toUpperCase() + " • " : ""}
                     {address?.address_line_1}
                     {address?.city ? `, ${address.city}` : ""}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
 
@@ -168,10 +168,10 @@ export default function ConfirmOrderModal({
                   <Ionicons name="calendar" size={14} color={Colors.themes.customer.primary} />
                 </View>
                 <View style={styles.detailTextWrapper}>
-                  <Text style={styles.detailLabel}>APPOINTMENT SCHEDULE</Text>
-                  <Text style={styles.detailValue}>
+                  <AppText style={styles.detailLabel}>APPOINTMENT SCHEDULE</AppText>
+                  <AppText style={styles.detailValue}>
                     {formatDate(scheduledDate)} at {formatTime(scheduledTime)}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
 
@@ -183,14 +183,14 @@ export default function ConfirmOrderModal({
                   <Ionicons name="wallet" size={14} color={Colors.themes.customer.primary} />
                 </View>
                 <View style={styles.detailTextWrapper}>
-                  <Text style={styles.detailLabel}>PAYMENT METHOD</Text>
-                  <Text style={styles.detailValue}>{getPaymentName(paymentMethod)}</Text>
+                  <AppText style={styles.detailLabel}>PAYMENT METHOD</AppText>
+                  <AppText style={styles.detailValue}>{getPaymentName(paymentMethod)}</AppText>
                   {attachmentsCount > 0 && (
                     <View style={styles.attachmentPill}>
                       <Ionicons name="image" size={12} color={Colors.themes.customer.primary} />
-                      <Text style={styles.attachmentPillText}>
-                        {attachmentsCount} photo attachment{attachmentsCount > 1 ? "s" : ""} included
-                      </Text>
+                      <AppText style={styles.attachmentPillText}>
+                        {`${attachmentsCount} ${attachmentsCount === 1 ? "photo attachment" : "photo attachments"} included`}
+                      </AppText>
                     </View>
                   )}
                 </View>
@@ -204,8 +204,8 @@ export default function ConfirmOrderModal({
                       <Ionicons name="document-text" size={14} color={Colors.themes.customer.primary} />
                     </View>
                     <View style={styles.detailTextWrapper}>
-                      <Text style={styles.detailLabel}>SPECIAL INSTRUCTIONS</Text>
-                      <Text style={styles.detailValue} numberOfLines={2}>{notes}</Text>
+                      <AppText style={styles.detailLabel}>SPECIAL INSTRUCTIONS</AppText>
+                      <AppText style={styles.detailValue} numberOfLines={2}>{notes}</AppText>
                     </View>
                   </View>
                 </>
@@ -216,14 +216,16 @@ export default function ConfirmOrderModal({
               {/* Total Row */}
               <View style={styles.totalRow}>
                 <View>
-                  <Text style={styles.detailLabel}>ORDER SUMMARY</Text>
-                  <Text style={styles.itemsSubText}>{itemsCount} service item{itemsCount > 1 ? "s" : ""}</Text>
+                  <AppText style={styles.detailLabel}>ORDER SUMMARY</AppText>
+                  <AppText style={styles.itemsSubText}>
+                    {`${itemsCount} ${itemsCount === 1 ? "service item" : "service items"}`}
+                  </AppText>
                 </View>
                 <View style={{ alignItems: "flex-end" }}>
-                  <Text style={styles.detailLabel}>ESTIMATED TOTAL</Text>
-                  <Text style={[styles.totalValue, isSmallScreen && { fontSize: 18 }]}>
+                  <AppText style={styles.detailLabel}>ESTIMATED TOTAL</AppText>
+                  <AppText style={[styles.totalValue, isSmallScreen && { fontSize: 18 }]}>
                     ₨{Math.round(totalAmount).toLocaleString()}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
             </View>
@@ -236,7 +238,7 @@ export default function ConfirmOrderModal({
                 disabled={processing}
                 activeOpacity={0.7}
               >
-                <Text style={styles.cancelButtonText}>Keep Editing</Text>
+                <AppText style={styles.cancelButtonText}>Keep Editing</AppText>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -251,7 +253,7 @@ export default function ConfirmOrderModal({
                   <ActivityIndicator color={Colors.neutral.white} size="small" />
                 ) : (
                   <>
-                    <Text style={styles.submitButtonText}>Confirm & Book</Text>
+                    <AppText style={styles.submitButtonText}>Confirm & Book</AppText>
                     <Ionicons name="checkmark-circle" size={18} color={Colors.neutral.white} />
                   </>
                 )}

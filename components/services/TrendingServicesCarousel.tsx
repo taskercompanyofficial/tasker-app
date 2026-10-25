@@ -2,8 +2,10 @@ import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import type { ParentService } from "@/types/parent-service";
 import React from "react";
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, StyleSheet, TouchableOpacity, View } from "react-native";
 import TrendingServiceCard from "./TrendingServiceCard";
+import { useLanguage } from "@/context/language-context";
+import AppText from "@/components/common/AppText";
 
 type Props = {
   title?: string;
@@ -12,20 +14,23 @@ type Props = {
   onViewAll?: () => void;
 };
 
-export default function TrendingServicesCarousel({ title = "Trending Services", items, loading = false, onViewAll }: Props) {
+export default function TrendingServicesCarousel({ title, items, loading = false, onViewAll }: Props) {
+  const { t } = useLanguage();
+  const displayTitle = title || t.customer.home.trendingServices;
+
   return (
     <View style={styles.section}>
       <View style={styles.header}>
-        <Text style={styles.title}>{title}</Text>
+        <AppText style={styles.title}>{displayTitle}</AppText>
         {onViewAll && (
           <TouchableOpacity onPress={onViewAll}>
-            <Text style={styles.viewAll}>View All</Text>
+            <AppText style={styles.viewAll}>{t.common.viewAll}</AppText>
           </TouchableOpacity>
         )}
       </View>
       {loading ? null : items.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyText}>No trending services</Text>
+          <AppText style={styles.emptyText}>{t.common.noTrendingServices}</AppText>
         </View>
       ) : (
         <FlatList
@@ -35,9 +40,9 @@ export default function TrendingServicesCarousel({ title = "Trending Services", 
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
           ItemSeparatorComponent={() => <View style={{ width: Spacing.sm }} />}
-          renderItem={({ item }) => (
-            <View style={{ width: 280 }}>
-              <TrendingServiceCard item={item} />
+          renderItem={({ item, index }) => (
+            <View style={{ width: 290 }}>
+              <TrendingServiceCard item={item} index={index} />
             </View>
           )}
         />

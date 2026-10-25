@@ -1,12 +1,13 @@
+import AppTextInput from "@/components/common/AppTextInput";
+import AppText from "@/components/common/AppText";
+import { localizedAlert } from "@/lib/i18n/localized-alert";
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   ScrollView,
-  Text,
   Platform,
   Linking,
   Animated,
@@ -224,7 +225,7 @@ export function ChatInput({
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== "granted") {
-        alert("Camera permission is required to take photos.");
+        localizedAlert("Permission Required", "Camera permission is required to take photos.");
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
@@ -259,7 +260,7 @@ export function ChatInput({
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        alert("Location permission is required to share your current location.");
+        localizedAlert("Permission Required", "Location permission is required to share your current location.");
         return;
       }
 
@@ -278,7 +279,7 @@ export function ChatInput({
     try {
       const { granted } = await requestRecordingPermissionsAsync();
       if (!granted) {
-        alert("Microphone permission is required to record voice notes.");
+        localizedAlert("Permission Required", "Microphone permission is required to record voice notes.");
         return;
       }
 
@@ -374,7 +375,7 @@ export function ChatInput({
                 onPress={() => handleSuggestionPress(sug)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.suggestionText}>{sug.label}</Text>
+                <AppText style={styles.suggestionText}>{sug.label}</AppText>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -393,7 +394,7 @@ export function ChatInput({
                   { transform: [{ scale: recordPulseAnim }] },
                 ]}
               />
-              <Text style={styles.recordingTimer}>{formatTimer(recordingSeconds)}</Text>
+              <AppText style={styles.recordingTimer}>{formatTimer(recordingSeconds)}</AppText>
             </View>
 
             {/* Audio Waveform Animation Bars */}
@@ -443,7 +444,7 @@ export function ChatInput({
             </TouchableOpacity>
 
             {/* Clean, Uniform Text Input Bar */}
-            <TextInput
+            <AppTextInput
               style={styles.input}
               placeholder="Type your message here..."
               placeholderTextColor="#94A3B8"
@@ -494,7 +495,7 @@ export function ChatInput({
         >
           <View style={styles.attachSheet}>
             <View style={styles.attachSheetHandle} />
-            <Text style={styles.attachSheetTitle}>Share & Attach</Text>
+            <AppText style={styles.attachSheetTitle}>Share & Attach</AppText>
 
             <View style={styles.attachGrid}>
               {/* 1. Camera */}
@@ -509,7 +510,7 @@ export function ChatInput({
                 <View style={[styles.attachIconCircle, { backgroundColor: "#EFF6FF" }]}>
                   <Ionicons name="camera" size={24} color="#2563EB" />
                 </View>
-                <Text style={styles.attachGridLabel}>Camera</Text>
+                <AppText style={styles.attachGridLabel}>Camera</AppText>
               </TouchableOpacity>
 
               {/* 2. Photo / Video Gallery */}
@@ -524,7 +525,7 @@ export function ChatInput({
                 <View style={[styles.attachIconCircle, { backgroundColor: "#FDF2F8" }]}>
                   <Ionicons name="images" size={24} color="#DB2777" />
                 </View>
-                <Text style={styles.attachGridLabel}>Gallery</Text>
+                <AppText style={styles.attachGridLabel}>Gallery</AppText>
               </TouchableOpacity>
 
               {/* 3. Document */}
@@ -539,7 +540,7 @@ export function ChatInput({
                 <View style={[styles.attachIconCircle, { backgroundColor: "#F5F3FF" }]}>
                   <Ionicons name="document-text" size={24} color="#7C3AED" />
                 </View>
-                <Text style={styles.attachGridLabel}>Document</Text>
+                <AppText style={styles.attachGridLabel}>Document</AppText>
               </TouchableOpacity>
 
               {/* 4. Location */}
@@ -554,7 +555,7 @@ export function ChatInput({
                 <View style={[styles.attachIconCircle, { backgroundColor: "#ECFDF5" }]}>
                   <Ionicons name="location" size={24} color="#059669" />
                 </View>
-                <Text style={styles.attachGridLabel}>Location</Text>
+                <AppText style={styles.attachGridLabel}>Location</AppText>
               </TouchableOpacity>
             </View>
 
@@ -563,7 +564,7 @@ export function ChatInput({
               onPress={() => setShowAttachModal(false)}
               activeOpacity={0.7}
             >
-              <Text style={styles.attachCancelText}>Cancel</Text>
+              <AppText style={styles.attachCancelText}>Cancel</AppText>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -572,11 +573,11 @@ export function ChatInput({
       {/* Bottom Remarks / AI Accuracy Disclaimer */}
       {showSuggestions && !isRecording && !isKeyboardOpen && (
         <View style={styles.bottomDisclaimerRow}>
-          <Text style={styles.bottomDisclaimerText}>
+          <AppText style={styles.bottomDisclaimerText}>
             {isVendor
               ? "Tasker AI Helpdesk can make mistakes. Verify contract and settlement details with operations support."
               : "Tasky AI can make mistakes. Verify important details with live support."}
-          </Text>
+          </AppText>
         </View>
       )}
     </View>

@@ -1,5 +1,6 @@
+import AppText from "@/components/common/AppText";
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Linking, Platform } from "react-native";
+import { View, StyleSheet, TouchableOpacity, Linking, Platform } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -39,9 +40,9 @@ export function LocationMessage({ latitude, longitude, label }: LocationMessageP
       </View>
       <View style={styles.infoRow}>
         <Ionicons name="location" size={16} color="#4B5563" />
-        <Text style={styles.locationText} numberOfLines={1}>
+        <AppText style={styles.locationText} numberOfLines={1}>
           {label || "Shared Location"}
-        </Text>
+        </AppText>
       </View>
     </TouchableOpacity>
   );

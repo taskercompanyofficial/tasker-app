@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { Spacing, Typography } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
@@ -15,7 +16,6 @@ import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   StyleSheet,
-  Text,
   TouchableOpacity,
   View
 } from "react-native";
@@ -156,7 +156,7 @@ export default function HomeHeader() {
           />
         </View>
         <View style={styles.addressInfo}>
-          <Text
+          <AppText
             style={[
               styles.addressLabel,
               item.id === selectedAddress?.id && styles.addressLabelActive,
@@ -164,10 +164,10 @@ export default function HomeHeader() {
           >
             {item.address_type.charAt(0).toUpperCase() +
               item.address_type.slice(1)}
-          </Text>
-          <Text style={styles.addressText} numberOfLines={1}>
+          </AppText>
+          <AppText style={styles.addressText} numberOfLines={1}>
             {item.address_line_1}
-          </Text>
+          </AppText>
         </View>
       </View>
       {item.id === selectedAddress?.id && (
@@ -200,21 +200,23 @@ export default function HomeHeader() {
               />
             ) : (
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
+                <AppText style={styles.avatarText}>
                   {session.user?.name
                     ?.split(" ")
                     .map((n) => n[0])
                     .join("")
                     .substring(0, 2)
                     .toUpperCase() || "U"}
-                </Text>
+                </AppText>
               </View>
             )}
           </TouchableOpacity>
 
           {/* User Info */}
           <View style={styles.userInfo}>
-            <Text style={styles.greeting}>Hi, {firstName}! 👋</Text>
+            <AppText style={styles.greeting}>
+              {"Hi, "}{"\u2068"}{firstName}{"\u2069"}{"! 👋"}
+            </AppText>
             <TouchableOpacity
               style={styles.addressRow}
               onPress={() => bottomSheetModalRef.current?.present()}
@@ -225,11 +227,11 @@ export default function HomeHeader() {
                 size={11}
                 color={Colors.text.tertiary}
               />
-              <Text style={styles.address} numberOfLines={1}>
+              <AppText style={styles.address} numberOfLines={1}>
                 {selectedAddress?.address_line_1
                   ?.substring(0, 30)
                   .concat("...") || "Select address"}
-              </Text>
+              </AppText>
               <Ionicons
                 name="chevron-down"
                 size={12}
@@ -256,7 +258,7 @@ export default function HomeHeader() {
         <View style={{ flex: 1, paddingBottom: Math.max(insets.bottom, 12) }}>
           {/* Header */}
           <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>Select Address</Text>
+            <AppText style={styles.sheetTitle}>Select Address</AppText>
             <TouchableOpacity
               onPress={() => bottomSheetModalRef.current?.dismiss()}
               style={styles.closeButton}
@@ -275,7 +277,7 @@ export default function HomeHeader() {
               { paddingBottom: Math.max(insets.bottom, Spacing.xl) },
             ]}
             ListEmptyComponent={
-              <Text style={styles.emptyAddressText}>No addresses found</Text>
+              <AppText style={styles.emptyAddressText}>No addresses found</AppText>
             }
             ListFooterComponent={
               <TouchableOpacity
@@ -289,7 +291,7 @@ export default function HomeHeader() {
                   size={18}
                   color={Colors.themes.customer.primary}
                 />
-                <Text style={styles.addAddressText}>Add New Address</Text>
+                <AppText style={styles.addAddressText}>Add New Address</AppText>
               </TouchableOpacity>
             }
           />

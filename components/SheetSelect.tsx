@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
@@ -7,7 +8,6 @@ import {
   FlatList,
   Modal,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -59,23 +59,23 @@ export default function SheetSelect({
           <View style={styles.itemHeader}>
             {item.badge && (
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>{item.badge}</Text>
+                <AppText style={styles.badgeText}>{item.badge}</AppText>
               </View>
             )}
-            <Text
+            <AppText
               style={[styles.itemLabel, isSelected && styles.itemLabelSelected]}
               numberOfLines={1}
             >
               {item.label}
               {item.isRequired && (
-                <Text style={styles.requiredMark}> (Required)</Text>
+                <AppText style={styles.requiredMark}> (Required)</AppText>
               )}
-            </Text>
+            </AppText>
           </View>
           {item.description && (
-            <Text style={styles.itemDescription} numberOfLines={2}>
+            <AppText style={styles.itemDescription} numberOfLines={2}>
               {item.description}
-            </Text>
+            </AppText>
           )}
         </View>
         <View style={styles.rightContent}>
@@ -119,7 +119,7 @@ export default function SheetSelect({
 
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>{title}</Text>
+            <AppText style={styles.title}>{title}</AppText>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <Ionicons name="close" size={20} color="#6B7280" />
             </TouchableOpacity>
@@ -132,12 +132,12 @@ export default function SheetSelect({
                 size="small"
                 color={Colors.themes.provider.primary}
               />
-              <Text style={styles.stateText}>Loading...</Text>
+              <AppText style={styles.stateText}>Loading...</AppText>
             </View>
           ) : options.length === 0 ? (
             <View style={styles.stateContainer}>
               <Ionicons name="alert-circle-outline" size={28} color="#9CA3AF" />
-              <Text style={styles.stateText}>{emptyText}</Text>
+              <AppText style={styles.stateText}>{emptyText}</AppText>
             </View>
           ) : (
             <FlatList

@@ -1,203 +1,226 @@
-import HomeHeader from '@/components/home/Header'
-import PromotionalCarousel from '@/components/home/PromotionalCarousel'
-import ServicesCard from '@/components/home/services-card'
-import Loader from '@/components/Loader'
-import TrendingServicesCarousel from '@/components/services/TrendingServicesCarousel'
-import Colors from '@/constants/Colors'
-import { BorderRadius, Shadows, Spacing, Typography } from '@/constants/Styles'
-import { useFetchTrendingParentServices } from '@/hooks/useFetchTrendingParentServices'
-import { GET_CATEGORIES_URL } from '@/lib/api-endpoints'
-import myAxios from '@/lib/axios.config'
-import { Category } from '@/types/category'
-import { FontAwesome, Ionicons } from '@expo/vector-icons'
-import { router, useLocalSearchParams } from 'expo-router'
-import { useEffect, useState } from 'react'
-import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
+import CategoryHubView from "@/components/home/CategoryHubView";
+import CategoryHubHeader, {
+  GRADIENT_BOTTOM_COLOR,
+} from "@/components/home/category-hub/CategoryHubHeader";
+import { MainCategoryPageSkeleton } from "@/components/Skeleton";
+import TrendingServicesCarousel from "@/components/services/TrendingServicesCarousel";
+import Colors from "@/constants/Colors";
+import { BorderRadius, Spacing, Typography } from "@/constants/Styles";
+import { useFetchTrendingParentServices } from "@/hooks/useFetchTrendingParentServices";
+import { GET_MAIN_CATEGORIES_URL } from "@/lib/api-endpoints";
+import myAxios from "@/lib/axios.config";
+import { MainCategory } from "@/types/main-category";
+import { Ionicons } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 let lastKnownSlug: string | null = null;
 
-export default function Index() {
-    const params = useLocalSearchParams<{ slug: string }>();
-    const slug = params.slug || lastKnownSlug;
+export default function MainCategoryHubPage() {
+  const params = useLocalSearchParams<{ slug: string }>();
+  const slug = params.slug || lastKnownSlug;
 
-    useEffect(() => {
-        if (params.slug) {
-            lastKnownSlug = params.slug;
-        }
-    }, [params.slug]);
-
-    useEffect(() => {
-        if (!slug) {
-            router.replace('/customer/index');
-        }
-    }, [slug]);
-
-    const [category, setCategory] = useState<Category | null>(null)
-    const [loading, setLoading] = useState(true)
-    const { data: trending, loading: trendingLoading } = useFetchTrendingParentServices(10)
-
-    const refresh = () => {
-        setLoading(true)
-        fetchCategory()
+  useEffect(() => {
+    if (params.slug) {
+      lastKnownSlug = params.slug;
     }
+  }, [params.slug]);
 
-    useEffect(() => {
-        fetchCategory()
-    }, [slug])
-
-    const fetchCategory = async () => {
-        try {
-            const res = await myAxios.get(GET_CATEGORIES_URL + '/' + slug)
-            const category: Category = res.data.data || null
-            setCategory(category)
-        } catch (error) {
-            console.error('Failed to fetch category:', error)
-        } finally {
-            setLoading(false)
-        }
+  useEffect(() => {
+    if (!slug) {
+      router.replace("/customer/index");
     }
+  }, [slug]);
 
-    if (loading) {
-        return (
-            <Loader size='medium' fullScreen />
-        )
+  const [mainCategory, setMainCategory] = useState<MainCategory | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { data: trending, loading: trendingLoading } = useFetchTrendingParentServices(10);
+
+  const fetchMainCategory = async () => {
+    if (!slug) return;
+    try {
+      const res = await myAxios.get(`${GET_MAIN_CATEGORIES_URL}/${slug}`);
+      const categoryData: MainCategory = res.data.data || null;
+      setMainCategory(categoryData);
+    } catch (error) {
+      console.error("Failed to fetch main category:", error);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const isComingSoon = category?.status === 'comming-soon'
+  useEffect(() => {
+    fetchMainCategory();
+  }, [slug]);
 
-    return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <HomeHeader />
-            <ScrollView
-                refreshControl={
-                    <RefreshControl
-                        refreshing={loading}
-                        onRefresh={refresh}
-                    />
-                }
-                style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
-            >
-                {!isComingSoon && <PromotionalCarousel />}
+  const refresh = () => {
+    setLoading(true);
+    fetchMainCategory();
+  };
 
-                {isComingSoon ? (
-                    <View style={styles.comingSoonContainer}>
-                        <View style={styles.comingSoonCard}>
-                            <View style={styles.iconCircle}>
-                                <Ionicons name="rocket-outline" size={48} color={Colors.themes.customer.primary} />
-                            </View>
-                            <Text style={styles.comingSoonTitle}>Launching Soon!</Text>
-                            <Text style={styles.comingSoonSubtitle}>
-                                We are working hard to bring {category?.name || 'this category'} to your doorstep. Stay tuned for updates!
-                            </Text>
-                            <TouchableOpacity
-                                style={styles.notifyButton}
-                                onPress={() => router.push('/customer/(tabs)/services')}
-                            >
-                                <Text style={styles.notifyButtonText}>Explore Other Services</Text>
-                                <Ionicons name="arrow-forward" size={16} color={Colors.neutral.white} />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                ) : (
-                    <ServicesCard data={category || undefined} />
-                )}
-                {!isComingSoon &&
-                    <TrendingServicesCarousel
-                        items={trending || []}
-                        loading={trendingLoading}
-                        onViewAll={() => router.push('/customer/(tabs)/services')}
-                    />
-                }
-            </ScrollView>
-        </SafeAreaView>
-    )
+  if (loading) {
+    return <MainCategoryPageSkeleton />;
+  }
+
+  const isComingSoon = mainCategory?.status === "comming-soon";
+
+  return (
+    <View style={styles.rootContainer}>
+      <StatusBar barStyle="light-content" backgroundColor="#08192E" />
+
+      {/* 1. FIXED NON-SCROLLABLE DEEP NAVY GRADIENT HEADER */}
+      <CategoryHubHeader
+        mainCategory={mainCategory}
+        onBack={() => router.replace("/customer")}
+      />
+
+      {/* 2. SHEET-TYPE WHITE CURVED BACKGROUND PORTION */}
+      <View style={styles.sheetContainerWrapper}>
+        {isComingSoon ? (
+          <ScrollView
+            refreshControl={
+              <RefreshControl
+                refreshing={loading}
+                onRefresh={refresh}
+                tintColor={Colors.themes.customer.primary}
+              />
+            }
+            style={styles.sheetScrollView}
+            contentContainerStyle={styles.sheetScrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.comingSoonContainer}>
+              <View style={styles.comingSoonCard}>
+                <View style={styles.iconCircle}>
+                  <Ionicons
+                    name="rocket-outline"
+                    size={44}
+                    color={Colors.themes.customer.primary}
+                  />
+                </View>
+                <AppText style={styles.comingSoonTitle}>Launching Soon!</AppText>
+                <AppText style={styles.comingSoonSubtitle}>
+                  We are working hard to bring {mainCategory?.name || "this category"} to your doorstep. Stay tuned for updates!
+                </AppText>
+                <TouchableOpacity
+                  style={styles.notifyButton}
+                  onPress={() => router.push("/customer/(tabs)/services")}
+                >
+                  <AppText style={styles.notifyButtonText}>Explore Other Services</AppText>
+                  <DirectionalIcon
+                    name="arrow-forward"
+                    size={15}
+                    color={Colors.neutral.white}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        ) : mainCategory ? (
+          <CategoryHubView
+            mainCategory={mainCategory}
+            trendingItems={trending || []}
+            trendingLoading={trendingLoading}
+            refreshControl={
+              <RefreshControl
+                refreshing={loading}
+                onRefresh={refresh}
+                tintColor={Colors.themes.customer.primary}
+              />
+            }
+          />
+        ) : null}
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: Colors.background.primary,
-    },
-    scrollView: {
-        flex: 1,
-    },
-    scrollContent: {
-        paddingBottom: Spacing.xl,
-    },
-    comingSoonContainer: {
-        paddingHorizontal: Spacing.md,
-        paddingVertical: Spacing.xl,
-    },
-    comingSoonCard: {
-        backgroundColor: Colors.background.secondary,
-        borderRadius: BorderRadius.md,
-        padding: Spacing.xl,
-        alignItems: 'center',
-        borderWidth: 0.4,
-        borderColor: Colors.border.light,
-        gap: Spacing.md,
-    },
-    iconCircle: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: Colors.themes.customer.primary + '10',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: Spacing.sm,
-    },
-    comingSoonTitle: {
-        fontSize: Typography.sizes.xl,
-        fontWeight: '800',
-        color: Colors.text.primary,
-        textAlign: 'center',
-    },
-    comingSoonSubtitle: {
-        fontSize: Typography.sizes.sm,
-        color: Colors.text.secondary,
-        textAlign: 'center',
-        lineHeight: 20,
-        paddingHorizontal: Spacing.md,
-    },
-    notifyButton: {
-        backgroundColor: Colors.themes.customer.primary,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: Spacing.xl,
-        paddingVertical: Spacing.sm,
-        borderRadius: BorderRadius.sm,
-        marginTop: Spacing.sm,
-        gap: Spacing.xs,
-    },
-    notifyButtonText: {
-        color: Colors.neutral.white,
-        fontWeight: '700',
-        fontSize: Typography.sizes.sm,
-    },
-    floatingButton: {
-        position: 'absolute',
-        bottom: 24,
-        right: 24,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: '#25D366', // WhatsApp green
-        justifyContent: 'center',
-        alignItems: 'center',
-        ...Shadows.md,
-        elevation: 5,
-    },
-    unreadDot: {
-        position: 'absolute',
-        top: 2,
-        right: 2,
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-        backgroundColor: Colors.error,
-        borderWidth: 2,
-        borderColor: Colors.neutral.white,
-    },
-})
+  rootContainer: {
+    flex: 1,
+    backgroundColor: GRADIENT_BOTTOM_COLOR, // Matches bottom stop of header gradient perfectly
+  },
+  sheetContainerWrapper: {
+    flex: 1,
+    backgroundColor: Colors.background.primary, // #FFFFFF
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    marginTop: -22, // Overlaps onto the gradient header so curves are clearly visible
+    overflow: "hidden",
+  },
+  sheetScrollView: {
+    flex: 1,
+    backgroundColor: Colors.background.primary,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    overflow: "hidden",
+  },
+  sheetScrollContent: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: 16,
+    paddingBottom: 40,
+  },
+  trendingWrapper: {
+    marginTop: Spacing.sm,
+    paddingBottom: Spacing.xl,
+  },
+  comingSoonContainer: {
+    paddingVertical: 40,
+    alignItems: "center",
+  },
+  comingSoonCard: {
+    alignItems: "center",
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: "#F9FAFB",
+    width: "100%",
+    maxWidth: 340,
+  },
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#F0F4F8",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.md,
+  },
+  comingSoonTitle: {
+    fontSize: Typography.sizes.lg,
+    fontWeight: "800",
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
+  },
+  comingSoonSubtitle: {
+    fontSize: Typography.sizes.xs,
+    color: Colors.text.secondary,
+    textAlign: "center",
+    lineHeight: 18,
+    marginBottom: Spacing.lg,
+  },
+  notifyButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: Colors.themes.customer.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: BorderRadius.full,
+  },
+  notifyButtonText: {
+    color: Colors.neutral.white,
+    fontWeight: "700",
+    fontSize: Typography.sizes.xs,
+  },
+});

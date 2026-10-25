@@ -1,5 +1,6 @@
+import AppText from "@/components/common/AppText";
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
@@ -32,8 +33,8 @@ export default function EmptyState({
       <View style={[styles.iconContainer, { backgroundColor: themeColor + "15" }]}>
         <Ionicons name={icon as any} size={48} color={themeColor} />
       </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.message}>{message}</Text>
+      <AppText style={styles.title}>{title}</AppText>
+      <AppText style={styles.message}>{message}</AppText>
       {actionLabel && onAction && (
         <View style={styles.buttonContainer}>
           <Button

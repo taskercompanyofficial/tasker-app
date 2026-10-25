@@ -1,3 +1,5 @@
+import AppTextInput from "@/components/common/AppTextInput";
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import {
   SERVICE_CONCERNS_URL,
@@ -13,8 +15,6 @@ import React, { useEffect, useState } from "react";
 import {
   Platform,
   StyleSheet,
-  Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -185,41 +185,41 @@ export default function ProductDetailsForm({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.sectionTitle}>Product Details</Text>
+      <AppText style={styles.sectionTitle}>Product Details</AppText>
 
       {/* Service Concern & Sub Concern */}
       {onServiceConcernChange && (
         <>
-          <Text style={styles.label}>Service Concern</Text>
+          <AppText style={styles.label}>Service Concern</AppText>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setShowConcernPicker(true)}
           >
-            <Text
+            <AppText
               style={[
                 styles.selectText,
                 !selectedConcernId && styles.placeholder,
               ]}
             >
               {getSelectedConcernLabel()}
-            </Text>
+            </AppText>
             <Ionicons name="chevron-down" size={14} color="#6B7280" />
           </TouchableOpacity>
 
-          <Text style={styles.label}>Sub Concern</Text>
+          <AppText style={styles.label}>Sub Concern</AppText>
           <TouchableOpacity
             style={[styles.selectButton, !selectedConcernId && styles.disabled]}
             onPress={() => selectedConcernId && setShowSubConcernPicker(true)}
             disabled={!selectedConcernId}
           >
-            <Text
+            <AppText
               style={[
                 styles.selectText,
                 !selectedSubConcernId && styles.placeholder,
               ]}
             >
               {getSelectedSubConcernLabel()}
-            </Text>
+            </AppText>
             <Ionicons name="chevron-down" size={14} color="#6B7280" />
           </TouchableOpacity>
         </>
@@ -228,27 +228,27 @@ export default function ProductDetailsForm({
       {/* Warranty Type */}
       {onWarrantyTypeChange && (
         <>
-          <Text style={styles.label}>Warranty Type</Text>
+          <AppText style={styles.label}>Warranty Type</AppText>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setShowWarrantyTypePicker(true)}
           >
-            <Text
+            <AppText
               style={[
                 styles.selectText,
                 !selectedWarrantyTypeId && styles.placeholder,
               ]}
             >
               {getSelectedWarrantyTypeLabel()}
-            </Text>
+            </AppText>
             <Ionicons name="chevron-down" size={14} color="#6B7280" />
           </TouchableOpacity>
         </>
       )}
 
-      <Text style={styles.label}>Indoor Serial Number</Text>
+      <AppText style={styles.label}>Indoor Serial Number</AppText>
       <View style={styles.inputWithButton}>
-        <TextInput
+        <AppTextInput
           style={[styles.input, styles.inputFlex]}
           placeholder="Enter or scan serial"
           placeholderTextColor="#9CA3AF"
@@ -265,9 +265,9 @@ export default function ProductDetailsForm({
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.label}>Outdoor Serial Number</Text>
+      <AppText style={styles.label}>Outdoor Serial Number</AppText>
       <View style={styles.inputWithButton}>
-        <TextInput
+        <AppTextInput
           style={[styles.input, styles.inputFlex]}
           placeholder="Enter or scan serial"
           placeholderTextColor="#9CA3AF"
@@ -285,8 +285,8 @@ export default function ProductDetailsForm({
 
       <View style={styles.row}>
         <View style={styles.halfField}>
-          <Text style={styles.label}>Indoor Model</Text>
-          <TextInput
+          <AppText style={styles.label}>Indoor Model</AppText>
+          <AppTextInput
             style={styles.input}
             placeholder="Indoor model"
             placeholderTextColor="#9CA3AF"
@@ -295,8 +295,8 @@ export default function ProductDetailsForm({
           />
         </View>
         <View style={styles.halfField}>
-          <Text style={styles.label}>Outdoor Model</Text>
-          <TextInput
+          <AppText style={styles.label}>Outdoor Model</AppText>
+          <AppTextInput
             style={styles.input}
             placeholder="Outdoor model"
             placeholderTextColor="#9CA3AF"
@@ -306,14 +306,14 @@ export default function ProductDetailsForm({
         </View>
       </View>
 
-      <Text style={styles.label}>Purchase Date</Text>
+      <AppText style={styles.label}>Purchase Date</AppText>
       <TouchableOpacity
         style={styles.selectButton}
         onPress={handleOpenDatePicker}
       >
-        <Text style={[styles.selectText, !purchaseDate && styles.placeholder]}>
+        <AppText style={[styles.selectText, !purchaseDate && styles.placeholder]}>
           {purchaseDate || "Select date"}
-        </Text>
+        </AppText>
         <Ionicons
           name="calendar-outline"
           size={14}

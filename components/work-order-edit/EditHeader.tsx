@@ -1,8 +1,10 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 
 interface EditHeaderProps {
   onInfoPress: () => void;
@@ -15,9 +17,9 @@ export default function EditHeader({ onInfoPress }: EditHeaderProps) {
         onPress={() => router.back()}
         style={styles.headerButton}
       >
-        <Ionicons name="arrow-back" size={20} color="#111827" />
+        <DirectionalIcon name="arrow-back" size={20} color="#111827" />
       </TouchableOpacity>
-      <Text style={styles.headerTitle}>Edit Work Order</Text>
+      <AppText style={styles.headerTitle}>Edit Work Order</AppText>
       <TouchableOpacity onPress={onInfoPress} style={styles.headerButton}>
         <Ionicons
           name="information-circle-outline"

@@ -1,7 +1,7 @@
+import AppText from "@/components/common/AppText";
 import React from "react";
 import {
   View,
-  Text,
   StyleSheet,
   Modal,
   TouchableOpacity,
@@ -82,9 +82,9 @@ export function ProfileSummaryModal({
                   <Image source={{ uri: partner.avatar_url }} style={styles.avatar} />
                 ) : (
                   <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                    <Text style={styles.avatarText}>
+                    <AppText style={styles.avatarText}>
                       {partner.display_name?.charAt(0).toUpperCase() || "T"}
-                    </Text>
+                    </AppText>
                   </View>
                 )}
                 {partner.is_verified && (
@@ -94,9 +94,9 @@ export function ProfileSummaryModal({
                 )}
               </View>
 
-              <Text style={styles.name}>{partner.display_name}</Text>
+              <AppText style={styles.name}>{partner.display_name}</AppText>
               <View style={styles.roleBadge}>
-                <Text style={styles.roleText}>{partner.role || "Service Partner"}</Text>
+                <AppText style={styles.roleText}>{partner.role || "Service Partner"}</AppText>
               </View>
             </View>
 
@@ -108,7 +108,7 @@ export function ProfileSummaryModal({
                 activeOpacity={0.8}
               >
                 <Ionicons name="call" size={16} color="#FFFFFF" />
-                <Text style={styles.callBtnText}>Call Directly</Text>
+                <AppText style={styles.callBtnText}>Call Directly</AppText>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -117,25 +117,25 @@ export function ProfileSummaryModal({
                 activeOpacity={0.8}
               >
                 <FontAwesome name="whatsapp" size={17} color="#FFFFFF" />
-                <Text style={styles.waBtnText}>WhatsApp</Text>
+                <AppText style={styles.waBtnText}>WhatsApp</AppText>
               </TouchableOpacity>
             </View>
 
             {/* Minimal Stats Row */}
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>4.9/5</Text>
-                <Text style={styles.statLabel}>Rating</Text>
+                <AppText style={styles.statValue}>4.9/5</AppText>
+                <AppText style={styles.statLabel}>Rating</AppText>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>150+</Text>
-                <Text style={styles.statLabel}>Jobs Completed</Text>
+                <AppText style={styles.statValue}>150+</AppText>
+                <AppText style={styles.statLabel}>Jobs Completed</AppText>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: "#16A34A" }]}>Verified</Text>
-                <Text style={styles.statLabel}>Tasker Pro</Text>
+                <AppText style={[styles.statValue, { color: "#16A34A" }]}>Verified</AppText>
+                <AppText style={styles.statLabel}>Tasker Pro</AppText>
               </View>
             </View>
 
@@ -144,18 +144,18 @@ export function ProfileSummaryModal({
               <View style={styles.infoCard}>
                 <Ionicons name="call-outline" size={18} color={Colors.themes.customer.primary} />
                 <View style={styles.infoCardContent}>
-                  <Text style={styles.infoCardTitle}>Direct Contact Number</Text>
-                  <Text style={styles.infoCardSubtitle}>{resolvedPhone}</Text>
+                  <AppText style={styles.infoCardTitle}>Direct Contact Number</AppText>
+                  <AppText style={styles.infoCardSubtitle}>{resolvedPhone}</AppText>
                 </View>
               </View>
 
               <View style={styles.infoCard}>
                 <Ionicons name="shield-checkmark-outline" size={18} color="#16A34A" />
                 <View style={styles.infoCardContent}>
-                  <Text style={styles.infoCardTitle}>Safety & Verification</Text>
-                  <Text style={styles.infoCardSubtitle}>
+                  <AppText style={styles.infoCardTitle}>Safety & Verification</AppText>
+                  <AppText style={styles.infoCardSubtitle}>
                     CNIC verified & background checked Tasker company technician
-                  </Text>
+                  </AppText>
                 </View>
               </View>
             </View>

@@ -1,7 +1,8 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import React from "react";
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
   ActivityIndicator,
@@ -19,6 +20,7 @@ import myAxios from "@/lib/axios.config";
 import { useFocusEffect } from "expo-router";
 import { VENDOR_RATES_URL } from "@/lib/api-endpoints";
 import { useSession } from "@/context/ctx";
+import { useLanguage } from "@/context/language-context";
 
 const { width: SW } = Dimensions.get("window");
 
@@ -35,6 +37,7 @@ type RateItem = {
 export default function VendorLedgerRates() {
   const insets = useSafeAreaInsets();
   const { session } = useSession();
+  const { t } = useLanguage();
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [services, setServices] = React.useState<RateItem[]>([]);
@@ -85,10 +88,10 @@ export default function VendorLedgerRates() {
           <Ionicons name="information-circle" size={16} color={Colors.warning} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.alertTitle}>Profile Incomplete</Text>
-          <Text style={styles.alertText}>Complete your profile to start receiving jobs.</Text>
+          <AppText style={styles.alertTitle}>Profile Incomplete</AppText>
+          <AppText style={styles.alertText}>Complete your profile to start receiving jobs.</AppText>
         </View>
-        <Ionicons name="chevron-forward" size={14} color={Colors.warning} />
+        <DirectionalIcon name="chevron-forward" size={14} color={Colors.warning} />
       </View>
     );
   };
@@ -102,12 +105,12 @@ export default function VendorLedgerRates() {
 
       {/* Info */}
       <View style={styles.rateInfo}>
-        <Text style={styles.rateName} numberOfLines={2}>{item.name}</Text>
+        <AppText style={styles.rateName} numberOfLines={2}>{item.name}</AppText>
         <View style={styles.rateMetaRow}>
-          <Text style={styles.rateTypeLabel}>Service Payout</Text>
+          <AppText style={styles.rateTypeLabel}>Service Payout</AppText>
           {item.assigned_share !== undefined && item.assigned_share > 0 && (
             <View style={styles.sharePill}>
-              <Text style={styles.sharePillText}>{item.assigned_share}% share</Text>
+              <AppText style={styles.sharePillText}>{item.assigned_share}% share</AppText>
             </View>
           )}
         </View>
@@ -115,13 +118,13 @@ export default function VendorLedgerRates() {
 
       {/* Price */}
       <View style={styles.priceBox}>
-        <Text style={styles.priceValue}>
+        <AppText style={styles.priceValue}>
           {item.assigned_rate != null ? formatPKR(item.assigned_rate) : "—"}
-        </Text>
+        </AppText>
         {item.is_overridden && (
           <View style={styles.customPill}>
             <Ionicons name="star" size={8} color={Colors.success} />
-            <Text style={styles.customPillText}>Custom</Text>
+            <AppText style={styles.customPillText}>Custom</AppText>
           </View>
         )}
       </View>
@@ -145,11 +148,11 @@ export default function VendorLedgerRates() {
 
           <View style={styles.headerTop}>
             <View>
-              <Text style={styles.headerEyebrow}>YOUR RATES</Text>
-              <Text style={styles.headerTitle}>Assigned Rates</Text>
-              <Text style={styles.headerSubtitle}>
-                {services.length > 0 ? `${services.length} services listed` : "Parent Service Ledger"}
-              </Text>
+              <AppText style={styles.headerEyebrow}>YOUR RATES</AppText>
+              <AppText style={styles.headerTitle}>{t.vendor.ledger.title}</AppText>
+              <AppText style={styles.headerSubtitle}>
+                {services.length > 0 ? `${services.length} ${t.vendor.ledger.subtitle}` : "Parent Service Ledger"}
+              </AppText>
             </View>
             <TouchableOpacity
               onPress={onRefresh}
@@ -163,22 +166,22 @@ export default function VendorLedgerRates() {
           {/* Stats mini row */}
           <View style={styles.miniStatsRow}>
             <View style={styles.miniStat}>
-              <Text style={styles.miniStatNum}>{services.length}</Text>
-              <Text style={styles.miniStatLabel}>Services</Text>
+              <AppText style={styles.miniStatNum}>{services.length}</AppText>
+              <AppText style={styles.miniStatLabel}>Services</AppText>
             </View>
             <View style={styles.miniStatDivider} />
             <View style={styles.miniStat}>
-              <Text style={styles.miniStatNum}>
+              <AppText style={styles.miniStatNum}>
                 {services.filter((s) => s.is_overridden).length}
-              </Text>
-              <Text style={styles.miniStatLabel}>Custom Rates</Text>
+              </AppText>
+              <AppText style={styles.miniStatLabel}>Custom Rates</AppText>
             </View>
             <View style={styles.miniStatDivider} />
             <View style={styles.miniStat}>
-              <Text style={styles.miniStatNum}>
+              <AppText style={styles.miniStatNum}>
                 {services.filter((s) => s.assigned_share && s.assigned_share > 0).length}
-              </Text>
-              <Text style={styles.miniStatLabel}>With Share</Text>
+              </AppText>
+              <AppText style={styles.miniStatLabel}>With Share</AppText>
             </View>
           </View>
         </LinearGradient>
@@ -188,7 +191,7 @@ export default function VendorLedgerRates() {
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={Colors.themes.provider.primary} />
-          <Text style={styles.loadingText}>Loading rates...</Text>
+          <AppText style={styles.loadingText}>Loading rates...</AppText>
         </View>
       ) : (
         <FlatList
@@ -211,17 +214,17 @@ export default function VendorLedgerRates() {
               <View style={styles.emptyIconWrap}>
                 <Ionicons name="document-text-outline" size={32} color={Colors.themes.provider.primaryLight} />
               </View>
-              <Text style={styles.emptyTitle}>No Rates Assigned</Text>
-              <Text style={styles.emptyText}>
+              <AppText style={styles.emptyTitle}>No Rates Assigned</AppText>
+              <AppText style={styles.emptyText}>
                 Your assigned service rates will appear here once configured.
-              </Text>
+              </AppText>
             </View>
           }
           ListFooterComponent={
             services.length > 0 ? (
               <View style={styles.footerNote}>
                 <Ionicons name="information-circle-outline" size={13} color={Colors.text.tertiary} />
-                <Text style={styles.footerNoteText}>Rates set by Tasker Company. Contact support for adjustments.</Text>
+                <AppText style={styles.footerNoteText}>Rates set by Tasker Company. Contact support for adjustments.</AppText>
               </View>
             ) : null
           }

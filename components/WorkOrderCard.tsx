@@ -1,7 +1,9 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 
 interface WorkOrderCardProps {
   workOrderNumber: string;
@@ -58,7 +60,7 @@ export default function WorkOrderCard({
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.workOrderNumber}>{workOrderNumber}</Text>
+          <AppText style={styles.workOrderNumber}>{workOrderNumber}</AppText>
           <View
             style={[styles.priorityDot, { backgroundColor: priorityColor }]}
           />
@@ -66,32 +68,32 @@ export default function WorkOrderCard({
 
         {/* Service */}
         {serviceName && (
-          <Text style={styles.serviceName} numberOfLines={1}>
+          <AppText style={styles.serviceName} numberOfLines={1}>
             {serviceName}
-          </Text>
+          </AppText>
         )}
 
         {/* Customer & Address */}
         <View style={styles.infoRow}>
           <Ionicons name="person-outline" size={11} color="#9CA3AF" />
-          <Text style={styles.infoText} numberOfLines={1}>
+          <AppText style={styles.infoText} numberOfLines={1}>
             {customerName}
-          </Text>
+          </AppText>
         </View>
         <View style={styles.infoRow}>
           <Ionicons name="location-outline" size={11} color="#9CA3AF" />
-          <Text style={styles.infoText} numberOfLines={1}>
+          <AppText style={styles.infoText} numberOfLines={1}>
             {address}
-          </Text>
+          </AppText>
         </View>
 
         {/* Staff Assignment */}
         {staffName && (
           <View style={styles.infoRow}>
             <Ionicons name="people-outline" size={11} color="#7C3AED" />
-            <Text style={[styles.infoText, { color: '#7C3AED', fontWeight: '600' }]} numberOfLines={1}>
+            <AppText style={[styles.infoText, { color: '#7C3AED', fontWeight: '600' }]} numberOfLines={1}>
               {staffName}
-            </Text>
+            </AppText>
           </View>
         )}
 
@@ -103,18 +105,18 @@ export default function WorkOrderCard({
               { backgroundColor: statusColor + "15" },
             ]}
           >
-            <Text style={[styles.statusText, { color: statusColor }]}>
+            <AppText style={[styles.statusText, { color: statusColor }]}>
               {status}
-            </Text>
+            </AppText>
           </View>
           {createdAt && (
-            <Text style={styles.dateText}>{formatDate(createdAt)}</Text>
+            <AppText style={styles.dateText}>{formatDate(createdAt)}</AppText>
           )}
         </View>
       </View>
 
       {/* Arrow */}
-      <Ionicons
+      <DirectionalIcon
         name="chevron-forward"
         size={16}
         color="#D1D5DB"

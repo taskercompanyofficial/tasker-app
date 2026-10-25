@@ -1,5 +1,7 @@
+import AppTextInput from "@/components/common/AppTextInput";
+import AppText from "@/components/common/AppText";
 import React from "react";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 interface TechnicianRemarksFormProps {
   value: string;
@@ -12,8 +14,8 @@ export default function TechnicianRemarksForm({
 }: TechnicianRemarksFormProps) {
   return (
     <View style={styles.card}>
-      <Text style={styles.sectionTitle}>Technician Remarks</Text>
-      <TextInput
+      <AppText style={styles.sectionTitle}>Technician Remarks</AppText>
+      <AppTextInput
         style={styles.textArea}
         placeholder="Enter your remarks..."
         placeholderTextColor="#9CA3AF"

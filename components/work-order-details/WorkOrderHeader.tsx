@@ -1,8 +1,10 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { Ionicons, FontAwesome } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 
 interface WorkOrderHeaderProps {
   statusName: string;
@@ -13,9 +15,9 @@ export default function WorkOrderHeader({ statusName, workOrderId }: WorkOrderHe
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <Ionicons name="arrow-back" size={24} color="#111827" />
+        <DirectionalIcon name="arrow-back" size={24} color="#111827" />
       </TouchableOpacity>
-      <Text style={styles.headerTitle}>{statusName}</Text>
+      <AppText style={styles.headerTitle}>{statusName}</AppText>
       {workOrderId ? (
         <TouchableOpacity
           onPress={() => router.push(`/vendor/work-order-chat/${workOrderId}`)}

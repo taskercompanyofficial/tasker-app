@@ -1,36 +1,61 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
-import { BorderRadius, Shadows, Spacing } from "@/constants/Styles";
+import { BorderRadius, Spacing } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
 import { useAuthStore } from "@/context/auth-store";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import Toast from "react-native-toast-message";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   ActivityIndicator,
-  Image,
+  Alert,
+  Linking,
   ScrollView,
   StatusBar,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+const LAHORE_MAPS_URL = "https://maps.app.goo.gl/SNe11vDp1YQ762gB9";
+const PHONE_NUMBER = "03041112717";
+const WHATSAPP_URL = "https://wa.me/923041112717?text=Hello%20Tasker%20Team%2C%20my%20vendor%20profile%20is%20under%20review%20and%20I%20would%20like%20to%20inquire%20about%20verification.";
+
 export default function PendingApproval() {
   const router = useRouter();
-  const { signOut, refetchUser } = useSession();
+  const { session, signOutMode, refetchUser } = useSession();
+  const user = session.vendorUser as any;
   const [checking, setChecking] = useState(false);
+
+  const vendorCity = (user?.city || "").trim();
+  const isLahore = !vendorCity || vendorCity.toLowerCase().includes("lahore");
+
+  const handleLogout = () => {
+    Alert.alert("Log Out", "Are you sure you want to log out of your partner account?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log Out",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await signOutMode("vendor");
+          } catch (_) {}
+          router.replace("/vendor/login" as any);
+        },
+      },
+    ]);
+  };
 
   const handleCheckStatus = async () => {
     try {
       setChecking(true);
       try {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      } catch (_) { }
+      } catch (_) {}
 
       await refetchUser("vendor");
       const currentVendor = useAuthStore.getState().vendorUser as any;
@@ -38,22 +63,22 @@ export default function PendingApproval() {
       if (currentVendor?.status === "active") {
         try {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        } catch (_) { }
-        Toast.show({
+        } catch (_) {}
+        localizedToast({
           type: "success",
           text1: "🎉 Account Approved!",
           text2: "Welcome to Tasker Partner Network!",
         });
         router.replace("/vendor/(tabs)" as any);
       } else {
-        Toast.show({
+        localizedToast({
           type: "info",
           text1: "Still In Review",
           text2: "Your verification is currently in progress. Please check back shortly.",
         });
       }
     } catch (_) {
-      Toast.show({
+      localizedToast({
         type: "info",
         text1: "Status Check",
         text2: "Your profile is under review by our team.",
@@ -63,139 +88,206 @@ export default function PendingApproval() {
     }
   };
 
+  const handleOpenMaps = async () => {
+    try {
+      await Linking.openURL(LAHORE_MAPS_URL);
+    } catch (_) {
+      localizedToast({ type: "error", text1: "Could not open Maps link" });
+    }
+  };
+
+  const handleCall = async () => {
+    try {
+      await Linking.openURL(`tel:${PHONE_NUMBER}`);
+    } catch (_) {
+      localizedToast({ type: "error", text1: "Could not initiate call" });
+    }
+  };
+
+  const handleWhatsApp = async () => {
+    try {
+      await Linking.openURL(WHATSAPP_URL);
+    } catch (_) {
+      localizedToast({ type: "error", text1: "Could not open WhatsApp" });
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Ambient background glows */}
-      <View style={styles.ambientTopGlow} />
-      <View style={styles.ambientBottomGlow} />
+      {/* Top Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={handleLogout}
+          style={styles.logoutBtn}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="log-out-outline" size={16} color="#DC2626" />
+          <AppText style={styles.logoutBtnText}>Logout</AppText>
+        </TouchableOpacity>
+        <AppText style={styles.headerTitle}>Application Status</AppText>
+        <View style={styles.statusBadge}>
+          <AppText style={styles.statusBadgeText}>Under Review</AppText>
+        </View>
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Top Header */}
-        <View style={styles.topHeader}>
-          <View style={styles.partnerBadge}>
-            <Ionicons name="shield-checkmark" size={14} color="#2563EB" />
-            <Text style={styles.partnerBadgeText}>TASKER PARTNER VERIFICATION</Text>
+        {/* Minimal Hero Card */}
+        <View style={styles.heroCard}>
+          <View style={styles.heroIconCircle}>
+            <Ionicons name="time-outline" size={32} color="#D97706" />
           </View>
-        </View>
 
-        {/* 3D Tasky Avatar Hero Display */}
-        <View style={styles.heroSection}>
-          <View style={styles.avatarGlowCircle}>
-            <Image
-              source={require("@/assets/images/tasky-ai-clipboard.png")}
-              style={styles.taskyAvatarImage}
-              resizeMode="contain"
-            />
-          </View>
           <View style={styles.reviewStatusPill}>
             <View style={styles.pulsingDot} />
-            <Text style={styles.reviewStatusText}>Profile Under Review</Text>
+            <AppText style={styles.reviewStatusText}>In Review</AppText>
           </View>
+
+          <AppText style={styles.heroTitle}>Application Under Review</AppText>
+          <AppText style={styles.heroSubtitle}>
+            Your partner application has been submitted and is currently being reviewed by our verification team.
+          </AppText>
         </View>
 
-        {/* Headline & Conversational Info Card */}
-        <View style={styles.conversationalCard}>
-          <View style={styles.cardHeaderRow}>
-            <View style={styles.assistantBadge}>
-              <Ionicons name="person-circle" size={15} color="#2563EB" />
-              <Text style={styles.assistantBadgeText}>Tasky Assistant</Text>
+        {/* Lahore Office In-Person Visit Card */}
+        {isLahore && (
+          <View style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.iconSquare}>
+                <Ionicons name="business-outline" size={18} color="#2563EB" />
+              </View>
+              <View style={styles.cardHeaderTexts}>
+                <AppText style={styles.cardTitle}>In-Person Verification</AppText>
+                <AppText style={styles.cardSubtitle}>You can visit our office for faster review</AppText>
+              </View>
             </View>
-            <Text style={styles.timeBadge}>~ 24-48 Hours</Text>
-          </View>
 
-          <Text style={styles.mainTitle}>Verification In Progress</Text>
-          <Text style={styles.mainDescription}>
-            Great job! You have successfully submitted all 6 profile completion steps. Our verification team is currently reviewing your documents to activate your account.
-          </Text>
-        </View>
+            <View style={styles.addressBox}>
+              <Ionicons name="location-outline" size={17} color="#2563EB" style={{ marginTop: 2 }} />
+              <View style={{ flex: 1 }}>
+                <AppText style={styles.addressName}>Tasker Company</AppText>
+                <AppText style={styles.addressText}>150-2 Street 9, Iqbal Park, Lahore</AppText>
+              </View>
+            </View>
 
-        {/* Checklist of Completed Steps */}
-        <View style={styles.checklistCard}>
-          <Text style={styles.checklistTitle}>Submitted Sections</Text>
-
-          <View style={styles.checklistItem}>
-            <View style={styles.checkIconBox}>
-              <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-            </View>
-            <View style={styles.checkInfo}>
-              <Text style={styles.checkItemTitle}>CNIC Document Scan</Text>
-              <Text style={styles.checkItemSub}>Front and back images submitted</Text>
-            </View>
-          </View>
-
-          <View style={styles.checklistItem}>
-            <View style={styles.checkIconBox}>
-              <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-            </View>
-            <View style={styles.checkInfo}>
-              <Text style={styles.checkItemTitle}>Identity & Current Address</Text>
-              <Text style={styles.checkItemSub}>Details confirmed & validated</Text>
-            </View>
-          </View>
-
-          <View style={styles.checklistItem}>
-            <View style={styles.checkIconBox}>
-              <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-            </View>
-            <View style={styles.checkInfo}>
-              <Text style={styles.checkItemTitle}>Live Face Photograph</Text>
-              <Text style={styles.checkItemSub}>Biometric face selfie verified</Text>
-            </View>
-          </View>
-
-          <View style={[styles.checklistItem, { borderBottomWidth: 0 }]}>
-            <View style={styles.checkIconBox}>
-              <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-            </View>
-            <View style={styles.checkInfo}>
-              <Text style={styles.checkItemTitle}>Guarantor References & Work Info</Text>
-              <Text style={styles.checkItemSub}>2 References & education recorded</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Action Buttons */}
-        <View style={styles.actionsContainer}>
-          <TouchableOpacity
-            style={[styles.checkBtn, checking && styles.btnDisabled]}
-            onPress={handleCheckStatus}
-            disabled={checking}
-            activeOpacity={0.88}
-          >
-            <LinearGradient
-              colors={["#1E3A8A", "#2563EB"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.checkBtnGradient}
+            <TouchableOpacity
+              style={styles.directionsBtn}
+              onPress={handleOpenMaps}
+              activeOpacity={0.8}
             >
-              {checking ? (
-                <>
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                  <Text style={styles.checkBtnText}>Checking Approval Status...</Text>
-                </>
-              ) : (
-                <>
-                  <Ionicons name="refresh" size={18} color="#FFFFFF" />
-                  <Text style={styles.checkBtnText}>Check Approval Status</Text>
-                </>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
+              <Ionicons name="navigate-outline" size={16} color="#2563EB" />
+              <AppText style={styles.directionsBtnText}>Get Directions on Google Maps</AppText>
+              <Ionicons name="open-outline" size={14} color="#2563EB" />
+            </TouchableOpacity>
+          </View>
+        )}
 
-          <TouchableOpacity
-            style={styles.signOutBtn}
-            onPress={() => signOut()}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="log-out-outline" size={18} color="#64748B" />
-            <Text style={styles.signOutBtnText}>Sign Out of Account</Text>
-          </TouchableOpacity>
+        {/* Documents to Bring Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeaderRow}>
+            <View style={[styles.iconSquare, { backgroundColor: "#FEF3C7" }]}>
+              <Ionicons name="document-text-outline" size={18} color="#D97706" />
+            </View>
+            <View style={styles.cardHeaderTexts}>
+              <AppText style={styles.cardTitle}>Documents to Bring</AppText>
+              <AppText style={styles.cardSubtitle}>Please bring the following original/copies</AppText>
+            </View>
+          </View>
+
+          <View style={styles.docsList}>
+            <View style={styles.docItem}>
+              <Ionicons name="checkmark-circle" size={16} color="#059669" />
+              <AppText style={styles.docItemText}>1 CNIC photocopy</AppText>
+            </View>
+
+            <View style={styles.docItem}>
+              <Ionicons name="checkmark-circle" size={16} color="#059669" />
+              <AppText style={styles.docItemText}>2 Passport-size photographs</AppText>
+            </View>
+
+            <View style={styles.docItem}>
+              <Ionicons name="checkmark-circle" size={16} color="#059669" />
+              <AppText style={styles.docItemText}>1 Electricity bill (utility copy)</AppText>
+            </View>
+
+            <View style={styles.docItem}>
+              <Ionicons name="checkmark-circle" size={16} color="#059669" />
+              <AppText style={styles.docItemText}>
+                1 Police verification certificate <AppText style={styles.docOptionalText}>(if available)</AppText>
+              </AppText>
+            </View>
+          </View>
         </View>
+
+        {/* Contact Support Options */}
+        <View style={styles.card}>
+          <View style={styles.cardHeaderRow}>
+            <View style={[styles.iconSquare, { backgroundColor: "#EFF6FF" }]}>
+              <Ionicons name="call-outline" size={18} color="#2563EB" />
+            </View>
+            <View style={styles.cardHeaderTexts}>
+              <AppText style={styles.cardTitle}>Have Questions?</AppText>
+              <AppText style={styles.cardSubtitle}>Reach out to our partner support team</AppText>
+            </View>
+          </View>
+
+          <View style={styles.contactRow}>
+            <TouchableOpacity
+              style={styles.contactActionBtn}
+              onPress={handleCall}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="call" size={16} color="#2563EB" />
+              <View>
+                <AppText style={styles.contactBtnLabel}>Call Us</AppText>
+                <AppText style={styles.contactBtnNumber}>0304-1112717</AppText>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.contactActionBtn, styles.whatsappBtn]}
+              onPress={handleWhatsApp}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="logo-whatsapp" size={17} color="#059669" />
+              <View>
+                <AppText style={[styles.contactBtnLabel, { color: "#065F46" }]}>WhatsApp</AppText>
+                <AppText style={[styles.contactBtnNumber, { color: "#059669" }]}>0304-1112717</AppText>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Check Status Action */}
+        <TouchableOpacity
+          style={[styles.checkBtn, checking && styles.btnDisabled]}
+          onPress={handleCheckStatus}
+          disabled={checking}
+          activeOpacity={0.88}
+        >
+          <LinearGradient
+            colors={["#1E3A8A", "#2563EB"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.checkBtnGradient}
+          >
+            {checking ? (
+              <>
+                <ActivityIndicator size="small" color="#FFFFFF" />
+                <AppText style={styles.checkBtnText}>Checking Status...</AppText>
+              </>
+            ) : (
+              <>
+                <Ionicons name="refresh-outline" size={17} color="#FFFFFF" />
+                <AppText style={styles.checkBtnText}>Check Approval Status</AppText>
+              </>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -206,187 +298,241 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
-  ambientTopGlow: {
-    position: "absolute",
-    top: -80,
-    left: -60,
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: "rgba(37, 99, 235, 0.08)",
+  header: {
+    height: 46,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.md,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
   },
-  ambientBottomGlow: {
-    position: "absolute",
-    bottom: -60,
-    right: -60,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: "rgba(16, 185, 129, 0.08)",
+  logoutBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: "#FEF2F2",
+  },
+  logoutBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#DC2626",
+  },
+  headerTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  statusBadge: {
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  statusBadgeText: {
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: "#B45309",
   },
   scrollContent: {
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.md,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.xl,
   },
-  topHeader: {
+  heroCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.md,
     alignItems: "center",
     marginBottom: Spacing.md,
   },
-  partnerBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#EFF6FF",
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: BorderRadius.full,
+  heroIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#FEF3C7",
     borderWidth: 1,
-    borderColor: "#DBEAFE",
-  },
-  partnerBadgeText: {
-    fontSize: 10.5,
-    fontWeight: "800",
-    color: "#2563EB",
-    letterSpacing: 0.5,
-  },
-  heroSection: {
-    alignItems: "center",
-    marginVertical: Spacing.sm,
-  },
-  avatarGlowCircle: {
-    width: 140,
-    height: 140,
+    borderColor: "#FDE68A",
     justifyContent: "center",
     alignItems: "center",
-  },
-  taskyAvatarImage: {
-    width: 115,
-    height: 115,
+    marginBottom: Spacing.sm,
   },
   reviewStatusPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "#FEF3C7",
-    paddingHorizontal: 14,
-    paddingVertical: 5,
-    borderRadius: BorderRadius.full,
+    gap: 5,
+    backgroundColor: "#FFFBEB",
+    paddingHorizontal: 10,
+    paddingVertical: 3.5,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: "#FDE68A",
-    marginTop: -14,
-    ...Shadows.sm,
+    marginBottom: 8,
   },
   pulsingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: "#D97706",
   },
   reviewStatusText: {
-    fontSize: 12,
-    fontWeight: "800",
+    fontSize: 11,
+    fontWeight: "700",
     color: "#B45309",
-    letterSpacing: 0.2,
   },
-  conversationalCard: {
+  heroTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  heroSubtitle: {
+    fontSize: 12.5,
+    color: "#64748B",
+    textAlign: "center",
+    lineHeight: 18,
+    paddingHorizontal: Spacing.xs,
+  },
+  card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    marginTop: Spacing.md,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    ...Shadows.sm,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
   },
   cardHeaderRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: Spacing.xs,
+    gap: 10,
+    marginBottom: Spacing.sm,
   },
-  assistantBadge: {
+  iconSquare: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cardHeaderTexts: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  cardSubtitle: {
+    fontSize: 11.5,
+    color: "#64748B",
+    marginTop: 1,
+  },
+  addressBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    padding: 10,
+    marginBottom: 10,
+  },
+  addressName: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  addressText: {
+    fontSize: 12,
+    color: "#475569",
+    marginTop: 2,
+  },
+  directionsBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    backgroundColor: "#EFF6FF",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#DBEAFE",
   },
-  assistantBadgeText: {
+  directionsBtnText: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: "#2563EB",
+  },
+  docsList: {
+    gap: 8,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    padding: 12,
+  },
+  docItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  docItemText: {
+    fontSize: 12.5,
+    fontWeight: "600",
+    color: "#1E293B",
+  },
+  docOptionalText: {
+    fontSize: 11.5,
+    fontWeight: "500",
+    color: "#64748B",
+  },
+  contactRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 2,
+  },
+  contactActionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1,
+    borderColor: "#DBEAFE",
+  },
+  whatsappBtn: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#A7F3D0",
+  },
+  contactBtnLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#1E40AF",
+  },
+  contactBtnNumber: {
     fontSize: 12,
     fontWeight: "700",
     color: "#2563EB",
   },
-  timeBadge: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#64748B",
-    backgroundColor: "#F1F5F9",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.full,
-  },
-  mainTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginTop: 6,
-    marginBottom: 4,
-  },
-  mainDescription: {
-    fontSize: 13.5,
-    color: "#475569",
-    lineHeight: 20,
-  },
-  checklistCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.md,
-    marginTop: Spacing.md,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    ...Shadows.sm,
-  },
-  checklistTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: Spacing.sm,
-  },
-  checklistItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-    gap: 10,
-  },
-  checkIconBox: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#ECFDF5",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  checkInfo: {
-    flex: 1,
-  },
-  checkItemTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#1E293B",
-  },
-  checkItemSub: {
-    fontSize: 11,
-    color: "#64748B",
-    marginTop: 1,
-  },
-  actionsContainer: {
-    marginTop: Spacing.lg,
-    gap: Spacing.sm,
-  },
   checkBtn: {
-    borderRadius: BorderRadius.lg,
+    borderRadius: 12,
     overflow: "hidden",
-    ...Shadows.md,
+    marginTop: 2,
   },
   btnDisabled: {
     opacity: 0.65,
@@ -396,27 +542,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    paddingVertical: 14,
+    paddingVertical: 13,
   },
   checkBtnText: {
-    fontSize: 15,
+    fontSize: 14.5,
     fontWeight: "700",
     color: "#FFFFFF",
-  },
-  signOutBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 12,
-    backgroundColor: "#F1F5F9",
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  signOutBtnText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#475569",
   },
 });

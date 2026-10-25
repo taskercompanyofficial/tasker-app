@@ -3,6 +3,7 @@ import { ParentService } from "./parent-service";
 import { User } from "./user";
 
 export type Service = {
+  id?: number;
   name: string;
   slug: string;
   description: string;

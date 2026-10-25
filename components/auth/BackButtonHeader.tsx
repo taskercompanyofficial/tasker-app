@@ -1,13 +1,13 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import React from "react";
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   StatusBar,
   useColorScheme,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Colors from "@/constants/Colors";
 import { Spacing, BorderRadius, Shadows } from "@/constants/Styles";
@@ -56,7 +56,7 @@ export default function BackButtonHeader({
               accessibilityLabel="Go back"
               accessibilityHint="Navigate back to previous screen"
             >
-              <Ionicons
+              <DirectionalIcon
                 name="chevron-back"
                 size={24}
                 color={textColor}
@@ -65,9 +65,9 @@ export default function BackButtonHeader({
           )}
           <View style={styles.titleContainer}>
             {title && (
-              <Text style={[styles.title, { color: textColor }]}>
+              <AppText style={[styles.title, { color: textColor }]}>
                 {title}
-              </Text>
+              </AppText>
             )}
           </View>
           {/* Spacer for layout balance */}

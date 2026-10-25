@@ -1,3 +1,5 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
@@ -11,7 +13,6 @@ import {
   Image,
   Modal,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -84,7 +85,7 @@ export default function DailySelfieModal({
           await refetchUser(mode);
         } catch (_) {}
 
-        Toast.show({
+        localizedToast({
           type: "success",
           text1: "✨ You are now Online!",
           text2: "Daily selfie verified. Profile active for 24 hours.",
@@ -103,7 +104,7 @@ export default function DailySelfieModal({
         err?.response?.data?.message ||
         err?.message ||
         "Could not upload selfie. Please try again.";
-      Toast.show({
+      localizedToast({
         type: "error",
         text1: "Upload Failed",
         text2: msg,
@@ -136,11 +137,11 @@ export default function DailySelfieModal({
                 />
               </View>
 
-              <Text style={styles.title}>Daily Selfie Verification</Text>
-              <Text style={styles.subtitle}>
+              <AppText style={styles.title}>Daily Selfie Verification</AppText>
+              <AppText style={styles.subtitle}>
                 Submit a fresh live photo to go online. This photo will serve as
                 your active profile picture for the next 24 hours.
-              </Text>
+              </AppText>
 
               {/* Preview if already snapped */}
               {capturedPhoto ? (
@@ -151,7 +152,7 @@ export default function DailySelfieModal({
                   />
                   <View style={styles.badge24h}>
                     <Ionicons name="time" size={13} color="#fff" />
-                    <Text style={styles.badge24hText}>Active for 24 Hours</Text>
+                    <AppText style={styles.badge24hText}>Active for 24 Hours</AppText>
                   </View>
                 </View>
               ) : (
@@ -162,9 +163,9 @@ export default function DailySelfieModal({
                       size={18}
                       color={Colors.themes.provider.primary}
                     />
-                    <Text style={styles.bulletText}>
+                    <AppText style={styles.bulletText}>
                       Look directly into front camera
-                    </Text>
+                    </AppText>
                   </View>
                   <View style={styles.bulletItem}>
                     <Ionicons
@@ -172,9 +173,9 @@ export default function DailySelfieModal({
                       size={18}
                       color={Colors.themes.provider.primary}
                     />
-                    <Text style={styles.bulletText}>
+                    <AppText style={styles.bulletText}>
                       Ensure good lighting and face visibility
-                    </Text>
+                    </AppText>
                   </View>
                   <View style={styles.bulletItem}>
                     <Ionicons
@@ -182,9 +183,9 @@ export default function DailySelfieModal({
                       size={18}
                       color={Colors.themes.provider.primary}
                     />
-                    <Text style={styles.bulletText}>
+                    <AppText style={styles.bulletText}>
                       Resets automatically after 24 hours
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
               )}
@@ -207,9 +208,9 @@ export default function DailySelfieModal({
                           size={20}
                           color="#fff"
                         />
-                        <Text style={styles.primaryBtnText}>
+                        <AppText style={styles.primaryBtnText}>
                           Confirm & Go Online
-                        </Text>
+                        </AppText>
                       </>
                     )}
                   </TouchableOpacity>
@@ -221,7 +222,7 @@ export default function DailySelfieModal({
                     activeOpacity={0.8}
                   >
                     <Ionicons name="camera-reverse" size={18} color="#4B5563" />
-                    <Text style={styles.retakeBtnText}>Retake Photo</Text>
+                    <AppText style={styles.retakeBtnText}>Retake Photo</AppText>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -232,7 +233,7 @@ export default function DailySelfieModal({
                     activeOpacity={0.85}
                   >
                     <Ionicons name="camera" size={20} color="#fff" />
-                    <Text style={styles.primaryBtnText}>Take Live Selfie</Text>
+                    <AppText style={styles.primaryBtnText}>Take Live Selfie</AppText>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -240,7 +241,7 @@ export default function DailySelfieModal({
                     onPress={handleCancel}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.cancelBtnText}>Stay Offline</Text>
+                    <AppText style={styles.cancelBtnText}>Stay Offline</AppText>
                   </TouchableOpacity>
                 </View>
               )}

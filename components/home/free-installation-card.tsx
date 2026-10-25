@@ -1,10 +1,12 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing, Typography } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useEffect, useRef } from "react";
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Animated, StyleSheet, TouchableOpacity, View } from "react-native";
 import Svg, {
   Circle,
   Defs,
@@ -169,25 +171,25 @@ export default function FreeInstallationCard() {
               <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
                 <Ionicons name="flame" size={11} color={Colors.neutral.white} />
               </Animated.View>
-              <Text style={styles.popularBadgeText}>MOST POPULAR</Text>
+              <AppText style={styles.popularBadgeText}>MOST POPULAR</AppText>
             </LinearGradient>
 
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>FREE SERVICE</Text>
+              <AppText style={styles.badgeText}>FREE SERVICE</AppText>
             </View>
           </View>
 
-          <Text style={styles.title}>Free Installation</Text>
-          <Text style={styles.subtitle}>AC, Washer, Geyser & Hoods</Text>
+          <AppText style={styles.title}>Free Installation</AppText>
+          <AppText style={styles.subtitle}>AC, Washer, Geyser & Hoods</AppText>
 
           <View style={styles.locationRow}>
             <View style={styles.ratingPill}>
               <Ionicons name="star" size={10} color="#FFB800" />
-              <Text style={styles.ratingText}>4.9 (2.4k+)</Text>
+              <AppText style={styles.ratingText}>4.9 (2.4k+)</AppText>
             </View>
-            <Text style={styles.dotSeparator}>•</Text>
+            <AppText style={styles.dotSeparator}>•</AppText>
             <Ionicons name="location" size={11} color={Colors.text.tertiary} />
-            <Text style={styles.locationText}>3 Major Cities</Text>
+            <AppText style={styles.locationText}>3 Major Cities</AppText>
           </View>
         </View>
 
@@ -205,7 +207,7 @@ export default function FreeInstallationCard() {
           />
 
           <View style={styles.circleArrow}>
-            <Ionicons name="arrow-forward" size={14} color={Colors.neutral.white} />
+            <DirectionalIcon name="arrow-forward" size={14} color={Colors.neutral.white} />
           </View>
         </View>
       </View>

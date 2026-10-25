@@ -1,5 +1,6 @@
+import AppText from "@/components/common/AppText";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
@@ -17,15 +18,15 @@ export default function TransactionItem({ txn }: Props) {
           <Ionicons name={getIcon(txn)} size={14} color={getIconColor(txn)} />
         </View>
         <View style={styles.textWrap}>
-          <Text style={styles.title}>{txn.title}</Text>
-          <Text style={styles.meta}>{txn.date}</Text>
+          <AppText style={styles.title}>{txn.title}</AppText>
+          <AppText style={styles.meta}>{txn.date}</AppText>
         </View>
       </View>
       <View style={styles.right}>
-        <Text style={[styles.amount, txn.amount < 0 ? styles.neg : styles.pos]}>
+        <AppText style={[styles.amount, txn.amount < 0 ? styles.neg : styles.pos]}>
           {txn.amount < 0 ? "-" : "+"} PKR {Math.abs(txn.amount).toFixed(0)}
-        </Text>
-        <Text style={[styles.status, getStatusStyle(txn.status)]}>{formatStatus(txn.status)}</Text>
+        </AppText>
+        <AppText style={[styles.status, getStatusStyle(txn.status)]}>{formatStatus(txn.status)}</AppText>
       </View>
     </View>
   );

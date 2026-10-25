@@ -1,3 +1,6 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import FileGallery from "@/components/FileGallery";
 import Modal from "@/components/Modal";
 import ActionButtons from "@/components/work-order-details/ActionButtons";
@@ -23,7 +26,6 @@ import {
   Image,
   Linking,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View
 } from "react-native";
@@ -609,7 +611,7 @@ export default function UberVendorWorkOrderView({
       )}`;
     }
     Linking.openURL(url).catch(() => {
-      Toast.show({ type: "error", text1: "Could not open Google Maps" });
+      localizedToast({ type: "error", text1: "Could not open Google Maps" });
     });
   };
 
@@ -707,15 +709,15 @@ export default function UberVendorWorkOrderView({
               onPress={() => router.back()}
               activeOpacity={0.8}
             >
-              <Ionicons name="arrow-back" size={20} color={Colors.text.primary} />
+              <DirectionalIcon name="arrow-back" size={20} color={Colors.text.primary} />
             </TouchableOpacity>
 
             <View style={styles.headerInfoPill}>
-              <Text style={styles.headerWorkOrderNumber}>
+              <AppText style={styles.headerWorkOrderNumber}>
                 #{workOrder.work_order_number}
-              </Text>
+              </AppText>
               <View style={styles.headerStatusDot} />
-              <Text style={styles.headerStatusName}>{workOrder.status?.name}</Text>
+              <AppText style={styles.headerStatusName}>{workOrder.status?.name}</AppText>
             </View>
 
             <TouchableOpacity
@@ -742,14 +744,14 @@ export default function UberVendorWorkOrderView({
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.turnAddressTitle} numberOfLines={1}>
+                <AppText style={styles.turnAddressTitle} numberOfLines={1}>
                   {workOrder.address?.address_line_1 || fullAddress}
-                </Text>
-                <Text style={styles.turnManeuverSub}>
+                </AppText>
+                <AppText style={styles.turnManeuverSub}>
                   {isNavigating
                     ? `Live Nav • ${etaMins} mins left (${distanceKm} km) • ${routeProgressPercent}%`
                     : `Route Overview • ${distanceKm} km`}
-                </Text>
+                </AppText>
 
                 {/* Real-Time Navigation Route Progress Bar */}
                 {isNavigating && (
@@ -782,7 +784,7 @@ export default function UberVendorWorkOrderView({
                       : Colors.themes.provider.primary
                   }
                 />
-                <Text
+                <AppText
                   style={[
                     styles.navModeToggleText,
                     {
@@ -793,7 +795,7 @@ export default function UberVendorWorkOrderView({
                   ]}
                 >
                   {isNavigating ? "NAV" : "START"}
-                </Text>
+                </AppText>
               </TouchableOpacity>
             </View>
           )}
@@ -849,12 +851,12 @@ export default function UberVendorWorkOrderView({
           <View style={styles.summaryCard}>
             <View style={styles.summaryHeaderRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.summaryServiceName}>
+                <AppText style={styles.summaryServiceName}>
                   {workOrder.service?.name || "Service Order"}
-                </Text>
-                <Text style={styles.summaryCustomerName}>
+                </AppText>
+                <AppText style={styles.summaryCustomerName}>
                   {workOrder.customer?.name} • {workOrder.address?.city}
-                </Text>
+                </AppText>
               </View>
 
               <View
@@ -865,9 +867,9 @@ export default function UberVendorWorkOrderView({
                     : styles.priorityNormal,
                 ]}
               >
-                <Text style={styles.priorityBadgeText}>
+                <AppText style={styles.priorityBadgeText}>
                   {workOrder.priority?.toUpperCase() || "NORMAL"}
-                </Text>
+                </AppText>
               </View>
             </View>
 
@@ -879,7 +881,7 @@ export default function UberVendorWorkOrderView({
                 activeOpacity={0.8}
               >
                 <Ionicons name="call" size={15} color={Colors.neutral.white} />
-                <Text style={styles.quickCallBtnText}>Call</Text>
+                <AppText style={styles.quickCallBtnText}>Call</AppText>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -888,7 +890,7 @@ export default function UberVendorWorkOrderView({
                 activeOpacity={0.8}
               >
                 <Ionicons name="chatbubbles" size={15} color={Colors.neutral.white} />
-                <Text style={styles.quickChatBtnText}>Chat</Text>
+                <AppText style={styles.quickChatBtnText}>Chat</AppText>
               </TouchableOpacity>
 
               {workOrder.customer?.whatsapp ? (
@@ -898,7 +900,7 @@ export default function UberVendorWorkOrderView({
                   activeOpacity={0.8}
                 >
                   <Ionicons name="logo-whatsapp" size={15} color={Colors.neutral.white} />
-                  <Text style={styles.quickWhatsappBtnText}>WhatsApp</Text>
+                  <AppText style={styles.quickWhatsappBtnText}>WhatsApp</AppText>
                 </TouchableOpacity>
               ) : null}
 
@@ -908,7 +910,7 @@ export default function UberVendorWorkOrderView({
                 activeOpacity={0.8}
               >
                 <Ionicons name="navigate" size={15} color={Colors.neutral.white} />
-                <Text style={styles.quickNavBtnText}>Nav</Text>
+                <AppText style={styles.quickNavBtnText}>Nav</AppText>
               </TouchableOpacity>
             </View>
           </View>
@@ -977,15 +979,15 @@ export default function UberVendorWorkOrderView({
                     size={18}
                     color={Colors.themes.provider.primary}
                   />
-                  <Text style={styles.sectionTitle}>Field Team</Text>
+                  <AppText style={styles.sectionTitle}>Field Team</AppText>
                 </View>
                 <TouchableOpacity
                   style={styles.assignButton}
                   onPress={() => setShowStaffModal(true)}
                 >
-                  <Text style={styles.assignButtonText}>
+                  <AppText style={styles.assignButtonText}>
                     {workOrder.vendor_staff ? "Change Staff" : "Assign Staff"}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               </View>
               <View style={styles.sectionContent}>
@@ -1010,29 +1012,29 @@ export default function UberVendorWorkOrderView({
                           );
                         }
                         return (
-                          <Text style={styles.avatarTextSmall}>
+                          <AppText style={styles.avatarTextSmall}>
                             {workOrder.vendor_staff.name.charAt(0).toUpperCase()}
-                          </Text>
+                          </AppText>
                         );
                       })()}
                     </View>
                     <View style={styles.staffDetails}>
-                      <Text style={styles.staffNameText}>
+                      <AppText style={styles.staffNameText}>
                         {workOrder.vendor_staff.name}
-                      </Text>
-                      <Text style={styles.staffPhoneText}>
+                      </AppText>
+                      <AppText style={styles.staffPhoneText}>
                         {workOrder.vendor_staff.phone}
-                      </Text>
+                      </AppText>
                     </View>
                     <View style={styles.statusBadgeSmall}>
-                      <Text style={styles.statusBadgeTextSmall}>Assigned</Text>
+                      <AppText style={styles.statusBadgeTextSmall}>Assigned</AppText>
                     </View>
                   </View>
                 ) : (
                   <View style={styles.emptyStaffState}>
-                    <Text style={styles.emptyStaffText}>
+                    <AppText style={styles.emptyStaffText}>
                       No staff assigned yet.
-                    </Text>
+                    </AppText>
                   </View>
                 )}
               </View>

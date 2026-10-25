@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import getImageUrl from "@/lib/utils";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,7 +8,6 @@ import {
   Image,
   Modal,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -74,9 +74,9 @@ export default function FileGallery({
               </View>
             )}
             <View style={styles.fileInfo}>
-              <Text style={styles.fileName} numberOfLines={1}>
+              <AppText style={styles.fileName} numberOfLines={1}>
                 {file.file_type?.name}
-              </Text>
+              </AppText>
             </View>
             {deletable && onDelete && (
               <TouchableOpacity
@@ -102,7 +102,7 @@ export default function FileGallery({
               size={24}
               color={Colors.themes.provider.primary}
             />
-            <Text style={styles.addButtonText}>Add</Text>
+            <AppText style={styles.addButtonText}>Add</AppText>
           </TouchableOpacity>
         )}
       </View>
@@ -121,10 +121,10 @@ export default function FileGallery({
           <View style={styles.previewModal}>
             <View style={styles.previewHeader}>
               <View style={styles.previewInfo}>
-                <Text style={styles.previewTitle}>
+                <AppText style={styles.previewTitle}>
                   {selectedImage.file_type?.name} • {selectedImage.file_size_kb}{" "}
                   KB
-                </Text>
+                </AppText>
               </View>
               <View style={styles.headerActions}>
                 {deletable && onDelete && (

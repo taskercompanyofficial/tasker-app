@@ -1,5 +1,6 @@
+import AppText from "@/components/common/AppText";
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Linking } from "react-native";
+import { View, StyleSheet, TouchableOpacity, Linking } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 interface DocumentMessageProps {
@@ -27,10 +28,10 @@ export function DocumentMessage({ uri, name, size }: DocumentMessageProps) {
         <Ionicons name="document-text" size={32} color="#4B5563" />
       </View>
       <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>
+        <AppText style={styles.name} numberOfLines={1}>
           {name}
-        </Text>
-        {size && <Text style={styles.size}>{formatSize(size)}</Text>}
+        </AppText>
+        {size && <AppText style={styles.size}>{formatSize(size)}</AppText>}
       </View>
       <Ionicons name="download-outline" size={20} color="#9CA3AF" />
     </TouchableOpacity>

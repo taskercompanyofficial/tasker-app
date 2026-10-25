@@ -1,6 +1,7 @@
+import AppText from "@/components/common/AppText";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Modal, StyleSheet, TouchableOpacity, View } from "react-native";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import type { Address } from "@/components/AddressSelector";
@@ -36,9 +37,9 @@ export default function AddressDetailsModal({ visible, onClose, address }: Addre
                 size={20}
                 color={Colors.themes.customer.primary}
               />
-              <Text style={styles.title}>
+              <AppText style={styles.title}>
                 {address.address_type.charAt(0).toUpperCase() + address.address_type.slice(1)} Address
-              </Text>
+              </AppText>
             </View>
             <TouchableOpacity onPress={onClose} hitSlop={8}>
               <Ionicons name="close" size={24} color={Colors.text.primary} />
@@ -49,8 +50,8 @@ export default function AddressDetailsModal({ visible, onClose, address }: Addre
             <View style={styles.detailRow}>
               <Ionicons name="map-outline" size={18} color={Colors.text.tertiary} />
               <View style={styles.detailTextContainer}>
-                <Text style={styles.detailLabel}>Street Address</Text>
-                <Text style={styles.detailValue}>{address.address_line_1}</Text>
+                <AppText style={styles.detailLabel}>Street Address</AppText>
+                <AppText style={styles.detailValue}>{address.address_line_1}</AppText>
               </View>
             </View>
 
@@ -58,8 +59,8 @@ export default function AddressDetailsModal({ visible, onClose, address }: Addre
               <View style={styles.detailRow}>
                 <Ionicons name="business-outline" size={18} color={Colors.text.tertiary} />
                 <View style={styles.detailTextContainer}>
-                  <Text style={styles.detailLabel}>Apartment / Suite</Text>
-                  <Text style={styles.detailValue}>{address.address_line_2}</Text>
+                  <AppText style={styles.detailLabel}>Apartment / Suite</AppText>
+                  <AppText style={styles.detailValue}>{address.address_line_2}</AppText>
                 </View>
               </View>
             )}
@@ -67,20 +68,20 @@ export default function AddressDetailsModal({ visible, onClose, address }: Addre
             <View style={styles.detailRow}>
               <Ionicons name="location-outline" size={18} color={Colors.text.tertiary} />
               <View style={styles.detailTextContainer}>
-                <Text style={styles.detailLabel}>City & State</Text>
-                <Text style={styles.detailValue}>
+                <AppText style={styles.detailLabel}>City & State</AppText>
+                <AppText style={styles.detailValue}>
                   {address.city}, {address.state} {address.zip_code || ""}
-                </Text>
+                </AppText>
               </View>
             </View>
 
             <View style={styles.detailRow}>
               <Ionicons name="flag-outline" size={18} color={Colors.text.tertiary} />
               <View style={styles.detailTextContainer}>
-                <Text style={styles.detailLabel}>Area Type</Text>
-                <Text style={styles.detailValue}>
+                <AppText style={styles.detailLabel}>Area Type</AppText>
+                <AppText style={styles.detailValue}>
                   {address.area_type.charAt(0).toUpperCase() + address.area_type.slice(1)}
-                </Text>
+                </AppText>
               </View>
             </View>
           </View>

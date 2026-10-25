@@ -1,10 +1,11 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { Shadows } from "@/constants/Styles";
 import { useNetwork } from "@/hooks/use-network";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { useEffect } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -80,9 +81,9 @@ export default function NetworkStatus() {
           <View style={styles.iconContainer}>
             <Ionicons name="cloud-offline" size={20} color={Colors.error} />
           </View>
-          <Text style={styles.text}>
+          <AppText style={styles.text}>
             No internet issue, app running in offline
-          </Text>
+          </AppText>
         </View>
       </BlurView>
     </Animated.View>

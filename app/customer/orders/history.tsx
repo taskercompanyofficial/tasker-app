@@ -1,3 +1,5 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Loader from "@/components/Loader";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
@@ -11,7 +13,6 @@ import {
   FlatList,
   RefreshControl,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -91,8 +92,8 @@ export default function OrderHistoryPage() {
     >
       <View style={styles.orderHeader}>
         <View style={styles.orderInfo}>
-          <Text style={styles.orderNumber}>{item.order_number}</Text>
-          <Text style={styles.orderDate}>{formatDate(item.order_date)}</Text>
+          <AppText style={styles.orderNumber}>{item.order_number}</AppText>
+          <AppText style={styles.orderDate}>{formatDate(item.order_date)}</AppText>
         </View>
         <View
           style={[
@@ -105,19 +106,19 @@ export default function OrderHistoryPage() {
             size={12}
             color={getStatusColor(item.status)}
           />
-          <Text
+          <AppText
             style={[styles.statusText, { color: getStatusColor(item.status) }]}
           >
             {item.status}
-          </Text>
+          </AppText>
         </View>
       </View>
 
       <View style={styles.orderDetails}>
-        <Text style={styles.servicesCount}>
+        <AppText style={styles.servicesCount}>
           {item.items?.length || 0} service(s)
-        </Text>
-        <Text style={styles.totalAmount}>₨{Math.round(item.total_amount)}</Text>
+        </AppText>
+        <AppText style={styles.totalAmount}>₨{Math.round(item.total_amount)}</AppText>
       </View>
     </TouchableOpacity>
   );
@@ -134,9 +135,9 @@ export default function OrderHistoryPage() {
           onPress={() => router.back()}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+          <DirectionalIcon name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Order History</Text>
+        <AppText style={styles.headerTitle}>Order History</AppText>
         <View style={styles.placeholder} />
       </View>
 
@@ -156,10 +157,10 @@ export default function OrderHistoryPage() {
               size={64}
               color={Colors.text.tertiary}
             />
-            <Text style={styles.emptyTitle}>No Order History</Text>
-            <Text style={styles.emptyText}>
+            <AppText style={styles.emptyTitle}>No Order History</AppText>
+            <AppText style={styles.emptyText}>
               Your completed and cancelled orders will appear here.
-            </Text>
+            </AppText>
           </View>
         }
       />

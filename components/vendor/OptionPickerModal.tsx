@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,7 +7,6 @@ import {
   Modal,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
@@ -48,7 +48,7 @@ export default function OptionPickerModal({
 
               {/* Header */}
               <View style={styles.headerRow}>
-                <Text style={styles.headerTitle}>{title}</Text>
+                <AppText style={styles.headerTitle}>{title}</AppText>
                 <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7}>
                   <Ionicons name="close" size={20} color="#64748B" />
                 </TouchableOpacity>
@@ -73,9 +73,9 @@ export default function OptionPickerModal({
                       activeOpacity={0.7}
                     >
                       <View style={styles.optionTextContainer}>
-                        <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                        <AppText style={[styles.optionText, isSelected && styles.optionTextSelected]}>
                           {item}
-                        </Text>
+                        </AppText>
                       </View>
                       <View
                         style={[

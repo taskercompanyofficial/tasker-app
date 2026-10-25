@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 /**
  * VendorActiveTripBubble
  *
@@ -23,7 +24,6 @@ import {
   PanResponder,
   Pressable,
   StyleSheet,
-  Text,
   View,
   Dimensions,
 } from "react-native";
@@ -237,9 +237,9 @@ export default function VendorActiveTripBubble() {
 
       {/* Label below bubble */}
       <View style={styles.label} pointerEvents="none">
-        <Text style={styles.labelText} numberOfLines={1}>
+        <AppText style={styles.labelText} numberOfLines={1}>
           #{trip.workOrderNumber}
-        </Text>
+        </AppText>
       </View>
     </Animated.View>
   );

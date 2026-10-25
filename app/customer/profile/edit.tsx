@@ -1,3 +1,7 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppTextInput from "@/components/common/AppTextInput";
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
@@ -19,8 +23,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -83,7 +85,7 @@ export default function EditProfilePage() {
       if (Platform.OS !== "android") {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== "granted") {
-          Toast.show({
+          localizedToast({
             type: "error",
             text1: "Permission Required",
             text2: "Gallery access is required to change profile picture.",
@@ -118,7 +120,7 @@ export default function EditProfilePage() {
       }
     } catch (err) {
       console.error("Avatar pick error:", err);
-      Toast.show({
+      localizedToast({
         type: "error",
         text1: "Image Selection Failed",
         text2: "Unable to process selected photo.",
@@ -165,7 +167,7 @@ export default function EditProfilePage() {
     post(UPDATE_PROFILE_URL, {
       onSuccess: async (response) => {
         await refetchUser("customer");
-        Toast.show({
+        localizedToast({
           type: "success",
           text1: "Profile Updated",
           text2: response?.message || "Your profile was successfully updated!",
@@ -180,7 +182,7 @@ export default function EditProfilePage() {
         }, 300);
       },
       onError: (error) => {
-        Toast.show({
+        localizedToast({
           type: "error",
           text1: "Update Failed",
           text2: error?.message || "Please check the highlighted errors below.",
@@ -225,9 +227,9 @@ export default function EditProfilePage() {
                 style={styles.backButton}
                 activeOpacity={0.7}
               >
-                <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+                <DirectionalIcon name="arrow-back" size={20} color="#FFFFFF" />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Edit Profile</Text>
+              <AppText style={styles.headerTitle}>Edit Profile</AppText>
               <View style={styles.headerPlaceholder} />
             </View>
 
@@ -244,7 +246,7 @@ export default function EditProfilePage() {
                   />
                 ) : (
                   <View style={styles.avatarFallback}>
-                    <Text style={styles.avatarInitials}>{userInitials}</Text>
+                    <AppText style={styles.avatarInitials}>{userInitials}</AppText>
                   </View>
                 )}
                 <TouchableOpacity
@@ -256,12 +258,12 @@ export default function EditProfilePage() {
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.userNameHeader} numberOfLines={1}>
+              <AppText style={styles.userNameHeader} numberOfLines={1}>
                 {data.name || "Customer"}
-              </Text>
-              <Text style={styles.userPhoneHeader}>
+              </AppText>
+              <AppText style={styles.userPhoneHeader}>
                 {user?.phone || user?.email || "Tasker Customer"}
-              </Text>
+              </AppText>
             </View>
           </SafeAreaView>
         </LinearGradient>
@@ -274,12 +276,12 @@ export default function EditProfilePage() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.formCard}>
-            <Text style={styles.cardSectionTitle}>Personal Information</Text>
+            <AppText style={styles.cardSectionTitle}>Personal Information</AppText>
 
             {/* Full Name (Required) */}
             <View style={styles.labelRow}>
-              <Text style={styles.fieldLabel}>Full Name</Text>
-              <Text style={styles.requiredStar}>*</Text>
+              <AppText style={styles.fieldLabel}>Full Name</AppText>
+              <AppText style={styles.requiredStar}>*</AppText>
             </View>
             <View
               style={[
@@ -298,7 +300,7 @@ export default function EditProfilePage() {
                   errors.name ? styles.inputDividerError : null,
                 ]}
               />
-              <TextInput
+              <AppTextInput
                 style={styles.textInput}
                 placeholder="Enter your full name"
                 placeholderTextColor="#9CA3AF"
@@ -314,14 +316,14 @@ export default function EditProfilePage() {
             {errors.name && (
               <View style={styles.errorRow}>
                 <Ionicons name="alert-circle" size={13} color="#EF4444" />
-                <Text style={styles.errorText}>{errors.name}</Text>
+                <AppText style={styles.errorText}>{errors.name}</AppText>
               </View>
             )}
 
             {/* Email Address (Optional) */}
             <View style={styles.labelRow}>
-              <Text style={styles.fieldLabel}>Email Address</Text>
-              <Text style={styles.optionalTag}>(Optional)</Text>
+              <AppText style={styles.fieldLabel}>Email Address</AppText>
+              <AppText style={styles.optionalTag}>(Optional)</AppText>
             </View>
             <View
               style={[
@@ -340,7 +342,7 @@ export default function EditProfilePage() {
                   errors.email ? styles.inputDividerError : null,
                 ]}
               />
-              <TextInput
+              <AppTextInput
                 style={styles.textInput}
                 placeholder="Enter email address (optional)"
                 placeholderTextColor="#9CA3AF"
@@ -357,32 +359,32 @@ export default function EditProfilePage() {
             {errors.email && (
               <View style={styles.errorRow}>
                 <Ionicons name="alert-circle" size={13} color="#EF4444" />
-                <Text style={styles.errorText}>{errors.email}</Text>
+                <AppText style={styles.errorText}>{errors.email}</AppText>
               </View>
             )}
 
             {/* Phone Number (Readonly Linked Account) */}
             <View style={styles.labelRow}>
-              <Text style={styles.fieldLabel}>Phone Number</Text>
+              <AppText style={styles.fieldLabel}>Phone Number</AppText>
             </View>
             <View style={[styles.inputWrapper, styles.inputWrapperDisabled]}>
               <Ionicons name="call-outline" size={19} color="#9CA3AF" />
               <View style={styles.inputDivider} />
-              <Text style={styles.disabledInputText}>
+              <AppText style={styles.disabledInputText}>
                 {user?.phone || "No phone linked"}
-              </Text>
+              </AppText>
               <View style={styles.verifiedTag}>
                 <Ionicons name="shield-checkmark" size={13} color="#16A34A" />
-                <Text style={styles.verifiedTagText}>Verified</Text>
+                <AppText style={styles.verifiedTagText}>Verified</AppText>
               </View>
             </View>
-            <Text style={styles.helperText}>
+            <AppText style={styles.helperText}>
               Phone number is tied to your account login.
-            </Text>
+            </AppText>
 
             {/* Gender Selection */}
             <View style={styles.labelRow}>
-              <Text style={styles.fieldLabel}>Gender</Text>
+              <AppText style={styles.fieldLabel}>Gender</AppText>
             </View>
             <View style={styles.genderRow}>
               {/* Male */}
@@ -403,14 +405,14 @@ export default function EditProfilePage() {
                       : "#6B7280"
                   }
                 />
-                <Text
+                <AppText
                   style={[
                     styles.genderText,
                     gender === "male" && styles.genderTextActive,
                   ]}
                 >
                   Male
-                </Text>
+                </AppText>
                 {gender === "male" && (
                   <Ionicons
                     name="checkmark-circle"
@@ -438,14 +440,14 @@ export default function EditProfilePage() {
                       : "#6B7280"
                   }
                 />
-                <Text
+                <AppText
                   style={[
                     styles.genderText,
                     gender === "female" && styles.genderTextActive,
                   ]}
                 >
                   Female
-                </Text>
+                </AppText>
                 {gender === "female" && (
                   <Ionicons
                     name="checkmark-circle"
@@ -473,14 +475,14 @@ export default function EditProfilePage() {
                       : "#6B7280"
                   }
                 />
-                <Text
+                <AppText
                   style={[
                     styles.genderText,
                     gender === "other" && styles.genderTextActive,
                   ]}
                 >
                   Other
-                </Text>
+                </AppText>
                 {gender === "other" && (
                   <Ionicons
                     name="checkmark-circle"
@@ -493,17 +495,17 @@ export default function EditProfilePage() {
             {errors.gender && (
               <View style={styles.errorRow}>
                 <Ionicons name="alert-circle" size={13} color="#EF4444" />
-                <Text style={styles.errorText}>{errors.gender}</Text>
+                <AppText style={styles.errorText}>{errors.gender}</AppText>
               </View>
             )}
 
             {/* Date of Birth (Locked if already set) */}
             <View style={styles.labelRow}>
-              <Text style={styles.fieldLabel}>Date of Birth</Text>
+              <AppText style={styles.fieldLabel}>Date of Birth</AppText>
               {isDobLocked && (
                 <View style={styles.lockedBadge}>
                   <Ionicons name="lock-closed" size={11} color="#6B7280" />
-                  <Text style={styles.lockedBadgeText}>Non-changeable</Text>
+                  <AppText style={styles.lockedBadgeText}>Non-changeable</AppText>
                 </View>
               )}
             </View>
@@ -532,7 +534,7 @@ export default function EditProfilePage() {
                   errors.dob ? styles.inputDividerError : null,
                 ]}
               />
-              <Text
+              <AppText
                 style={[
                   styles.textInput,
                   isDobLocked && styles.disabledInputText,
@@ -540,7 +542,7 @@ export default function EditProfilePage() {
                 ]}
               >
                 {formatDateDisplay(dobDate)}
-              </Text>
+              </AppText>
               {!isDobLocked && (
                 <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
               )}
@@ -548,13 +550,13 @@ export default function EditProfilePage() {
             {errors.dob && (
               <View style={styles.errorRow}>
                 <Ionicons name="alert-circle" size={13} color="#EF4444" />
-                <Text style={styles.errorText}>{errors.dob}</Text>
+                <AppText style={styles.errorText}>{errors.dob}</AppText>
               </View>
             )}
             {isDobLocked && (
-              <Text style={styles.helperText}>
+              <AppText style={styles.helperText}>
                 Date of birth cannot be changed once saved.
-              </Text>
+              </AppText>
             )}
           </View>
 
@@ -568,12 +570,12 @@ export default function EditProfilePage() {
             {processing ? (
               <View style={styles.btnRow}>
                 <ActivityIndicator color="#FFFFFF" size="small" />
-                <Text style={styles.saveBtnText}>Saving Changes...</Text>
+                <AppText style={styles.saveBtnText}>Saving Changes...</AppText>
               </View>
             ) : (
               <View style={styles.btnRow}>
                 <Ionicons name="checkmark-done" size={18} color="#FFFFFF" />
-                <Text style={styles.saveBtnText}>Save Changes</Text>
+                <AppText style={styles.saveBtnText}>Save Changes</AppText>
               </View>
             )}
           </TouchableOpacity>
@@ -612,9 +614,9 @@ export default function EditProfilePage() {
                   onPress={() => setShowDatePicker(false)}
                   style={styles.iosPickerHeaderBtn}
                 >
-                  <Text style={styles.iosPickerCancelText}>Cancel</Text>
+                  <AppText style={styles.iosPickerCancelText}>Cancel</AppText>
                 </TouchableOpacity>
-                <Text style={styles.iosPickerTitle}>Date of Birth</Text>
+                <AppText style={styles.iosPickerTitle}>Date of Birth</AppText>
                 <TouchableOpacity
                   onPress={() => {
                     setShowDatePicker(false);
@@ -624,7 +626,7 @@ export default function EditProfilePage() {
                   }}
                   style={styles.iosPickerHeaderBtn}
                 >
-                  <Text style={styles.iosPickerDoneText}>Done</Text>
+                  <AppText style={styles.iosPickerDoneText}>Done</AppText>
                 </TouchableOpacity>
               </View>
               <DateTimePicker

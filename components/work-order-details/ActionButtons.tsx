@@ -1,9 +1,10 @@
+import AppText from "@/components/common/AppText";
 import Button from "@/components/Button";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import { router } from "expo-router";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 interface ActionButtonsProps {
   workOrderId: number;
@@ -160,9 +161,9 @@ export default function ActionButtons({
   ) {
     return (
       <View style={styles.terminalState}>
-        <Text style={styles.terminalText}>
+        <AppText style={styles.terminalText}>
           This job is {currentStatusSlug}. No further actions required.
-        </Text>
+        </AppText>
       </View>
     );
   }

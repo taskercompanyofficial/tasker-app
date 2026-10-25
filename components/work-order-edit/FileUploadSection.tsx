@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import FileGallery from "@/components/FileGallery";
 import SheetSelect, { SheetSelectOption } from "@/components/SheetSelect";
 import Colors from "@/constants/Colors";
@@ -10,7 +11,6 @@ import {
   Image,
   Modal,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -101,18 +101,18 @@ export default function FileUploadSection({
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.sectionTitle}>Photos & Videos</Text>
-        <Text style={styles.fileCount}>
+        <AppText style={styles.sectionTitle}>Photos & Videos</AppText>
+        <AppText style={styles.fileCount}>
           {files.length} {files.length === 1 ? "file" : "files"}
-        </Text>
+        </AppText>
       </View>
 
       {/* Quality Guidance */}
       <View style={styles.guidanceBox}>
         <Ionicons name="information-circle-outline" size={14} color="#0369A1" />
-        <Text style={styles.guidanceText}>
+        <AppText style={styles.guidanceText}>
           Clear, well-lit photos of serial numbers are required
-        </Text>
+        </AppText>
       </View>
 
       {/* Uploading/Processing Overlay */}
@@ -122,9 +122,9 @@ export default function FileUploadSection({
             size="large"
             color={Colors.themes.provider.primary}
           />
-          <Text style={styles.uploadingText}>
+          <AppText style={styles.uploadingText}>
             {processing ? "Compressing Media..." : "Uploading..."}
-          </Text>
+          </AppText>
         </View>
       )}
 
@@ -171,9 +171,9 @@ export default function FileUploadSection({
 
             {/* Header */}
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>
+              <AppText style={styles.sheetTitle}>
                 Upload {selectedFileTypeName}
-              </Text>
+              </AppText>
               <TouchableOpacity
                 onPress={onCancelSourceSheet}
                 style={styles.closeBtn}
@@ -197,10 +197,10 @@ export default function FileUploadSection({
                     color={Colors.themes.provider.primary}
                   />
                 </View>
-                <Text style={styles.sourceLabel}>Camera</Text>
-                <Text style={styles.sourceDescription}>
+                <AppText style={styles.sourceLabel}>Camera</AppText>
+                <AppText style={styles.sourceDescription}>
                   Take a new photo or video
-                </Text>
+                </AppText>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -215,10 +215,10 @@ export default function FileUploadSection({
                     color={Colors.themes.provider.primary}
                   />
                 </View>
-                <Text style={styles.sourceLabel}>Gallery</Text>
-                <Text style={styles.sourceDescription}>
+                <AppText style={styles.sourceLabel}>Gallery</AppText>
+                <AppText style={styles.sourceDescription}>
                   Choose from your library
-                </Text>
+                </AppText>
               </TouchableOpacity>
             </View>
           </View>
@@ -236,9 +236,9 @@ export default function FileUploadSection({
         <View style={styles.previewOverlay}>
           {/* Preview Header */}
           <View style={styles.previewHeader}>
-            <Text style={styles.previewTitle}>
+            <AppText style={styles.previewTitle}>
               Preview: {selectedFileTypeName}
-            </Text>
+            </AppText>
             <TouchableOpacity
               onPress={onCancelPreview}
               style={styles.closeBtn}
@@ -259,9 +259,9 @@ export default function FileUploadSection({
             ) : (
               <View style={styles.previewPlaceholder}>
                 <Ionicons name="image-outline" size={48} color="#9CA3AF" />
-                <Text style={styles.previewPlaceholderText}>
+                <AppText style={styles.previewPlaceholderText}>
                   No preview available
-                </Text>
+                </AppText>
               </View>
             )}
           </View>
@@ -274,7 +274,7 @@ export default function FileUploadSection({
               activeOpacity={0.8}
             >
               <Ionicons name="close-circle" size={20} color="#9CA3AF" />
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <AppText style={styles.cancelButtonText}>Cancel</AppText>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -283,7 +283,7 @@ export default function FileUploadSection({
               activeOpacity={0.8}
             >
               <Ionicons name="cloud-upload" size={20} color="#FFFFFF" />
-              <Text style={styles.uploadButtonText}>Upload</Text>
+              <AppText style={styles.uploadButtonText}>Upload</AppText>
             </TouchableOpacity>
           </View>
         </View>

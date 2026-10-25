@@ -1,5 +1,6 @@
+import AppText from "@/components/common/AppText";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 
@@ -11,14 +12,14 @@ type Props = {
 export default function DailyStreak({ streak, max }: Props) {
   return (
     <View style={styles.wrap}>
-      <Text style={styles.title}>Daily Streak</Text>
+      <AppText style={styles.title}>Daily Streak</AppText>
       <View style={styles.row}>
         {Array.from({ length: max }).map((_, i) => {
           const active = i < streak;
           return <View key={i} style={[styles.dot, active ? styles.dotActive : styles.dotInactive]} />;
         })}
       </View>
-      <Text style={styles.meta}>{streak} / {max} days</Text>
+      <AppText style={styles.meta}>{streak} / {max} days</AppText>
     </View>
   );
 }

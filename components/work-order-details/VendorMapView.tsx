@@ -1,9 +1,10 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { Shadows } from "@/constants/Styles";
 import uberMapStyle from "@/constants/uberMapStyle";
 import { Ionicons } from "@expo/vector-icons";
 import React, { memo } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 
 // Conditionally require react-native-maps only on native platforms
 let MapViewComponent: any = null;
@@ -61,8 +62,8 @@ function VendorMapViewComponent({
     return (
       <View style={styles.webMapFallback}>
         <Ionicons name="map" size={64} color={Colors.themes.provider.primary} />
-        <Text style={styles.webMapTitle}>Interactive Location Map</Text>
-        <Text style={styles.webMapSubtitle}>{fullAddress}</Text>
+        <AppText style={styles.webMapTitle}>Interactive Location Map</AppText>
+        <AppText style={styles.webMapSubtitle}>{fullAddress}</AppText>
       </View>
     );
   }

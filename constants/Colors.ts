@@ -54,11 +54,11 @@ const Colors = {
   // App Themes
   themes: {
     customer: {
-      primary: "#D4AF37",      // Classic Royal Gold
-      primaryLight: "#F1D77A", // Soft Champagne Gold
-      primaryDark: "#8A6A1F",  // Deep Antique Gold
-      accent: "#C9A227",       // Rich Metallic Gold
-      background: "#FFFCF2",   // Warm Ivory Gold Tint
+      primary: "#1B477F",      // Deep Navy Blue (matching slug bg)
+      primaryLight: "#3B82F6", // Royal Blue
+      primaryDark: "#08192E",  // Midnight Deep Navy
+      accent: "#2563EB",       // Electric Accent Blue
+      background: "#F0F5FA",   // Soft Ice-Navy Tint
     },
     provider: {
       primary: "#1E3A8A", // Professional Deep Navy Blue

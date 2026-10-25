@@ -1,3 +1,7 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppText from "@/components/common/AppText";
+import AppBottomSheetTextInput from "@/components/common/AppBottomSheetTextInput";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
@@ -7,7 +11,6 @@ import { compressAndSquare } from "@/lib/image";
 import { Ionicons } from "@expo/vector-icons";
 import BottomSheet, {
   BottomSheetScrollView,
-  BottomSheetTextInput,
 } from "@gorhom/bottom-sheet";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { LinearGradient } from "expo-linear-gradient";
@@ -22,7 +25,6 @@ import {
   Platform,
   StatusBar,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -134,7 +136,7 @@ export default function CustomerCompleteProfile() {
       if (Platform.OS !== "android") {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== "granted") {
-          Toast.show({
+          localizedToast({
             type: "error",
             text1: "Permission required",
             text2: "Gallery access is needed to upload a profile photo.",
@@ -201,7 +203,7 @@ export default function CustomerCompleteProfile() {
 
   const handleSubmit = () => {
     if (!data.name.trim()) {
-      Toast.show({
+      localizedToast({
         type: "error",
         text1: "Name Required",
         text2: "Please enter your full name to continue.",
@@ -218,7 +220,7 @@ export default function CustomerCompleteProfile() {
 
     post(UPDATE_PROFILE_URL, {
       onSuccess: async (response) => {
-        Toast.show({
+        localizedToast({
           type: "success",
           text1: "Profile Updated!",
           text2: "Welcome to Tasker Company.",
@@ -227,7 +229,7 @@ export default function CustomerCompleteProfile() {
         router.replace("/customer");
       },
       onError: (error) => {
-        Toast.show({
+        localizedToast({
           type: "error",
           text1: error?.message || "Failed to update profile",
         });
@@ -274,7 +276,7 @@ export default function CustomerCompleteProfile() {
             style={styles.circleIconButton}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={22} color="#18181B" />
+            <DirectionalIcon name="arrow-back" size={22} color="#18181B" />
           </TouchableOpacity>
 
           <Image
@@ -302,13 +304,13 @@ export default function CustomerCompleteProfile() {
                   size={12}
                   color={Colors.themes.customer.primaryDark}
                 />
-                <Text style={styles.licensedText}>Verified Experts</Text>
+                <AppText style={styles.licensedText}>Verified Experts</AppText>
               </View>
             </View>
-            <Text style={styles.brandTitle}>Complete Profile</Text>
-            <Text style={styles.brandSubtitle}>
+            <AppText style={styles.brandTitle}>Complete Profile</AppText>
+            <AppText style={styles.brandSubtitle}>
               Personalize your profile for quick home services
-            </Text>
+            </AppText>
           </View>
         </Animated.View>
       </SafeAreaView>
@@ -339,7 +341,7 @@ export default function CustomerCompleteProfile() {
           {/* Active Tab Heading */}
           <View style={styles.tabContainer}>
             <View style={styles.activeTabWrapper}>
-              <Text style={styles.tabTitle}>Basic Details</Text>
+              <AppText style={styles.tabTitle}>Basic Details</AppText>
               <View style={styles.tabUnderline} />
             </View>
           </View>
@@ -369,15 +371,15 @@ export default function CustomerCompleteProfile() {
                 <Ionicons name="camera" size={14} color="#FFFFFF" />
               </View>
             </TouchableOpacity>
-            <Text style={styles.avatarHint}>
+            <AppText style={styles.avatarHint}>
               {avatarPreview
                 ? "Tap to change photo"
                 : "Add profile photo (optional)"}
-            </Text>
+            </AppText>
           </View>
 
           {/* Name Input */}
-          <Text style={styles.fieldLabel}>Full Name *</Text>
+          <AppText style={styles.fieldLabel}>Full Name *</AppText>
           <View
             style={[
               styles.inputContainer,
@@ -395,7 +397,7 @@ export default function CustomerCompleteProfile() {
                 errors.name ? styles.inputDividerError : null,
               ]}
             />
-            <BottomSheetTextInput
+            <AppBottomSheetTextInput
               style={styles.textInput}
               placeholder="e.g. Ali Ahmed"
               placeholderTextColor="#9CA3AF"
@@ -411,12 +413,12 @@ export default function CustomerCompleteProfile() {
           {errors.name && (
             <View style={styles.errorRow}>
               <Ionicons name="alert-circle" size={13} color="#EF4444" />
-              <Text style={styles.errorText}>{errors.name}</Text>
+              <AppText style={styles.errorText}>{errors.name}</AppText>
             </View>
           )}
 
           {/* Gender Selector */}
-          <Text style={styles.fieldLabel}>Gender</Text>
+          <AppText style={styles.fieldLabel}>Gender</AppText>
           <View style={styles.genderRow}>
             <TouchableOpacity
               style={[
@@ -435,14 +437,14 @@ export default function CustomerCompleteProfile() {
                     : "#6B7280"
                 }
               />
-              <Text
+              <AppText
                 style={[
                   styles.genderText,
                   gender === "male" && styles.genderTextActive,
                 ]}
               >
                 Male
-              </Text>
+              </AppText>
               {gender === "male" && (
                 <View style={styles.genderCheck}>
                   <Ionicons
@@ -471,14 +473,14 @@ export default function CustomerCompleteProfile() {
                     : "#6B7280"
                 }
               />
-              <Text
+              <AppText
                 style={[
                   styles.genderText,
                   gender === "female" && styles.genderTextActive,
                 ]}
               >
                 Female
-              </Text>
+              </AppText>
               {gender === "female" && (
                 <View style={styles.genderCheck}>
                   <Ionicons
@@ -507,14 +509,14 @@ export default function CustomerCompleteProfile() {
                     : "#6B7280"
                 }
               />
-              <Text
+              <AppText
                 style={[
                   styles.genderText,
                   gender === "other" && styles.genderTextActive,
                 ]}
               >
                 Other
-              </Text>
+              </AppText>
               {gender === "other" && (
                 <View style={styles.genderCheck}>
                   <Ionicons
@@ -528,7 +530,7 @@ export default function CustomerCompleteProfile() {
           </View>
 
           {/* Date of Birth Input */}
-          <Text style={styles.fieldLabel}>Date of Birth</Text>
+          <AppText style={styles.fieldLabel}>Date of Birth</AppText>
           <TouchableOpacity
             style={styles.inputContainer}
             onPress={() => setShowDatePicker(true)}
@@ -536,17 +538,17 @@ export default function CustomerCompleteProfile() {
           >
             <Ionicons name="calendar-outline" size={20} color="#6B7280" />
             <View style={styles.inputDivider} />
-            <Text
+            <AppText
               style={[
                 styles.textInput,
                 !hasSelectedDob && styles.placeholderText,
               ]}
             >
               {formatDateDisplay(dobDate)}
-            </Text>
+            </AppText>
             <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
           </TouchableOpacity>
-          {errors.dob && <Text style={styles.errorText}>{errors.dob}</Text>}
+          {errors.dob && <AppText style={styles.errorText}>{errors.dob}</AppText>}
 
           {/* iOS Date Picker Modal */}
           {Platform.OS === "ios" ? (
@@ -567,9 +569,9 @@ export default function CustomerCompleteProfile() {
                       onPress={() => setShowDatePicker(false)}
                       style={styles.iosPickerHeaderBtn}
                     >
-                      <Text style={styles.iosPickerCancelText}>Cancel</Text>
+                      <AppText style={styles.iosPickerCancelText}>Cancel</AppText>
                     </TouchableOpacity>
-                    <Text style={styles.iosPickerTitle}>Date of Birth</Text>
+                    <AppText style={styles.iosPickerTitle}>Date of Birth</AppText>
                     <TouchableOpacity
                       onPress={() => {
                         setHasSelectedDob(true);
@@ -578,7 +580,7 @@ export default function CustomerCompleteProfile() {
                       }}
                       style={styles.iosPickerHeaderBtn}
                     >
-                      <Text style={styles.iosPickerDoneText}>Done</Text>
+                      <AppText style={styles.iosPickerDoneText}>Done</AppText>
                     </TouchableOpacity>
                   </View>
                   <DateTimePicker
@@ -609,11 +611,11 @@ export default function CustomerCompleteProfile() {
           )}
 
           {/* Email Address */}
-          <Text style={styles.fieldLabel}>Email Address (Optional)</Text>
+          <AppText style={styles.fieldLabel}>Email Address (Optional)</AppText>
           <View style={styles.inputContainer}>
             <Ionicons name="mail-outline" size={20} color="#6B7280" />
             <View style={styles.inputDivider} />
-            <BottomSheetTextInput
+            <AppBottomSheetTextInput
               style={styles.textInput}
               placeholder="e.g. name@example.com"
               placeholderTextColor="#9CA3AF"
@@ -624,7 +626,7 @@ export default function CustomerCompleteProfile() {
               autoCorrect={false}
             />
           </View>
-          {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+          {errors.email && <AppText style={styles.errorText}>{errors.email}</AppText>}
 
           {/* Save & Continue Submit Button */}
           <TouchableOpacity
@@ -640,8 +642,8 @@ export default function CustomerCompleteProfile() {
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
               <>
-                <Text style={styles.submitButtonText}>Save & Continue</Text>
-                <Ionicons name="arrow-forward" size={19} color="#FFFFFF" />
+                <AppText style={styles.submitButtonText}>Save & Continue</AppText>
+                <DirectionalIcon name="arrow-forward" size={19} color="#FFFFFF" />
               </>
             )}
           </TouchableOpacity>

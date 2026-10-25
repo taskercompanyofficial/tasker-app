@@ -1,8 +1,9 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { CameraView } from "expo-camera";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 
 interface BarcodeScannerProps {
   visible: boolean;
@@ -23,9 +24,9 @@ export default function BarcodeScanner({
     <View style={styles.container}>
       <View style={styles.scannerContainer}>
         <View style={styles.header}>
-          <Text style={styles.title}>
+          <AppText style={styles.title}>
             Scan {scanningField === "indoor" ? "Indoor" : "Outdoor"} Serial
-          </Text>
+          </AppText>
           <TouchableOpacity onPress={onClose}>
             <Ionicons name="close" size={22} color="#FFF" />
           </TouchableOpacity>
@@ -49,7 +50,7 @@ export default function BarcodeScanner({
         />
         <View style={styles.overlay}>
           <View style={styles.frame} />
-          <Text style={styles.hint}>Position barcode in frame</Text>
+          <AppText style={styles.hint}>Position barcode in frame</AppText>
         </View>
       </View>
     </View>

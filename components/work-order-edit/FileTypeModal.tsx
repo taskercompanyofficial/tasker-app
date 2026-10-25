@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import Button from "@/components/Button";
 import Colors from "@/constants/Colors";
 import { FileType } from "@/types/file-type";
@@ -5,7 +6,6 @@ import React from "react";
 import {
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -32,8 +32,8 @@ export default function FileTypeModal({
   return (
     <View style={styles.overlay}>
       <View style={styles.container}>
-        <Text style={styles.title}>Select File Type</Text>
-        <Text style={styles.message}>Choose the type of file</Text>
+        <AppText style={styles.title}>Select File Type</AppText>
+        <AppText style={styles.message}>Choose the type of file</AppText>
 
         <ScrollView style={styles.fileTypeList}>
           {fileTypes.map((fileType) => (
@@ -50,7 +50,7 @@ export default function FileTypeModal({
                   <View style={styles.radioInner} />
                 )}
               </View>
-              <Text
+              <AppText
                 style={[
                   styles.fileTypeText,
                   selectedFileType === fileType.id &&
@@ -58,7 +58,7 @@ export default function FileTypeModal({
                 ]}
               >
                 {fileType.name}
-              </Text>
+              </AppText>
             </TouchableOpacity>
           ))}
         </ScrollView>

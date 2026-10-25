@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import ContactSupportModal from "@/components/orders/ContactSupportModal";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing, Typography } from "@/constants/Styles";
@@ -5,7 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
 import Svg, {
   Circle,
   Defs,
@@ -66,13 +67,13 @@ export default function IndustrialServicesCard() {
           <View style={styles.headerTextCol}>
             <View style={styles.badge}>
               <Ionicons name="business" size={11} color="#38BDF8" />
-              <Text style={styles.badgeText}>COMMERCIAL & INDUSTRIAL</Text>
+              <AppText style={styles.badgeText}>COMMERCIAL & INDUSTRIAL</AppText>
             </View>
 
-            <Text style={styles.title}>Services for Your Business</Text>
-            <Text style={styles.subtitle}>
+            <AppText style={styles.title}>Services for Your Business</AppText>
+            <AppText style={styles.subtitle}>
               HVAC, Heavy Electrical & Facility Maintenance with Custom B2B Rates.
-            </Text>
+            </AppText>
           </View>
 
           {/* 3D Commercial HVAC Thumbnail */}
@@ -89,15 +90,15 @@ export default function IndustrialServicesCard() {
         <View style={styles.featuresRow}>
           <View style={styles.featureItem}>
             <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-            <Text style={styles.featureText}>Custom Quotes</Text>
+            <AppText style={styles.featureText}>Custom Quotes</AppText>
           </View>
           <View style={styles.featureItem}>
             <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-            <Text style={styles.featureText}>Bulk Discounts</Text>
+            <AppText style={styles.featureText}>Bulk Discounts</AppText>
           </View>
           <View style={styles.featureItem}>
             <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-            <Text style={styles.featureText}>24/7 SLA Support</Text>
+            <AppText style={styles.featureText}>24/7 SLA Support</AppText>
           </View>
         </View>
 
@@ -109,7 +110,7 @@ export default function IndustrialServicesCard() {
             activeOpacity={0.85}
           >
             <Ionicons name="document-text" size={15} color={Colors.neutral.white} />
-            <Text style={styles.primaryButtonText}>Request Quote</Text>
+            <AppText style={styles.primaryButtonText}>Request Quote</AppText>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -122,7 +123,7 @@ export default function IndustrialServicesCard() {
               size={15}
               color={Colors.themes.customer.primary}
             />
-            <Text style={styles.secondaryButtonText}>Contact Us</Text>
+            <AppText style={styles.secondaryButtonText}>Contact Us</AppText>
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -207,8 +208,9 @@ const styles = StyleSheet.create({
   },
   featuresRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "space-around",
     backgroundColor: "rgba(255, 255, 255, 0.06)",
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs + 2,
@@ -222,11 +224,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: "30%",
+    justifyContent: "center",
   },
   featureText: {
     fontSize: 10,
     fontWeight: "700",
     color: Colors.neutral.white,
+    flexShrink: 1,
+    lineHeight: 15,
+    textAlign: "center",
   },
   actionsRow: {
     flexDirection: "row",

@@ -1,12 +1,16 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing, Typography } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
+import { useLanguage } from "@/context/language-context";
+import LanguageSwitcherModal from "@/components/common/LanguageSwitcherModal";
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   ScrollView,
   StatusBar,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
   useColorScheme,
@@ -27,6 +31,8 @@ import getImageUrl from "@/lib/utils";
 
 export default function VendorSettings() {
   const { session, setAppMode, signOutMode } = useSession();
+  const { language, t } = useLanguage();
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showSwitchConfirm, setShowSwitchConfirm] = React.useState(false);
   const [pendingCustomer, setPendingCustomer] = React.useState<boolean | null>(null);
 
@@ -69,7 +75,7 @@ export default function VendorSettings() {
       }
     } catch {}
     await signOutMode(isStaff ? "vendor_staff" : "vendor");
-    Toast.show({ type: "success", text1: "Successfully signed out" });
+    localizedToast({ type: "success", text1: "Successfully signed out" });
 
     await setAppMode("customer");
     if (session.customerToken) {
@@ -111,14 +117,14 @@ export default function VendorSettings() {
         />
       </View>
       <View style={styles.settingContent}>
-        <Text
+        <AppText
           style={[styles.settingTitle, destructive && { color: Colors.error }]}
         >
           {title}
-        </Text>
-        {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
+        </AppText>
+        {subtitle && <AppText style={styles.settingSubtitle}>{subtitle}</AppText>}
       </View>
-      <Ionicons name="chevron-forward" size={18} color={Colors.text.tertiary} />
+      <DirectionalIcon name="chevron-forward" size={18} color={Colors.text.tertiary} />
     </TouchableOpacity>
   );
 
@@ -152,9 +158,9 @@ export default function VendorSettings() {
               />
             ) : (
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
+                <AppText style={styles.avatarText}>
                   {vendorName.charAt(0).toUpperCase()}
-                </Text>
+                </AppText>
               </View>
             )}
             <View style={styles.verifiedBadge}>
@@ -166,10 +172,10 @@ export default function VendorSettings() {
             </View>
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{vendorName}</Text>
-            <Text style={styles.profileEmail}>{vendorEmail}</Text>
+            <AppText style={styles.profileName}>{vendorName}</AppText>
+            <AppText style={styles.profileEmail}>{vendorEmail}</AppText>
             <View style={styles.roleBadge}>
-              <Text style={styles.roleBadgeText}>{isStaff ? "Vendor Staff" : "Official Vendor"}</Text>
+              <AppText style={styles.roleBadgeText}>{isStaff ? "Vendor Staff" : "Official Vendor"}</AppText>
             </View>
           </View>
         </View>
@@ -183,10 +189,10 @@ export default function VendorSettings() {
         <View style={styles.sectionCard}>
           <View style={styles.tileHeaderRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.tileTitle}>Switch your account</Text>
-              <Text style={styles.tileSubtitle}>
+              <AppText style={styles.tileTitle}>Switch your account</AppText>
+              <AppText style={styles.tileSubtitle}>
                 Toggle between Customer and Vendor modes
-              </Text>
+              </AppText>
             </View>
             <View style={styles.tileRight}>
               <View
@@ -195,7 +201,7 @@ export default function VendorSettings() {
                   isVendor ? styles.modeTagVendor : styles.modeTagCustomer,
                 ]}
               >
-                <Text
+                <AppText
                   style={[
                     styles.modeTagText,
                     isVendor
@@ -204,7 +210,7 @@ export default function VendorSettings() {
                   ]}
                 >
                   {isVendor ? "Vendor" : "Customer"}
-                </Text>
+                </AppText>
               </View>
               <CustomSwitch
                 value={isVendor}
@@ -220,7 +226,7 @@ export default function VendorSettings() {
         </View>
         {!isStaff && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Business Management</Text>
+          <AppText style={styles.sectionTitle}>Business Management</AppText>
           <View style={styles.itemsGate}>
             <SettingItem
               icon="people-outline"
@@ -247,7 +253,7 @@ export default function VendorSettings() {
         )}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account Settings</Text>
+          <AppText style={styles.sectionTitle}>Account Settings</AppText>
           <View style={styles.itemsGate}>
             <SettingItem
               icon="notifications-outline"
@@ -265,6 +271,13 @@ export default function VendorSettings() {
               color={Colors.warning}
             />
             <SettingItem
+              icon="globe-outline"
+              title={t.vendor.settings.languageSettings}
+              subtitle={language === "ur" ? "اردو (Urdu) - فعال ہے" : language === "ur-Latn" ? "Roman Urdu - Selected" : "English - Active"}
+              onPress={() => setShowLanguageModal(true)}
+              color="#2563EB"
+            />
+            <SettingItem
               icon="lock-closed-outline"
               title="Security"
               subtitle="Password and account protection"
@@ -276,7 +289,7 @@ export default function VendorSettings() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>More</Text>
+          <AppText style={styles.sectionTitle}>More</AppText>
           <View style={styles.itemsGate}>
             <SettingItem
               icon="help-circle-outline"
@@ -299,10 +312,10 @@ export default function VendorSettings() {
           onPress={onSignOut}
         >
           <Ionicons name="log-out-outline" size={20} color={Colors.error} />
-          <Text style={styles.logoutText}>Sign Out Account</Text>
+          <AppText style={styles.logoutText}>Sign Out Account</AppText>
         </TouchableOpacity>
 
-        <Text style={styles.versionText}>{getAppVersionDisplay("Tasker Company")}</Text>
+        <AppText style={styles.versionText}>{getAppVersionDisplay("Tasker Company")}</AppText>
       </ScrollView>
 
       <AlertModal
@@ -331,6 +344,11 @@ export default function VendorSettings() {
             setPendingCustomer(null);
           },
         }}
+      />
+
+      <LanguageSwitcherModal
+        visible={showLanguageModal}
+        onClose={() => setShowLanguageModal(false)}
       />
     </SafeAreaView>
   );

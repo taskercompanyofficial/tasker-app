@@ -1,5 +1,7 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppText from "@/components/common/AppText";
 import React from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, StyleSheet, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
@@ -28,7 +30,7 @@ export default function Gifts() {
     const g = await claimGift(id);
     if (g) {
       const msg = g.discountPercent ? "Voucher saved" : `Added PKR ${g.amount} to wallet`;
-      Toast.show({ type: "success", text1: "Gift claimed", text2: msg });
+      localizedToast({ type: "success", text1: "Gift claimed", text2: msg });
       const list = await getUnclaimed();
       setGifts(list);
     }
@@ -39,13 +41,13 @@ export default function Gifts() {
       <FlatList
         ListHeaderComponent={
           <View style={styles.header}>
-            <Text style={styles.heroTitle}>Daily Rewards</Text>
-            <Text style={styles.heroSubtitle}>
+            <AppText style={styles.heroTitle}>Daily Rewards</AppText>
+            <AppText style={styles.heroSubtitle}>
               Check-in daily for 7 days to unlock one-time discount vouchers: 2%, 5%, 7%, 10%, 12%, 15%, and 20% on day 7 for any service.
-            </Text>
+            </AppText>
             <DailyStreak streak={streak} max={DefaultRewardPolicy.cycleDays} />
             <GiftsCalendar streak={streak} />
-            <Text style={styles.sectionTitle}>Unclaimed Gifts</Text>
+            <AppText style={styles.sectionTitle}>Unclaimed Gifts</AppText>
           </View>
         }
         data={gifts}

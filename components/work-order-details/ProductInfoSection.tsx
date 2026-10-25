@@ -1,6 +1,7 @@
+import AppText from "@/components/common/AppText";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { fieldStyles, sectionStyles } from "./styles";
 
 interface ProductInfoSectionProps {
@@ -42,7 +43,7 @@ export default function ProductInfoSection({
         onPress={() => setExpanded(!expanded)}
         activeOpacity={0.7}
       >
-        <Text style={sectionStyles.sectionTitle}>Product Info</Text>
+        <AppText style={sectionStyles.sectionTitle}>Product Info</AppText>
         <Ionicons
           name={expanded ? "chevron-up" : "chevron-down"}
           size={20}
@@ -54,81 +55,81 @@ export default function ProductInfoSection({
         <View style={sectionStyles.sectionContent}>
           <View style={fieldStyles.fieldRow}>
             <View style={fieldStyles.fieldHalf}>
-              <Text style={fieldStyles.fieldLabel}>Brand:</Text>
-              <Text style={fieldStyles.fieldValue}>{brand?.name || "N/A"}</Text>
+              <AppText style={fieldStyles.fieldLabel}>Brand:</AppText>
+              <AppText style={fieldStyles.fieldValue}>{brand?.name || "N/A"}</AppText>
             </View>
             <View style={fieldStyles.fieldHalf}>
-              <Text style={fieldStyles.fieldLabel}>Product:</Text>
-              <Text style={fieldStyles.fieldValue}>
+              <AppText style={fieldStyles.fieldLabel}>Product:</AppText>
+              <AppText style={fieldStyles.fieldValue}>
                 {product?.name || "N/A"}
-              </Text>
+              </AppText>
             </View>
           </View>
 
           <View style={fieldStyles.fieldRow}>
             <View style={fieldStyles.fieldHalf}>
-              <Text style={fieldStyles.fieldLabel}>Indoor Model:</Text>
-              <Text style={fieldStyles.fieldValue}>
+              <AppText style={fieldStyles.fieldLabel}>Indoor Model:</AppText>
+              <AppText style={fieldStyles.fieldValue}>
                 {productIndoorModel || "N/A"}
-              </Text>
+              </AppText>
             </View>
             <View style={fieldStyles.fieldHalf}>
-              <Text style={fieldStyles.fieldLabel}>Indoor Serial:</Text>
-              <Text style={fieldStyles.fieldValue}>
+              <AppText style={fieldStyles.fieldLabel}>Indoor Serial:</AppText>
+              <AppText style={fieldStyles.fieldValue}>
                 {indoorSerialNumber || "N/A"}
-              </Text>
+              </AppText>
             </View>
           </View>
 
           <View style={fieldStyles.fieldRow}>
             <View style={fieldStyles.fieldHalf}>
-              <Text style={fieldStyles.fieldLabel}>Outdoor Model:</Text>
-              <Text style={fieldStyles.fieldValue}>
+              <AppText style={fieldStyles.fieldLabel}>Outdoor Model:</AppText>
+              <AppText style={fieldStyles.fieldValue}>
                 {productOutdoorModel || "N/A"}
-              </Text>
+              </AppText>
             </View>
             <View style={fieldStyles.fieldHalf}>
-              <Text style={fieldStyles.fieldLabel}>Outdoor Serial:</Text>
-              <Text style={fieldStyles.fieldValue}>
+              <AppText style={fieldStyles.fieldLabel}>Outdoor Serial:</AppText>
+              <AppText style={fieldStyles.fieldValue}>
                 {outdoorSerialNumber || "N/A"}
-              </Text>
+              </AppText>
             </View>
           </View>
 
           <View style={fieldStyles.fieldRow}>
             <View style={fieldStyles.fieldHalf}>
-              <Text style={fieldStyles.fieldLabel}>Purchase Date:</Text>
-              <Text style={fieldStyles.fieldValue}>
+              <AppText style={fieldStyles.fieldLabel}>Purchase Date:</AppText>
+              <AppText style={fieldStyles.fieldValue}>
                 {purchaseDate || "N/A"}
-              </Text>
+              </AppText>
             </View>
             <View style={fieldStyles.fieldHalf}>
-              <Text style={fieldStyles.fieldLabel}>Warranty Case:</Text>
-              <Text style={fieldStyles.fieldValue}>
+              <AppText style={fieldStyles.fieldLabel}>Warranty Case:</AppText>
+              <AppText style={fieldStyles.fieldValue}>
                 {isWarrantyCase ? "Yes" : "No"}
-              </Text>
+              </AppText>
             </View>
           </View>
 
           <View style={fieldStyles.fieldRow}>
             {reference && (
               <View style={fieldStyles.fieldHalf}>
-                <Text style={fieldStyles.fieldLabel}>Reference:</Text>
-                <Text style={fieldStyles.fieldValue}>{reference}</Text>
+                <AppText style={fieldStyles.fieldLabel}>Reference:</AppText>
+                <AppText style={fieldStyles.fieldValue}>{reference}</AppText>
               </View>
             )}
             {extraNumber && (
               <View style={fieldStyles.fieldHalf}>
-                <Text style={fieldStyles.fieldLabel}>Extra Number:</Text>
-                <Text style={fieldStyles.fieldValue}>{extraNumber}</Text>
+                <AppText style={fieldStyles.fieldLabel}>Extra Number:</AppText>
+                <AppText style={fieldStyles.fieldValue}>{extraNumber}</AppText>
               </View>
             )}
           </View>
 
           {technicianRemarks && (
             <View style={fieldStyles.fieldGroup}>
-              <Text style={fieldStyles.fieldLabel}>Technician Remarks:</Text>
-              <Text style={fieldStyles.fieldValue}>{technicianRemarks}</Text>
+              <AppText style={fieldStyles.fieldLabel}>Technician Remarks:</AppText>
+              <AppText style={fieldStyles.fieldValue}>{technicianRemarks}</AppText>
             </View>
           )}
         </View>

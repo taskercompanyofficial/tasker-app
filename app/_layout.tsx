@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 // ⚠️  Must be the FIRST import — registers the vendor background location task
 // with expo-task-manager before any navigation or component mounts.
 import "@/tasks/vendorLocationTask";
@@ -13,6 +14,7 @@ import { useAuthStore } from "@/context/auth-store";
 import { EchoProvider } from "@/context/EchoProvider";
 import { useNetwork } from "@/hooks/use-network";
 import { VoiceCallProvider } from "@/context/VoiceCallContext";
+import { LanguageProvider, useLanguage } from "@/context/language-context";
 import VendorActiveTripBubble from "@/components/vendor/VendorActiveTripBubble";
 
 import { addDebugLog, initRemoteLogging } from "@/lib/debug-monitor";
@@ -20,10 +22,10 @@ import { Observe, ObserveRoot, useObserve } from "@/lib/observe";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Stack, usePathname, useRouter } from "expo-router";
 import * as SystemUI from "expo-system-ui";
+import { useFonts } from "expo-font";
 import { useEffect, useRef, useState } from "react";
 import {
   StyleSheet,
-  Text,
   View,
   StatusBar,
   useColorScheme,
@@ -136,31 +138,34 @@ function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <BottomSheetModalProvider>
-        <EchoProvider>
-          <VoiceCallProvider>
-            <StatusBar
-              barStyle={isDark ? "light-content" : "dark-content"}
-              backgroundColor={
-                isDark ? "rgba(0, 0, 0, 0.40)" : "rgba(255, 255, 255, 0.40)"
-              }
-              translucent
-            />
-            <OTAUpdateManager />
-            <NetworkStatus />
-            <RootNavigator />
-            <Toast />
-            <DebugPanel />
-            {/* Floating trip bubble — visible on all screens during an active vendor job */}
-            <VendorActiveTripBubble />
-          </VoiceCallProvider>
-        </EchoProvider>
-      </BottomSheetModalProvider>
+      <LanguageProvider>
+        <BottomSheetModalProvider>
+          <EchoProvider>
+            <VoiceCallProvider>
+              <StatusBar
+                barStyle={isDark ? "light-content" : "dark-content"}
+                backgroundColor={
+                  isDark ? "rgba(0, 0, 0, 0.40)" : "rgba(255, 255, 255, 0.40)"
+                }
+                translucent
+              />
+              <OTAUpdateManager />
+              <NetworkStatus />
+              <RootNavigator />
+              <Toast />
+              <DebugPanel />
+              {/* Floating trip bubble — visible on all screens during an active vendor job */}
+              <VendorActiveTripBubble />
+            </VoiceCallProvider>
+          </EchoProvider>
+        </BottomSheetModalProvider>
+      </LanguageProvider>
     </GestureHandlerRootView>
   );
 }
 
 function RootNavigator() {
+  const { isLoading: isLanguageLoading } = useLanguage();
   const isLoading = useAuthStore((state) => state.isLoading);
   const fetchError = useAuthStore((state) => state.fetchError);
   const user = useAuthStore((state) => state.user);
@@ -171,6 +176,13 @@ function RootNavigator() {
   const vendorStaffToken = useAuthStore((state) => state.vendorStaffToken);
 
   const { isOffline } = useNetwork();
+
+  const [fontsLoaded] = useFonts({
+    "NotoNaskhArabic-Regular": require("@/assets/fonts/NotoNaskhArabic-Regular.ttf"),
+    "NotoNaskhArabic-Bold": require("@/assets/fonts/NotoNaskhArabic-Bold.ttf"),
+    "NotoNastaliqUrdu-Regular": require("@/assets/fonts/NotoNastaliqUrdu-Regular.ttf"),
+    "NotoNastaliqUrdu-Bold": require("@/assets/fonts/NotoNastaliqUrdu-Bold.ttf"),
+  });
 
   const [splashTimerEnded, setSplashTimerEnded] = useState(false);
 
@@ -188,7 +200,7 @@ function RootNavigator() {
     !user &&
     !!fetchError;
 
-  if (isLoading || !splashTimerEnded) {
+  if (isLoading || isLanguageLoading || !splashTimerEnded || !fontsLoaded) {
     return <Splash />;
   }
 
@@ -223,10 +235,10 @@ function RootNavigator() {
 function DefaultErrorFallback() {
   return (
     <View style={errorStyles.container}>
-      <Text style={errorStyles.title}>Something went wrong</Text>
-      <Text style={errorStyles.subtitle}>
+      <AppText style={errorStyles.title}>Something went wrong</AppText>
+      <AppText style={errorStyles.subtitle}>
         An unexpected error occurred. Please restart the app.
-      </Text>
+      </AppText>
     </View>
   );
 }

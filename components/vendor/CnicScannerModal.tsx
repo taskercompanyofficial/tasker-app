@@ -1,3 +1,5 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,7 +14,6 @@ import {
   Image,
   Modal,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
   Easing,
@@ -156,7 +157,7 @@ export default function CnicScannerModal({
       }
     } catch (e) {
       console.warn("[CnicScanner] Capture error:", e);
-      Toast.show({ type: "error", text1: "Failed to capture. Please try again." });
+      localizedToast({ type: "error", text1: "Failed to capture. Please try again." });
     } finally {
       setCapturing(false);
     }
@@ -221,15 +222,15 @@ export default function CnicScannerModal({
             <View style={styles.permIconCircle}>
               <Ionicons name="camera" size={38} color={Colors.themes.provider.primary} />
             </View>
-            <Text style={styles.permTitle}>Camera Access Required</Text>
-            <Text style={styles.permSub}>
+            <AppText style={styles.permTitle}>Camera Access Required</AppText>
+            <AppText style={styles.permSub}>
               We need camera access for the document scanner to capture high-clarity photos of your CNIC for identity verification.
-            </Text>
+            </AppText>
             <TouchableOpacity style={styles.permBtn} onPress={requestPermission} activeOpacity={0.88}>
-              <Text style={styles.permBtnText}>Grant Camera Permission</Text>
+              <AppText style={styles.permBtnText}>Grant Camera Permission</AppText>
             </TouchableOpacity>
             <TouchableOpacity style={styles.permCloseBtn} onPress={onClose}>
-              <Text style={styles.permCloseText}>Cancel</Text>
+              <AppText style={styles.permCloseText}>Cancel</AppText>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -252,9 +253,9 @@ export default function CnicScannerModal({
           </TouchableOpacity>
           <View style={styles.sideBadge}>
             <Ionicons name="scan" size={16} color="#38BDF8" />
-            <Text style={styles.sideBadgeText}>
+            <AppText style={styles.sideBadgeText}>
               {targetSide === "front" ? "CNIC FRONT SCAN" : "CNIC BACK SCAN"}
-            </Text>
+            </AppText>
           </View>
           {!capturedUri ? (
             <TouchableOpacity
@@ -294,7 +295,7 @@ export default function CnicScannerModal({
             {/* Document Quality Badge */}
             <View style={styles.docQualityBadge}>
               <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-              <Text style={styles.docQualityText}>Document Cropped & Ready</Text>
+              <AppText style={styles.docQualityText}>Document Cropped & Ready</AppText>
             </View>
 
             {/* Bottom Actions Bar */}
@@ -302,7 +303,7 @@ export default function CnicScannerModal({
               <View style={styles.previewBtnRow}>
                 <TouchableOpacity style={styles.retakeBtn} onPress={handleRetake} activeOpacity={0.8}>
                   <Ionicons name="camera-reverse" size={20} color="#FFFFFF" />
-                  <Text style={styles.retakeBtnText}>Retake</Text>
+                  <AppText style={styles.retakeBtnText}>Retake</AppText>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -311,12 +312,12 @@ export default function CnicScannerModal({
                   activeOpacity={0.8}
                 >
                   <Ionicons name="reload" size={18} color="#94A3B8" />
-                  <Text style={styles.rotateActionText}>Rotate</Text>
+                  <AppText style={styles.rotateActionText}>Rotate</AppText>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirmPhoto} activeOpacity={0.88}>
                   <Ionicons name="checkmark" size={20} color="#FFFFFF" />
-                  <Text style={styles.confirmBtnText}>Use Document</Text>
+                  <AppText style={styles.confirmBtnText}>Use Document</AppText>
                 </TouchableOpacity>
               </View>
             </SafeAreaView>
@@ -339,12 +340,12 @@ export default function CnicScannerModal({
               <View style={styles.maskTop}>
                 <View style={styles.scannerBadge}>
                   <Ionicons name="document-text-outline" size={14} color="#FFFFFF" />
-                  <Text style={styles.scannerBadgeText}>DOCUMENT SCANNER</Text>
+                  <AppText style={styles.scannerBadgeText}>DOCUMENT SCANNER</AppText>
                 </View>
-                <Text style={styles.guideInstruction}>
+                <AppText style={styles.guideInstruction}>
                   Align {targetSide === "front" ? "FRONT" : "BACK"} of CNIC inside the box
-                </Text>
-                <Text style={styles.guideSub}>Press the shutter button to capture and crop</Text>
+                </AppText>
+                <AppText style={styles.guideSub}>Press the shutter button to capture and crop</AppText>
               </View>
 
               {/* Center Row with Card Viewfinder Frame */}
@@ -360,9 +361,9 @@ export default function CnicScannerModal({
                   {/* Inner Watermark/Card Placement Guide */}
                   <View style={styles.guideCardSilhouette}>
                     <Ionicons name="card-outline" size={40} color="rgba(255, 255, 255, 0.22)" />
-                    <Text style={styles.silhouetteText}>
+                    <AppText style={styles.silhouetteText}>
                       Place CNIC {targetSide === "front" ? "Front" : "Back"} Here
-                    </Text>
+                    </AppText>
                   </View>
 
                   {/* Animated Laser Scanline */}
@@ -396,7 +397,7 @@ export default function CnicScannerModal({
                     </View>
                   </View>
                 </TouchableOpacity>
-                <Text style={styles.shutterHint}>Tap to Capture Document</Text>
+                <AppText style={styles.shutterHint}>Tap to Capture Document</AppText>
               </View>
             </View>
           </View>

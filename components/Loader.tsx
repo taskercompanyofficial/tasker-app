@@ -1,251 +1,155 @@
-import React, { useEffect, useRef } from 'react'
-import { View, StyleSheet, Animated, Easing } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
-import Colors from '@/constants/Colors'
+import React, { useEffect, useRef } from "react";
+import { View, StyleSheet, Animated, Easing, DimensionValue } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import Colors from "@/constants/Colors";
 
 interface LoaderProps {
-    size?: 'small' | 'medium' | 'large'
-    fullScreen?: boolean
+  size?: "small" | "medium" | "large";
+  fullScreen?: boolean;
+  color?: string;
+  iconName?: keyof typeof Ionicons.glyphMap;
 }
 
-export default function Loader({ size = 'medium', fullScreen = false }: LoaderProps) {
-    const spinValue = useRef(new Animated.Value(0)).current
-    const scaleValue1 = useRef(new Animated.Value(1)).current
-    const scaleValue2 = useRef(new Animated.Value(1)).current
-    const scaleValue3 = useRef(new Animated.Value(1)).current
-    const fadeValue = useRef(new Animated.Value(0)).current
-    const breatheValue = useRef(new Animated.Value(1)).current
-    const glowValue = useRef(new Animated.Value(0.3)).current
+export default function Loader({
+  size = "medium",
+  fullScreen = false,
+  color = Colors.themes.customer.primary,
+  iconName = "sparkles",
+}: LoaderProps) {
+  const spinValue = useRef(new Animated.Value(0)).current;
+  const pulseValue = useRef(new Animated.Value(1)).current;
 
-    useEffect(() => {
-        // Fade in animation on mount
-        Animated.timing(fadeValue, {
-            toValue: 1,
-            duration: 500,
-            easing: Easing.ease,
-            useNativeDriver: true,
-        }).start()
+  useEffect(() => {
+    // 1. Single smooth native-driver continuous spin
+    const spinAnimation = Animated.loop(
+      Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 1200,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
 
-        // Spin animation
-        const spinAnimation = Animated.loop(
-            Animated.timing(spinValue, {
-                toValue: 1,
-                duration: 2000,
-                easing: Easing.linear,
-                useNativeDriver: true,
-            })
-        )
+    // 2. Subtle center breathing pulse
+    const pulseAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseValue, {
+          toValue: 1.12,
+          duration: 600,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseValue, {
+          toValue: 1,
+          duration: 600,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    );
 
-        // Breathing animation for center icon
-        const breatheAnimation = Animated.loop(
-            Animated.sequence([
-                Animated.timing(breatheValue, {
-                    toValue: 1.15,
-                    duration: 1000,
-                    easing: Easing.ease,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(breatheValue, {
-                    toValue: 1,
-                    duration: 1000,
-                    easing: Easing.ease,
-                    useNativeDriver: true,
-                }),
-            ])
-        )
+    spinAnimation.start();
+    pulseAnimation.start();
 
-        // Glow pulse animation
-        const glowAnimation = Animated.loop(
-            Animated.sequence([
-                Animated.timing(glowValue, {
-                    toValue: 1,
-                    duration: 1500,
-                    easing: Easing.ease,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(glowValue, {
-                    toValue: 0.3,
-                    duration: 1500,
-                    easing: Easing.ease,
-                    useNativeDriver: true,
-                }),
-            ])
-        )
+    return () => {
+      spinAnimation.stop();
+      pulseAnimation.stop();
+    };
+  }, [spinValue, pulseValue]);
 
-        // Pulse animation for dots
-        const pulseAnimation = (scaleValue: Animated.Value, delay: number) =>
-            Animated.loop(
-                Animated.sequence([
-                    Animated.delay(delay),
-                    Animated.timing(scaleValue, {
-                        toValue: 1.3,
-                        duration: 400,
-                        easing: Easing.ease,
-                        useNativeDriver: true,
-                    }),
-                    Animated.timing(scaleValue, {
-                        toValue: 1,
-                        duration: 400,
-                        easing: Easing.ease,
-                        useNativeDriver: true,
-                    }),
-                ])
-            )
+  const spin = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
 
-        spinAnimation.start()
-        breatheAnimation.start()
-        glowAnimation.start()
-        pulseAnimation(scaleValue1, 0).start()
-        pulseAnimation(scaleValue2, 200).start()
-        pulseAnimation(scaleValue3, 400).start()
-
-        return () => {
-            spinAnimation.stop()
-            breatheAnimation.stop()
-            glowAnimation.stop()
-        }
-    }, [])
-
-    const spin = spinValue.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0deg', '360deg'],
-    })
-
-    const getSizes = () => {
-        switch (size) {
-            case 'small':
-                return { icon: 24, dot: 6, container: 60 }
-            case 'large':
-                return { icon: 48, dot: 10, container: 120 }
-            default:
-                return { icon: 36, dot: 8, container: 90 }
-        }
+  const getDimensions = () => {
+    switch (size) {
+      case "small":
+        return { ringSize: 32, strokeWidth: 2.5, iconSize: 14 };
+      case "large":
+        return { ringSize: 64, strokeWidth: 4, iconSize: 28 };
+      default:
+        return { ringSize: 46, strokeWidth: 3, iconSize: 20 };
     }
+  };
 
-    const sizes = getSizes()
+  const { ringSize, strokeWidth, iconSize } = getDimensions();
 
-    const loaderContent = (
-        <Animated.View
-            style={[
-                styles.loaderContainer,
-                {
-                    width: sizes.container,
-                    height: sizes.container,
-                    opacity: fadeValue,
-                }
-            ]}
-        >
-            {/* Spinning outer circle with glow */}
-            <Animated.View
-                style={[
-                    styles.outerCircle,
-                    {
-                        width: sizes.container,
-                        height: sizes.container,
-                        borderRadius: sizes.container / 2,
-                        transform: [{ rotate: spin }],
-                        opacity: glowValue,
-                    },
-                ]}
-            >
-                <View style={styles.circleSegment} />
-            </Animated.View>
+  const loaderContent = (
+    <View style={[styles.loaderBox, { width: ringSize, height: ringSize }]}>
+      {/* Background Track Ring */}
+      <View
+        style={[
+          styles.trackRing,
+          {
+            width: ringSize,
+            height: ringSize,
+            borderRadius: ringSize / 2,
+            borderWidth: strokeWidth,
+            borderColor: color + "20",
+          },
+        ]}
+      />
 
-            {/* Center icon with breathing effect */}
-            <Animated.View
-                style={[
-                    styles.centerIcon,
-                    {
-                        transform: [{ scale: breatheValue }],
-                    }
-                ]}
-            >
-                <Ionicons name="snow" size={sizes.icon} color={Colors.themes.customer.primary} />
-            </Animated.View>
+      {/* Rotating Accent Arc Ring */}
+      <Animated.View
+        style={[
+          styles.rotatingRing,
+          {
+            width: ringSize,
+            height: ringSize,
+            borderRadius: ringSize / 2,
+            borderWidth: strokeWidth,
+            borderTopColor: color,
+            borderRightColor: color,
+            borderBottomColor: "transparent",
+            borderLeftColor: "transparent",
+            transform: [{ rotate: spin }],
+          },
+        ]}
+      />
 
-            {/* Pulsing dots at bottom */}
-            <View style={styles.dotsContainer}>
-                <Animated.View
-                    style={[
-                        styles.dot,
-                        {
-                            width: sizes.dot,
-                            height: sizes.dot,
-                            borderRadius: sizes.dot / 2,
-                            transform: [{ scale: scaleValue1 }],
-                        },
-                    ]}
-                />
-                <Animated.View
-                    style={[
-                        styles.dot,
-                        {
-                            width: sizes.dot,
-                            height: sizes.dot,
-                            borderRadius: sizes.dot / 2,
-                            transform: [{ scale: scaleValue2 }],
-                        },
-                    ]}
-                />
-                <Animated.View
-                    style={[
-                        styles.dot,
-                        {
-                            width: sizes.dot,
-                            height: sizes.dot,
-                            borderRadius: sizes.dot / 2,
-                            transform: [{ scale: scaleValue3 }],
-                        },
-                    ]}
-                />
-            </View>
-        </Animated.View>
-    )
+      {/* Center Subtle Brand Icon with breathing pulse */}
+      <Animated.View
+        style={[
+          styles.centerIconWrap,
+          {
+            transform: [{ scale: pulseValue }],
+          },
+        ]}
+      >
+        <Ionicons name={iconName} size={iconSize} color={color} />
+      </Animated.View>
+    </View>
+  );
 
-    if (fullScreen) {
-        return (
-            <View style={styles.fullScreenContainer}>
-                {loaderContent}
-            </View>
-        )
-    }
+  if (fullScreen) {
+    return <View style={styles.fullScreenWrapper}>{loaderContent}</View>;
+  }
 
-    return loaderContent
+  return loaderContent;
 }
 
 const styles = StyleSheet.create({
-    fullScreenContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: Colors.neutral.white,
-    },
-    loaderContainer: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        position: 'relative',
-    },
-    outerCircle: {
-        position: 'absolute',
-        borderWidth: 3,
-        borderColor: 'transparent',
-        borderTopColor: Colors.themes.customer.primary,
-        borderRightColor: Colors.themes.customer.primaryLight,
-    },
-    circleSegment: {
-        width: '100%',
-        height: '100%',
-    },
-    centerIcon: {
-        zIndex: 1,
-    },
-    dotsContainer: {
-        flexDirection: 'row',
-        position: 'absolute',
-        bottom: -20,
-        gap: 6,
-    },
-    dot: {
-        backgroundColor: Colors.themes.customer.primary,
-    },
-})
+  fullScreenWrapper: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: Colors.background.primary,
+  },
+  loaderBox: {
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+  },
+  trackRing: {
+    position: "absolute",
+  },
+  rotatingRing: {
+    position: "absolute",
+  },
+  centerIconWrap: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+});

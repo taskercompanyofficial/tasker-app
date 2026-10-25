@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import Button from "@/components/Button";
 import Modal from "@/components/Modal";
 import Colors from "@/constants/Colors";
@@ -12,7 +13,6 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -96,7 +96,7 @@ export default function VendorWorkOrderEditScreen() {
             size="large"
             color={Colors.themes.provider.primary}
           />
-          <Text style={styles.loadingText}>Loading...</Text>
+          <AppText style={styles.loadingText}>Loading...</AppText>
         </View>
       </SafeAreaView>
     );
@@ -112,7 +112,7 @@ export default function VendorWorkOrderEditScreen() {
             size={48}
             color={Colors.text.tertiary}
           />
-          <Text style={styles.errorTitle}>Work Order Not Found</Text>
+          <AppText style={styles.errorTitle}>Work Order Not Found</AppText>
         </View>
       </SafeAreaView>
     );
@@ -130,7 +130,7 @@ export default function VendorWorkOrderEditScreen() {
             size="small"
             color={Colors.themes.provider.primary}
           />
-          <Text style={styles.autoSaveText}>Auto-saving...</Text>
+          <AppText style={styles.autoSaveText}>Auto-saving...</AppText>
         </View>
       )}
 

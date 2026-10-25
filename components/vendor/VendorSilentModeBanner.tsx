@@ -1,8 +1,9 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { Shadows } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Animated, StyleSheet, TouchableOpacity, View } from "react-native";
 
 export default function VendorSilentModeBanner() {
   const [isSilentMode, setIsSilentMode] = useState(false);
@@ -45,10 +46,10 @@ export default function VendorSilentModeBanner() {
       <View style={styles.content}>
         <Ionicons name="volume-mute" size={18} color={Colors.neutral.white} />
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Silent / Mute Mode Detected</Text>
-          <Text style={styles.subtitle}>
+          <AppText style={styles.title}>Silent / Mute Mode Detected</AppText>
+          <AppText style={styles.subtitle}>
             Turn up ringer volume so you don&apos;t miss instant customer job alerts & calls!
-          </Text>
+          </AppText>
         </View>
         <TouchableOpacity
           onPress={() => setDismissed(true)}

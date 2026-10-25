@@ -1,8 +1,9 @@
+import AppText from "@/components/common/AppText";
 import Modal from "@/components/Modal";
 import Colors from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 interface RequiredFile {
   id: number;
@@ -38,7 +39,7 @@ export default function JobGuideModal({
       onClose={onClose}
     >
       <View style={styles.container}>
-        <Text style={styles.subTitle}>Required Photos</Text>
+        <AppText style={styles.subTitle}>Required Photos</AppText>
         {requiredFiles?.length ? (
           requiredFiles.map((req) => {
             const isUploaded = uploadedFiles?.some(
@@ -53,30 +54,30 @@ export default function JobGuideModal({
                     isUploaded ? Colors.themes.provider.primary : "#9CA3AF"
                   }
                 />
-                <Text
+                <AppText
                   style={[styles.itemText, isUploaded && styles.itemUploaded]}
                 >
                   {req.file_type.name}
-                </Text>
+                </AppText>
               </View>
             );
           })
         ) : (
-          <Text style={styles.emptyText}>No specific requirements.</Text>
+          <AppText style={styles.emptyText}>No specific requirements.</AppText>
         )}
 
         <View style={styles.divider} />
 
-        <Text style={styles.subTitle}>Product Info</Text>
+        <AppText style={styles.subTitle}>Product Info</AppText>
         <View style={styles.item}>
           <Ionicons
             name={indoorSerial ? "checkbox" : "square-outline"}
             size={14}
             color={indoorSerial ? Colors.themes.provider.primary : "#9CA3AF"}
           />
-          <Text style={[styles.itemText, indoorSerial && styles.itemUploaded]}>
+          <AppText style={[styles.itemText, indoorSerial && styles.itemUploaded]}>
             Indoor Serial
-          </Text>
+          </AppText>
         </View>
         <View style={styles.item}>
           <Ionicons
@@ -84,9 +85,9 @@ export default function JobGuideModal({
             size={14}
             color={outdoorSerial ? Colors.themes.provider.primary : "#9CA3AF"}
           />
-          <Text style={[styles.itemText, outdoorSerial && styles.itemUploaded]}>
+          <AppText style={[styles.itemText, outdoorSerial && styles.itemUploaded]}>
             Outdoor Serial
-          </Text>
+          </AppText>
         </View>
       </View>
     </Modal>

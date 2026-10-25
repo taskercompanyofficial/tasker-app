@@ -1,9 +1,10 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing, Typography } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef } from "react";
-import { Animated, Image, StyleSheet, Text, View } from "react-native";
+import { Animated, Image, StyleSheet, View } from "react-native";
 
 export default function TaskerShopCard() {
   const shineAnim = useRef(new Animated.Value(0)).current;
@@ -70,14 +71,14 @@ export default function TaskerShopCard() {
         {/* Content Section */}
         <View style={styles.bodySection}>
           <View style={styles.header}>
-            <Text style={styles.title}>Tasker E-Store</Text>
+            <AppText style={styles.title}>Tasker E-Store</AppText>
             <View style={styles.comingSoonBadge}>
-              <Text style={styles.comingSoonText}>COMING SOON</Text>
+              <AppText style={styles.comingSoonText}>COMING SOON</AppText>
             </View>
           </View>
-          <Text style={styles.subtitle} numberOfLines={2}>
+          <AppText style={styles.subtitle} numberOfLines={2}>
             Buy original home appliances, electronic spare parts & tools.
-          </Text>
+          </AppText>
         </View>
 
         {/* Lock Badge */}

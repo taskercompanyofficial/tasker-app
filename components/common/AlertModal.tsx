@@ -1,8 +1,9 @@
+import AppText from "@/components/common/AppText";
 import Colors from '@/constants/Colors'
 import { Spacing } from '@/constants/Styles'
 import { Ionicons } from '@expo/vector-icons'
 import React from 'react'
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Modal, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 interface AlertModalProps {
     visible: boolean
@@ -59,10 +60,10 @@ export default function AlertModal({
                     </View>
 
                     {/* Title */}
-                    <Text style={styles.title}>{title}</Text>
+                    <AppText style={styles.title}>{title}</AppText>
 
                     {/* Message */}
-                    <Text style={styles.message}>{message}</Text>
+                    <AppText style={styles.message}>{message}</AppText>
 
                     {/* Buttons */}
                     <View style={styles.buttonsContainer}>
@@ -74,7 +75,7 @@ export default function AlertModal({
                                     onClose()
                                 }}
                             >
-                                <Text style={styles.secondaryButtonText}>{secondaryButton.text}</Text>
+                                <AppText style={styles.secondaryButtonText}>{secondaryButton.text}</AppText>
                             </TouchableOpacity>
                         )}
                         <TouchableOpacity
@@ -86,9 +87,9 @@ export default function AlertModal({
                                 onClose()
                             }}
                         >
-                            <Text style={styles.primaryButtonText}>
+                            <AppText style={styles.primaryButtonText}>
                                 {primaryButton?.text || 'OK'}
-                            </Text>
+                            </AppText>
                         </TouchableOpacity>
                     </View>
                 </View>

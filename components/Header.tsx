@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import { useAuthStore } from "@/context/auth-store";
@@ -8,7 +9,6 @@ import { useState } from "react";
 import {
   StatusBar,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
   useColorScheme,
@@ -76,13 +76,13 @@ export default function Header({
                 router.push((isVendor ? "/vendor/settings" : "/customer/settings") as any)
               }
             >
-              <Text style={styles.greeting}>{getGreeting()}</Text>
-              <Text style={styles.userName}>
+              <AppText style={styles.greeting}>{getGreeting()}</AppText>
+              <AppText style={styles.userName}>
                 {user.name || `${user.first_name} ${user.last_name}`}
-              </Text>
+              </AppText>
             </TouchableOpacity>
           ) : (
-            <Text style={styles.title}>{title}</Text>
+            <AppText style={styles.title}>{title}</AppText>
           )}
         </View>
 
@@ -114,10 +114,10 @@ export default function Header({
                       { backgroundColor: theme.primary },
                     ]}
                   >
-                    <Text style={styles.avatarText}>
+                    <AppText style={styles.avatarText}>
                       {user.name?.charAt(0).toUpperCase() ||
                         user.first_name?.charAt(0).toUpperCase()}
-                    </Text>
+                    </AppText>
                   </View>
                 )}
                 {isVendor && (

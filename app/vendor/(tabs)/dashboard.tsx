@@ -1,3 +1,6 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Header from "@/components/Header";
 import DailySelfieModal from "@/components/vendor/DailySelfieModal";
 import VendorLocationGateModal from "@/components/vendor/VendorLocationGateModal";
@@ -30,7 +33,6 @@ import {
   ScrollView,
   StyleSheet,
   Switch,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -105,6 +107,12 @@ export default function VendorDashboard() {
   const [thisMonthEarnings, setThisMonthEarnings] = useState(0);
   const [companyShare, setCompanyShare] = useState(0);
 
+  // Two-bucket financial model
+  const [monthlyAccrued, setMonthlyAccrued] = useState(0);
+  const [dueTodayPayable, setDueTodayPayable] = useState(0);
+  const [overduePayable, setOverduePayable] = useState(0);
+  const [secondsToMidnight, setSecondsToMidnight] = useState(0);
+
   // Online status
   const [isOnline, setIsOnline] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState(0);
@@ -146,13 +154,26 @@ export default function VendorDashboard() {
     return () => clearInterval(interval);
   }, [secondsRemaining, isOnline]);
 
+  useEffect(() => {
+    if (secondsToMidnight <= 0) return;
+    const interval = setInterval(() => setSecondsToMidnight((p) => Math.max(0, p - 1)), 1000);
+    return () => clearInterval(interval);
+  }, [secondsToMidnight]);
+
   const fetchOnlineStatus = useCallback(async () => {
     try {
       const res = await axios.get(VENDOR_ONLINE_STATUS_URL(mode));
       if (res.data?.status === "success") {
         const d = res.data.data;
+        if (d.is_financial_blocked || Number(d.overdue_payables ?? 0) > 0) {
+          router.replace("/vendor/financial-lock" as any);
+          return;
+        }
         setIsOnline(Boolean(d.is_online));
         setSecondsRemaining(Number(d.seconds_remaining ?? 0));
+        if (d.due_today_payables !== undefined) setDueTodayPayable(Number(d.due_today_payables));
+        if (d.overdue_payables !== undefined) setOverduePayable(Number(d.overdue_payables));
+        if (d.seconds_to_midnight !== undefined) setSecondsToMidnight(Number(d.seconds_to_midnight));
       }
     } catch (e) { console.warn("[Dashboard] Online status fetch failed:", e); }
   }, [mode]);
@@ -209,7 +230,7 @@ export default function VendorDashboard() {
         if (targetValue) {
           sendDashboardOnlineLocationPing();
         }
-        Toast.show({
+        localizedToast({
           type: "success",
           text1: targetValue ? "🟢 You are Online" : "⚫ You are Offline",
           text2: targetValue ? "Ready to receive dispatches." : "Off-duty. No new assignments.",
@@ -219,7 +240,7 @@ export default function VendorDashboard() {
       if (err?.response?.data?.requires_daily_selfie) {
         setShowSelfieModal(true);
       } else {
-        Toast.show({ type: "error", text1: "Status Error", text2: err?.response?.data?.message || "Failed." });
+        localizedToast({ type: "error", text1: "Status Error", text2: err?.response?.data?.message || "Failed." });
       }
     } finally { setTogglingOnline(false); }
   };
@@ -240,6 +261,22 @@ export default function VendorDashboard() {
         if (earningsData?.summary) {
           setBalance(Number(earningsData.summary.net_balance ?? 0));
           setThisMonthEarnings(Number(earningsData.summary.this_month_revenue ?? 0));
+          if (earningsData.summary.monthly_accrued !== undefined) {
+            setMonthlyAccrued(Number(earningsData.summary.monthly_accrued));
+          }
+          if (earningsData.summary.due_today_payable !== undefined) {
+            setDueTodayPayable(Number(earningsData.summary.due_today_payable));
+          }
+          if (earningsData.summary.overdue_payable !== undefined) {
+            setOverduePayable(Number(earningsData.summary.overdue_payable));
+          }
+          if (earningsData.summary.seconds_to_midnight !== undefined) {
+            setSecondsToMidnight(Number(earningsData.summary.seconds_to_midnight));
+          }
+          if (earningsData.summary.is_financial_blocked || Number(earningsData.summary.overdue_payable ?? 0) > 0) {
+            router.replace("/vendor/financial-lock" as any);
+            return;
+          }
         } else {
           const txns = Array.isArray(earningsData?.transactions) ? earningsData.transactions
             : Array.isArray(earningsData) ? earningsData
@@ -281,6 +318,13 @@ export default function VendorDashboard() {
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
   };
 
+  const formatCountdown = (sec: number) => {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return `${h}h ${m}m ${s}s`;
+  };
+
   const resolvedAvatar =
     vendorUser?.active_avatar_url || vendorUser?.profile_image || vendorUser?.image || null;
   const avatarInitial = (vendorUser?.name?.charAt(0) || vendorUser?.first_name?.charAt(0) || "P").toUpperCase();
@@ -320,19 +364,20 @@ export default function VendorDashboard() {
                       />
                     ) : (
                       <View style={styles.heroAvatarFallback}>
-                        <Text style={styles.heroAvatarText}>{avatarInitial}</Text>
+                        <AppText style={styles.heroAvatarText}>{avatarInitial}</AppText>
                       </View>
                     )}
                     <View style={[styles.avatarStatusDot, { backgroundColor: isOnline ? "#10B981" : "#9CA3AF" }]} />
                   </View>
                   <View>
-                    <Text style={styles.heroGreeting}>Welcome back,</Text>
-                    <Text style={styles.heroName}>{firstName} 👋</Text>
+                    <AppText style={styles.heroGreeting}>Welcome back,</AppText>
+                    <AppText style={styles.heroName}>{firstName} 👋</AppText>
                   </View>
                 </View>
 
-                {/* Online toggle pill */}
-                <View style={[styles.togglePill, isOnline ? styles.togglePillOnline : styles.togglePillOffline]}>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  {/* Online toggle pill */}
+                  <View style={[styles.togglePill, isOnline ? styles.togglePillOnline : styles.togglePillOffline]}>
                   <Animated.View
                     style={[
                       styles.toggleDot,
@@ -340,7 +385,7 @@ export default function VendorDashboard() {
                       isOnline && { transform: [{ scale: pulseAnim }] },
                     ]}
                   />
-                  <Text style={styles.toggleLabel}>{isOnline ? "LIVE" : "OFF"}</Text>
+                  <AppText style={styles.toggleLabel}>{isOnline ? "LIVE" : "OFF"}</AppText>
                   {togglingOnline ? (
                     <ActivityIndicator size="small" color="#fff" style={{ marginLeft: 2 }} />
                   ) : (
@@ -355,16 +400,17 @@ export default function VendorDashboard() {
                   )}
                 </View>
               </View>
+            </View>
 
               {/* Slogan + Character row */}
               <View style={styles.heroMidRow}>
                 <View style={styles.heroSloganBox}>
-                  <Text style={styles.heroSloganTag}>YOUR EARNINGS, YOUR RULES</Text>
-                  <Text style={styles.heroSlogan}>Every job you{"\n"}complete pays{"\n"}you more.</Text>
+                  <AppText style={styles.heroSloganTag}>YOUR EARNINGS, YOUR RULES</AppText>
+                  <AppText style={styles.heroSlogan}>Every job you{"\n"}complete pays{"\n"}you more.</AppText>
                   {isOnline && secondsRemaining > 0 && (
                     <View style={styles.timerChip}>
                       <Ionicons name="time-outline" size={10} color="#D1FAE5" />
-                      <Text style={styles.timerChipText}>Selfie valid · {formatTime(secondsRemaining)}</Text>
+                      <AppText style={styles.timerChipText}>Selfie valid · {formatTime(secondsRemaining)}</AppText>
                     </View>
                   )}
                 </View>
@@ -381,22 +427,22 @@ export default function VendorDashboard() {
               <View style={styles.earningsStrip}>
                 <View style={styles.earnItem}>
                   <Ionicons name="wallet-outline" size={12} color="rgba(255,255,255,0.6)" />
-                  <Text style={styles.earnLabel}>Balance</Text>
-                  <Text style={styles.earnValue} numberOfLines={1}>
+                  <AppText style={styles.earnLabel}>Balance</AppText>
+                  <AppText style={styles.earnValue} numberOfLines={1}>
                     {balance < 0 ? "-" : ""}PKR {Math.abs(balance).toLocaleString()}
-                  </Text>
+                  </AppText>
                 </View>
                 <View style={styles.earnDivider} />
                 <View style={styles.earnItem}>
                   <Ionicons name="today-outline" size={12} color="rgba(255,255,255,0.6)" />
-                  <Text style={styles.earnLabel}>Today</Text>
-                  <Text style={styles.earnValue}>PKR {todayEarnings.toLocaleString()}</Text>
+                  <AppText style={styles.earnLabel}>Today</AppText>
+                  <AppText style={styles.earnValue}>PKR {todayEarnings.toLocaleString()}</AppText>
                 </View>
                 <View style={styles.earnDivider} />
                 <View style={styles.earnItem}>
                   <Ionicons name="calendar-outline" size={12} color="rgba(255,255,255,0.6)" />
-                  <Text style={styles.earnLabel}>This Month</Text>
-                  <Text style={styles.earnValue}>PKR {thisMonthEarnings.toLocaleString()}</Text>
+                  <AppText style={styles.earnLabel}>This Month</AppText>
+                  <AppText style={styles.earnValue}>PKR {thisMonthEarnings.toLocaleString()}</AppText>
                 </View>
               </View>
 
@@ -412,12 +458,75 @@ export default function VendorDashboard() {
                 <Ionicons name="person" size={22} color={Colors.themes.provider.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.staffTitle}>Staff Account</Text>
-                <Text style={styles.staffSub}>
+                <AppText style={styles.staffTitle}>Staff Account</AppText>
+                <AppText style={styles.staffSub}>
                   Logged in under{" "}
                   {(session.user as any)?.vendor?.company_name ||
                     (session.user as any)?.vendor?.name || "your vendor"}
-                </Text>
+                </AppText>
+              </View>
+            </View>
+          )}
+
+          {/* ─── SETTLEMENT & REVENUE SPLIT BUCKETS ─── */}
+          {!isStaff && (
+            <View style={styles.settlementSection}>
+              {/* Due Tonight Daily Share (Midnight Lock Alert) */}
+              {dueTodayPayable > 0 && (
+                <View style={styles.dailyPayableCard}>
+                  <View style={styles.dailyPayableHeader}>
+                    <View style={styles.dailyPayableTitleRow}>
+                      <Ionicons name="time" size={16} color="#DC2626" />
+                      <AppText style={styles.dailyPayableTitle}>Due Tonight (by 12:00 AM)</AppText>
+                    </View>
+                    <View style={styles.countdownBadge}>
+                      <Ionicons name="hourglass-outline" size={12} color="#DC2626" />
+                      <AppText style={styles.countdownText}>{formatCountdown(secondsToMidnight)}</AppText>
+                    </View>
+                  </View>
+
+                  <View style={styles.dailyPayableBody}>
+                    <AppText style={styles.dailyPayableAmount}>
+                      PKR {dueTodayPayable.toLocaleString()}
+                    </AppText>
+                    <AppText style={styles.dailyPayableDesc}>
+                      Company 35% cut from on-site extra cash collected. Must be deposited before 12:00 AM midnight to avoid automated app lockout.
+                    </AppText>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.payNowBtn}
+                    activeOpacity={0.85}
+                    onPress={() => router.push("/vendor/financial-lock" as any)}
+                  >
+                    <AppText style={styles.payNowBtnText}>Submit Payment Proof</AppText>
+                    <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Monthly Accrual Bucket (Warranty / Free Installation 100% Payout) */}
+              <View style={styles.monthlyAccrualCard}>
+                <View style={styles.monthlyAccrualHeader}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Ionicons name="shield-checkmark" size={16} color="#059669" />
+                    <AppText style={styles.monthlyAccrualTitle}>Monthly Accrued (100% Payout)</AppText>
+                  </View>
+                  <AppText style={styles.monthlyCycleBadge}>1st–30th Cycle</AppText>
+                </View>
+
+                <View style={{ marginTop: 4, flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
+                  <AppText style={styles.monthlyAccrualAmount}>
+                    PKR {monthlyAccrued.toLocaleString()}
+                  </AppText>
+                  <AppText style={styles.monthlyPayoutNote}>
+                    Paid 1st–5th of next month
+                  </AppText>
+                </View>
+
+                <AppText style={styles.monthlyAccrualDesc}>
+                  Warranty & free installation fees paid in full (0% company deduction).
+                </AppText>
               </View>
             </View>
           )}
@@ -426,12 +535,12 @@ export default function VendorDashboard() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View>
-                <Text style={styles.sectionTitle}>Job Performance</Text>
-                <Text style={styles.sectionSub}>Live work order snapshot</Text>
+                <AppText style={styles.sectionTitle}>Job Performance</AppText>
+                <AppText style={styles.sectionSub}>Live work order snapshot</AppText>
               </View>
               <View style={styles.syncBadge}>
                 <Animated.View style={[styles.syncDot, { backgroundColor: isConnected ? Colors.success : Colors.error }]} />
-                <Text style={styles.syncText}>Live</Text>
+                <AppText style={styles.syncText}>Live</AppText>
               </View>
             </View>
 
@@ -444,10 +553,10 @@ export default function VendorDashboard() {
                 <View style={[styles.statIcon, { backgroundColor: "rgba(30,58,138,0.12)" }]}>
                   <Ionicons name="flash" size={20} color={Colors.themes.provider.primary} />
                 </View>
-                <Text style={[styles.statNum, { color: Colors.themes.provider.primary }]}>{stats?.active ?? 0}</Text>
-                <Text style={styles.statLabel}>Active Jobs</Text>
+                <AppText style={[styles.statNum, { color: Colors.themes.provider.primary }]}>{stats?.active ?? 0}</AppText>
+                <AppText style={styles.statLabel}>Active Jobs</AppText>
                 <View style={styles.statArrow}>
-                  <Ionicons name="arrow-forward" size={10} color={Colors.themes.provider.primaryLight} />
+                  <DirectionalIcon name="arrow-forward" size={10} color={Colors.themes.provider.primaryLight} />
                 </View>
               </TouchableOpacity>
 
@@ -459,12 +568,12 @@ export default function VendorDashboard() {
                 <View style={[styles.statIcon, { backgroundColor: "rgba(245,158,11,0.12)" }]}>
                   <Ionicons name="time" size={20} color={Colors.warning} />
                 </View>
-                <Text style={[styles.statNum, stats?.pending_acceptance ? { color: Colors.warning } : {}]}>
+                <AppText style={[styles.statNum, stats?.pending_acceptance ? { color: Colors.warning } : {}]}>
                   {stats?.pending_acceptance ?? 0}
-                </Text>
-                <Text style={styles.statLabel}>Pending</Text>
+                </AppText>
+                <AppText style={styles.statLabel}>Pending</AppText>
                 <View style={styles.statArrow}>
-                  <Ionicons name="arrow-forward" size={10} color={Colors.warning} />
+                  <DirectionalIcon name="arrow-forward" size={10} color={Colors.warning} />
                 </View>
               </TouchableOpacity>
 
@@ -476,10 +585,10 @@ export default function VendorDashboard() {
                 <View style={[styles.statIcon, { backgroundColor: "rgba(16,185,129,0.12)" }]}>
                   <Ionicons name="checkmark-done" size={20} color={Colors.success} />
                 </View>
-                <Text style={[styles.statNum, { color: Colors.success }]}>{stats?.completed_this_month ?? 0}</Text>
-                <Text style={styles.statLabel}>This Month</Text>
+                <AppText style={[styles.statNum, { color: Colors.success }]}>{stats?.completed_this_month ?? 0}</AppText>
+                <AppText style={styles.statLabel}>This Month</AppText>
                 <View style={styles.statArrow}>
-                  <Ionicons name="arrow-forward" size={10} color={Colors.success} />
+                  <DirectionalIcon name="arrow-forward" size={10} color={Colors.success} />
                 </View>
               </TouchableOpacity>
 
@@ -491,10 +600,10 @@ export default function VendorDashboard() {
                 <View style={[styles.statIcon, { backgroundColor: "rgba(139,92,246,0.12)" }]}>
                   <Ionicons name="trophy" size={20} color="#8B5CF6" />
                 </View>
-                <Text style={[styles.statNum, { color: "#8B5CF6" }]}>{stats?.completed ?? 0}</Text>
-                <Text style={styles.statLabel}>Lifetime</Text>
+                <AppText style={[styles.statNum, { color: "#8B5CF6" }]}>{stats?.completed ?? 0}</AppText>
+                <AppText style={styles.statLabel}>Lifetime</AppText>
                 <View style={styles.statArrow}>
-                  <Ionicons name="arrow-forward" size={10} color="#8B5CF6" />
+                  <DirectionalIcon name="arrow-forward" size={10} color="#8B5CF6" />
                 </View>
               </TouchableOpacity>
             </View>
@@ -505,8 +614,8 @@ export default function VendorDashboard() {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <View>
-                  <Text style={styles.sectionTitle}>Quick Actions</Text>
-                  <Text style={styles.sectionSub}>Shortcuts to key features</Text>
+                  <AppText style={styles.sectionTitle}>Quick Actions</AppText>
+                  <AppText style={styles.sectionSub}>Shortcuts to key features</AppText>
                 </View>
               </View>
 
@@ -521,11 +630,11 @@ export default function VendorDashboard() {
                     <Ionicons name="people" size={20} color={Colors.themes.provider.primary} />
                   </View>
                   <View style={styles.actionMeta}>
-                    <Text style={styles.actionTitle}>Team Management</Text>
-                    <Text style={styles.actionSub}>Manage staff & technicians</Text>
+                    <AppText style={styles.actionTitle}>Team Management</AppText>
+                    <AppText style={styles.actionSub}>Manage staff & technicians</AppText>
                   </View>
                   <View style={[styles.actionChip, { backgroundColor: Colors.themes.provider.background }]}>
-                    <Ionicons name="chevron-forward" size={14} color={Colors.themes.provider.primary} />
+                    <DirectionalIcon name="chevron-forward" size={14} color={Colors.themes.provider.primary} />
                   </View>
                 </TouchableOpacity>
 
@@ -541,11 +650,11 @@ export default function VendorDashboard() {
                     <Ionicons name="headset" size={20} color={Colors.success} />
                   </View>
                   <View style={styles.actionMeta}>
-                    <Text style={styles.actionTitle}>Chat Support</Text>
-                    <Text style={styles.actionSub}>Get help from our team</Text>
+                    <AppText style={styles.actionTitle}>Chat Support</AppText>
+                    <AppText style={styles.actionSub}>Get help from our team</AppText>
                   </View>
                   <View style={[styles.actionChip, { backgroundColor: "#F0FDF4" }]}>
-                    <Ionicons name="chevron-forward" size={14} color={Colors.success} />
+                    <DirectionalIcon name="chevron-forward" size={14} color={Colors.success} />
                   </View>
                 </TouchableOpacity>
 
@@ -561,11 +670,11 @@ export default function VendorDashboard() {
                     <MaterialCommunityIcons name="chart-line" size={20} color="#D97706" />
                   </View>
                   <View style={styles.actionMeta}>
-                    <Text style={styles.actionTitle}>Earnings & Ledger</Text>
-                    <Text style={styles.actionSub}>View payouts & balance history</Text>
+                    <AppText style={styles.actionTitle}>Earnings & Ledger</AppText>
+                    <AppText style={styles.actionSub}>View payouts & balance history</AppText>
                   </View>
                   <View style={[styles.actionChip, { backgroundColor: "#FEF3C7" }]}>
-                    <Ionicons name="chevron-forward" size={14} color="#D97706" />
+                    <DirectionalIcon name="chevron-forward" size={14} color="#D97706" />
                   </View>
                 </TouchableOpacity>
               </View>
@@ -578,10 +687,10 @@ export default function VendorDashboard() {
               <Ionicons name="bulb" size={20} color="#FBBF24" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.tipTitle}>Pro Tip</Text>
-              <Text style={styles.tipText}>
+              <AppText style={styles.tipTitle}>Pro Tip</AppText>
+              <AppText style={styles.tipText}>
                 Keep job statuses updated for faster payouts. All jobs sync in real-time.
-              </Text>
+              </AppText>
             </View>
           </View>
 
@@ -838,4 +947,120 @@ const styles = StyleSheet.create({
   },
   tipTitle: { fontSize: 13, fontWeight: "700", color: "#92400E", marginBottom: 2 },
   tipText: { fontSize: 12, color: "#78350F", lineHeight: 17, fontWeight: "500" },
+
+  // ─── SETTLEMENT & BUCKETS ────────────────────────────────────────────────────
+  settlementSection: {
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.md,
+    gap: 12,
+  },
+  dailyPayableCard: {
+    backgroundColor: "#FEF2F2",
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: "#FCA5A5",
+    padding: 16,
+  },
+  dailyPayableHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  dailyPayableTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  dailyPayableTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#DC2626",
+  },
+  countdownBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#FEE2E2",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.full,
+  },
+  countdownText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#DC2626",
+  },
+  dailyPayableBody: {
+    marginTop: 4,
+  },
+  dailyPayableAmount: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#991B1B",
+  },
+  dailyPayableDesc: {
+    fontSize: 11,
+    color: "#7F1D1D",
+    marginTop: 2,
+    lineHeight: 15,
+  },
+  payNowBtn: {
+    marginTop: 12,
+    backgroundColor: "#DC2626",
+    borderRadius: BorderRadius.lg,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  payNowBtnText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  monthlyAccrualCard: {
+    backgroundColor: "#F0FDF4",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+    padding: 16,
+  },
+  monthlyAccrualHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  monthlyAccrualTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#059669",
+  },
+  monthlyCycleBadge: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#065F46",
+    backgroundColor: "#DCFCE7",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  monthlyAccrualAmount: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: "#065F46",
+  },
+  monthlyPayoutNote: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#047857",
+  },
+  monthlyAccrualDesc: {
+    fontSize: 11,
+    color: "#166534",
+    marginTop: 4,
+    lineHeight: 15,
+  },
 });

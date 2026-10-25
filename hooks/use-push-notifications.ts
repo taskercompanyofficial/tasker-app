@@ -51,7 +51,6 @@ export function usePushNotifications() {
             lightColor: "#10B981",
             lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
             bypassDnd: true,
-            sound: "default",
           });
 
           // 2. Chat Messages: HIGH priority
@@ -61,14 +60,12 @@ export function usePushNotifications() {
             vibrationPattern: [0, 250, 250, 250],
             lightColor: "#2563EB",
             lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-            sound: "default",
           });
 
           // 3. Default Channel
           await Notifications.setNotificationChannelAsync("default", {
             name: "Default",
             importance: Notifications.AndroidImportance.DEFAULT,
-            sound: "default",
           });
         }
 

@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { Spacing, BorderRadius, Typography } from "@/constants/Styles";
 import getImageUrl from "@/lib/utils";
@@ -5,7 +6,7 @@ import { ParentService } from "@/types/parent-service";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
 
 interface ParentServiceCardProps {
@@ -44,21 +45,21 @@ export default function ParentServiceCard({
               router.push(`/customer/services/parent/${service.slug}`)
             }
           >
-            <Text style={styles.serviceName}>{service.name}</Text>
+            <AppText style={styles.serviceName}>{service.name}</AppText>
           </TouchableOpacity>
-          <Text style={styles.description} numberOfLines={1}>
+          <AppText style={styles.description} numberOfLines={1}>
             {service.description}
-          </Text>
+          </AppText>
         </View>
 
         {/* Price & Discount */}
         <View style={styles.priceSection}>
           {discount > 0 && (
             <View style={styles.discountRow}>
-              <Text style={styles.originalPrice}>₨ {price}</Text>
+              <AppText style={styles.originalPrice}>₨ {price}</AppText>
             </View>
           )}
-          <Text style={styles.price}>₨ {Math.round(discountedPrice)}</Text>
+          <AppText style={styles.price}>₨ {Math.round(discountedPrice)}</AppText>
         </View>
       </View>
 
@@ -69,7 +70,7 @@ export default function ParentServiceCard({
             style={styles.addButton}
             onPress={() => onUpdateQuantity(1)}
           >
-            <Text style={styles.addButtonText}>Add</Text>
+            <AppText style={styles.addButtonText}>Add</AppText>
             <Ionicons name="add" size={16} color={Colors.neutral.white} />
           </TouchableOpacity>
         ) : (
@@ -84,7 +85,7 @@ export default function ParentServiceCard({
                 color={Colors.themes.customer.primary}
               />
             </TouchableOpacity>
-            <Text style={styles.quantityText}>{quantity}</Text>
+            <AppText style={styles.quantityText}>{quantity}</AppText>
             <TouchableOpacity
               style={styles.quantityButton}
               onPress={() => onUpdateQuantity(1)}

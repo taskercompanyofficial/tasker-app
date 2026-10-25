@@ -1,6 +1,7 @@
+import AppText from "@/components/common/AppText";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { fieldStyles, sectionStyles } from "./styles";
 
 interface ServiceInfoSectionProps {
@@ -43,7 +44,7 @@ export default function ServiceInfoSection({
         onPress={() => setExpanded(!expanded)}
         activeOpacity={0.7}
       >
-        <Text style={sectionStyles.sectionTitle}>Service Info</Text>
+        <AppText style={sectionStyles.sectionTitle}>Service Info</AppText>
         <Ionicons
           name={expanded ? "chevron-up" : "chevron-down"}
           size={18}
@@ -56,91 +57,91 @@ export default function ServiceInfoSection({
           {/* Service & Category */}
           <View style={fieldStyles.fieldRow}>
             <View style={fieldStyles.fieldHalf}>
-              <Text style={fieldStyles.fieldLabel}>Service</Text>
-              <Text style={fieldStyles.fieldValue}>
+              <AppText style={fieldStyles.fieldLabel}>Service</AppText>
+              <AppText style={fieldStyles.fieldValue}>
                 {parentService?.name || service?.name || "N/A"}
-              </Text>
+              </AppText>
             </View>
             <View style={fieldStyles.fieldHalf}>
-              <Text style={fieldStyles.fieldLabel}>Category</Text>
-              <Text style={fieldStyles.fieldValue}>
+              <AppText style={fieldStyles.fieldLabel}>Category</AppText>
+              <AppText style={fieldStyles.fieldValue}>
                 {category?.name || "N/A"}
-              </Text>
+              </AppText>
             </View>
           </View>
 
           {/* Product & Sub Status */}
           <View style={fieldStyles.fieldRow}>
             <View style={fieldStyles.fieldHalf}>
-              <Text style={fieldStyles.fieldLabel}>Product</Text>
-              <Text style={fieldStyles.fieldValue}>
+              <AppText style={fieldStyles.fieldLabel}>Product</AppText>
+              <AppText style={fieldStyles.fieldValue}>
                 {product?.name || "N/A"}
-              </Text>
+              </AppText>
             </View>
             <View style={fieldStyles.fieldHalf}>
-              <Text style={fieldStyles.fieldLabel}>Current Status</Text>
-              <Text style={fieldStyles.fieldValue}>
+              <AppText style={fieldStyles.fieldLabel}>Current Status</AppText>
+              <AppText style={fieldStyles.fieldValue}>
                 {subStatus?.name || "N/A"}
-              </Text>
+              </AppText>
             </View>
           </View>
 
           {/* Service Concern & Sub Concern */}
           <View style={fieldStyles.fieldRow}>
             <View style={fieldStyles.fieldHalf}>
-              <Text style={fieldStyles.fieldLabel}>Service Concern</Text>
-              <Text style={fieldStyles.fieldValue}>
+              <AppText style={fieldStyles.fieldLabel}>Service Concern</AppText>
+              <AppText style={fieldStyles.fieldValue}>
                 {serviceConcern?.name || "N/A"}
-              </Text>
+              </AppText>
             </View>
             <View style={fieldStyles.fieldHalf}>
-              <Text style={fieldStyles.fieldLabel}>Sub Concern</Text>
-              <Text style={fieldStyles.fieldValue}>
+              <AppText style={fieldStyles.fieldLabel}>Sub Concern</AppText>
+              <AppText style={fieldStyles.fieldValue}>
                 {serviceSubConcern?.name || "N/A"}
-              </Text>
+              </AppText>
             </View>
           </View>
 
           {/* Warranty Type & Status */}
           <View style={fieldStyles.fieldRow}>
             <View style={fieldStyles.fieldHalf}>
-              <Text style={fieldStyles.fieldLabel}>Warranty Type</Text>
+              <AppText style={fieldStyles.fieldLabel}>Warranty Type</AppText>
               <View style={styles.badgeRow}>
-                <Text style={fieldStyles.fieldValue}>
+                <AppText style={fieldStyles.fieldValue}>
                   {warrantyType?.name || "N/A"}
-                </Text>
+                </AppText>
                 {isWarrantyCase && (
                   <View style={styles.warrantyBadge}>
-                    <Text style={styles.warrantyBadgeText}>In Warranty</Text>
+                    <AppText style={styles.warrantyBadgeText}>In Warranty</AppText>
                   </View>
                 )}
               </View>
             </View>
             <View style={fieldStyles.fieldHalf}>
-              <Text style={fieldStyles.fieldLabel}>Warranty Status</Text>
-              <Text style={fieldStyles.fieldValue}>
+              <AppText style={fieldStyles.fieldLabel}>Warranty Status</AppText>
+              <AppText style={fieldStyles.fieldValue}>
                 {warrantyStatus ||
                   (isWarrantyCase ? "In warranty" : "Out of warranty")}
-              </Text>
+              </AppText>
             </View>
           </View>
 
           {/* Customer Description */}
           {customerDescription && (
             <View style={fieldStyles.fieldGroup}>
-              <Text style={fieldStyles.fieldLabel}>Customer Remarks</Text>
-              <Text style={[fieldStyles.fieldValue, styles.description]}>
+              <AppText style={fieldStyles.fieldLabel}>Customer Remarks</AppText>
+              <AppText style={[fieldStyles.fieldValue, styles.description]}>
                 {customerDescription}
-              </Text>
+              </AppText>
             </View>
           )}
           {/* Assignment Message */}
           {assignmentMessage && (
             <View style={[fieldStyles.fieldGroup, styles.messageBox]}>
-              <Text style={fieldStyles.fieldLabel}>Assignment Message</Text>
-              <Text style={[fieldStyles.fieldValue, styles.description]}>
+              <AppText style={fieldStyles.fieldLabel}>Assignment Message</AppText>
+              <AppText style={[fieldStyles.fieldValue, styles.description]}>
                 {assignmentMessage}
-              </Text>
+              </AppText>
             </View>
           )}
           {/* Reminders Section */}
@@ -160,7 +161,7 @@ export default function ServiceInfoSection({
               <View style={[fieldStyles.fieldGroup, styles.reminderBox]}>
                 <View style={styles.reminderHeader}>
                   <Ionicons name="notifications" size={14} color="#D97706" />
-                  <Text style={styles.reminderLabel}>Reminders</Text>
+                  <AppText style={styles.reminderLabel}>Reminders</AppText>
                 </View>
                 <View style={styles.reminderList}>
                   {reminderItems.map((item, index) => (
@@ -168,9 +169,9 @@ export default function ServiceInfoSection({
                       <View style={styles.reminderDot} />
                       <View style={styles.reminderContent}>
                         {item.remark || item.message || item.notes ? (
-                          <Text style={styles.reminderMessage}>
+                          <AppText style={styles.reminderMessage}>
                             {item.remark || item.message || item.notes}
-                          </Text>
+                          </AppText>
                         ) : null}
 
                         <View style={styles.reminderMeta}>
@@ -181,9 +182,9 @@ export default function ServiceInfoSection({
                                 size={10}
                                 color="#9CA3AF"
                               />
-                              <Text style={styles.metaText}>
+                              <AppText style={styles.metaText}>
                                 {item.sent_at || item["set at"] || item.set_at}
-                              </Text>
+                              </AppText>
                             </View>
                           ) : null}
 
@@ -194,9 +195,9 @@ export default function ServiceInfoSection({
                                 size={10}
                                 color="#9CA3AF"
                               />
-                              <Text style={styles.metaText}>
+                              <AppText style={styles.metaText}>
                                 By: {item.sent_by_name || item["sent by name"]}
-                              </Text>
+                              </AppText>
                             </View>
                           ) : null}
 
@@ -207,10 +208,10 @@ export default function ServiceInfoSection({
                                 size={10}
                                 color="#9CA3AF"
                               />
-                              <Text style={styles.metaText}>
+                              <AppText style={styles.metaText}>
                                 For: {item.staff_name || "Staff"} (ID:{" "}
                                 {item.staff_id || item.workorder_staff_id})
-                              </Text>
+                              </AppText>
                             </View>
                           ) : null}
                         </View>

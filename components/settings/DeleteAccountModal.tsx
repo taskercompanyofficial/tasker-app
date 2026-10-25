@@ -1,3 +1,5 @@
+import AppTextInput from "@/components/common/AppTextInput";
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing, Typography } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
@@ -5,8 +7,6 @@ import React, { useState } from "react";
 import {
   Modal,
   StyleSheet,
-  Text,
-  TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
@@ -50,18 +50,18 @@ export default function DeleteAccountModal({
                 <Ionicons name="trash-outline" size={28} color={Colors.error} />
               </View>
 
-              <Text style={styles.title}>Delete Account?</Text>
+              <AppText style={styles.title}>Delete Account?</AppText>
 
-              <Text style={styles.warningBoxText}>
-                ⚠️ This action is <Text style={styles.boldText}>permanent</Text> and cannot be undone. All your orders, active requests, saved addresses, and personal profile data will be permanently wiped.
-              </Text>
+              <AppText style={styles.warningBoxText}>
+                ⚠️ This action is <AppText style={styles.boldText}>permanent</AppText> and cannot be undone. All your orders, active requests, saved addresses, and personal profile data will be permanently wiped.
+              </AppText>
 
               {/* Confirmation Input */}
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>
-                  Type <Text style={styles.deleteKeyword}>DELETE</Text> to confirm:
-                </Text>
-                <TextInput
+                <AppText style={styles.inputLabel}>
+                  Type <AppText style={styles.deleteKeyword}>DELETE</AppText> to confirm:
+                </AppText>
+                <AppTextInput
                   style={styles.textInput}
                   placeholder="Type DELETE"
                   placeholderTextColor={Colors.text.tertiary}
@@ -83,9 +83,9 @@ export default function DeleteAccountModal({
                   activeOpacity={0.8}
                 >
                   <Ionicons name="trash-bin" size={16} color={Colors.neutral.white} />
-                  <Text style={styles.deleteBtnText}>
+                  <AppText style={styles.deleteBtnText}>
                     {loading ? "Deleting..." : "Delete Permanently"}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -93,7 +93,7 @@ export default function DeleteAccountModal({
                   onPress={handleClose}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.cancelBtnText}>Keep Account</Text>
+                  <AppText style={styles.cancelBtnText}>Keep Account</AppText>
                 </TouchableOpacity>
               </View>
             </View>

@@ -41,15 +41,46 @@ export default function VendorLayout() {
             user = res.data?.user;
           }
 
+          // If vendor is active and approved by admin, bypass onboarding check
+          // Financial Lock Barrier: If vendor has unsettled daily payables past 12:00 AM
+          if (user?.is_financial_blocked) {
+            if (!pathname.includes("/financial-lock")) {
+              router.replace("/vendor/financial-lock" as any);
+            }
+            return;
+          }
+
+          if (!user?.is_financial_blocked && pathname.includes("/financial-lock")) {
+            router.replace("/vendor/(tabs)" as any);
+            return;
+          }
+
+          const isApproved = user?.status === "active";
+          if (isApproved) {
+            const permissionsDone = await AsyncStorage.getItem(
+              "@vendor_permissions_completed"
+            );
+            if (!permissionsDone && !pathname.includes("/permissions")) {
+              router.replace("/vendor/permissions" as any);
+              return;
+            }
+
+            // Approved and permissions done: redirect away from onboarding/pending to dashboard
+            if (
+              pathname.includes("/pending-approval") ||
+              pathname.includes("/complete-profile") ||
+              pathname.includes("/permissions")
+            ) {
+              router.replace("/vendor/(tabs)" as any);
+            }
+            return;
+          }
+
           const step2Completed = Boolean(user?.cnic_front_image);
           const step3Completed = Boolean(
             user?.cnic &&
             user?.name &&
-            !String(user.name).startsWith("Partner ") &&
-            user?.father_name &&
-            user?.dob &&
-            user?.address &&
-            user?.current_address
+            !String(user.name).startsWith("Partner ")
           );
           const step4Completed = Boolean(user?.profile_image);
           const refs = user?.references;
@@ -75,47 +106,38 @@ export default function VendorLayout() {
 
           if (!isProfileComplete) {
             if (!step2Completed) {
-              router.replace("/vendor/complete-profile/step-2" as any);
+              if (!pathname.includes("/complete-profile/step-2")) {
+                router.replace("/vendor/complete-profile/step-2" as any);
+              }
             } else if (!step3Completed) {
-              router.replace("/vendor/complete-profile/step-3" as any);
+              if (!pathname.includes("/complete-profile/step-3")) {
+                router.replace("/vendor/complete-profile/step-3" as any);
+              }
             } else if (!step4Completed) {
-              router.replace("/vendor/complete-profile/step-4" as any);
+              if (!pathname.includes("/complete-profile/step-4")) {
+                router.replace("/vendor/complete-profile/step-4" as any);
+              }
             } else if (!step5Completed) {
-              router.replace("/vendor/complete-profile/step-5" as any);
+              if (!pathname.includes("/complete-profile/step-5")) {
+                router.replace("/vendor/complete-profile/step-5" as any);
+              }
             } else if (!step6Completed) {
-              router.replace("/vendor/complete-profile/step-6" as any);
+              if (!pathname.includes("/complete-profile/step-6")) {
+                router.replace("/vendor/complete-profile/step-6" as any);
+              }
             } else {
-              router.replace("/vendor/complete-profile" as any);
+              if (!pathname.includes("/complete-profile")) {
+                router.replace("/vendor/complete-profile" as any);
+              }
             }
             return;
           }
 
-          // Profile is 100% complete: check admin activation status
-          const isApproved = user?.status === "active";
-
-          if (!isApproved) {
-            if (!pathname.includes("/pending-approval")) {
-              router.replace("/vendor/pending-approval" as any);
-            }
-            return;
+          // Profile is complete but not active: keep on pending approval
+          if (!pathname.includes("/pending-approval")) {
+            router.replace("/vendor/pending-approval" as any);
           }
-
-          // Account is active & approved: check if device permissions setup is completed
-          const permissionsDone = await AsyncStorage.getItem(
-            "@vendor_permissions_completed"
-          );
-          if (!permissionsDone && !pathname.includes("/permissions")) {
-            router.replace("/vendor/permissions" as any);
-            return;
-          }
-
-          // If on pending-approval or permissions (when already done), redirect to dashboard
-          if (
-            pathname.includes("/pending-approval") ||
-            (permissionsDone && pathname.includes("/permissions"))
-          ) {
-            router.replace("/vendor/(tabs)" as any);
-          }
+          return;
         } catch (e) {
           console.error("[VendorLayout] Error checking profile status:", e);
         }

@@ -1,5 +1,6 @@
+import AppText from "@/components/common/AppText";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import Button from "@/components/Button";
@@ -19,19 +20,19 @@ export default function GiftCard({ gift, onClaim }: Props) {
           <Ionicons name="gift" size={18} color={Colors.themes.customer.primary} />
         </View>
         <View style={styles.texts}>
-          <Text style={styles.title}>
+          <AppText style={styles.title}>
             {gift.discountPercent
               ? `${gift.discountPercent}% Off Voucher`
               : gift.title}
-          </Text>
-          <Text style={styles.meta}>Added {new Date(gift.createdAt).toLocaleDateString()}</Text>
+          </AppText>
+          <AppText style={styles.meta}>Added {new Date(gift.createdAt).toLocaleDateString()}</AppText>
         </View>
       </View>
       <View style={styles.right}>
         {gift.discountPercent ? (
-          <Text style={styles.amount}>One-time Use</Text>
+          <AppText style={styles.amount}>One-time Use</AppText>
         ) : (
-          <Text style={styles.amount}>+ PKR {gift.amount}</Text>
+          <AppText style={styles.amount}>+ PKR {gift.amount}</AppText>
         )}
         <Button title="Claim" size="small" onPress={() => onClaim(gift.id)} />
       </View>

@@ -1,11 +1,13 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppTextInput from "@/components/common/AppTextInput";
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import React from "react";
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -52,21 +54,21 @@ export default function AddStaffScreen() {
 
   const handleSubmit = async () => {
     if (!form.data.name.trim()) {
-      Toast.show({ type: "error", text1: "Name is required" });
+      localizedToast({ type: "error", text1: "Name is required" });
       return;
     }
     if (
       !form.data.phone.trim() ||
       form.data.phone.replace(/\D/g, "").length < 10
     ) {
-      Toast.show({ type: "error", text1: "Enter a valid phone number" });
+      localizedToast({ type: "error", text1: "Enter a valid phone number" });
       return;
     }
 
     await form.post(VENDOR_STAFF_URL, {
       onSuccess: (res: any) => {
         const defaultPwd = res?.default_password || "";
-        Toast.show({
+        localizedToast({
           type: "success",
           text1: "Staff Added Successfully!",
           text2: defaultPwd
@@ -77,7 +79,7 @@ export default function AddStaffScreen() {
         router.back();
       },
       onError: (err) => {
-        Toast.show({
+        localizedToast({
           type: "error",
           text1: "Error",
           text2: err.message || "Failed to add staff member",
@@ -94,10 +96,10 @@ export default function AddStaffScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+          <DirectionalIcon name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add New Staff</Text>
-        <View style={{ width: 40 }} />
+        <AppText style={styles.headerTitle}>Add New Staff</AppText>
+        <View style={{ width: 32 }} />
       </View>
 
       <KeyboardAvoidingView
@@ -132,19 +134,19 @@ export default function AddStaffScreen() {
             <View style={styles.profileImageBadge}>
               <Ionicons name="add" size={14} color={Colors.neutral.white} />
             </View>
-            <Text style={styles.profileImageLabel}>Profile Photo</Text>
+            <AppText style={styles.profileImageLabel}>Profile Photo</AppText>
           </TouchableOpacity>
 
           {/* Form Card */}
           <View style={styles.formCard}>
             {/* Name */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>
-                Full Name <Text style={styles.required}>*</Text>
-              </Text>
+              <AppText style={styles.label}>
+                Full Name <AppText style={styles.required}>*</AppText>
+              </AppText>
               <View style={[styles.inputBox, form.errors.name && styles.inputError]}>
                 <Ionicons name="person-outline" size={18} color={Colors.text.tertiary} />
-                <TextInput
+                <AppTextInput
                   style={styles.input}
                   placeholder="Enter full name"
                   placeholderTextColor={Colors.text.tertiary}
@@ -156,12 +158,12 @@ export default function AddStaffScreen() {
 
             {/* Phone */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>
-                Phone Number <Text style={styles.required}>*</Text>
-              </Text>
+              <AppText style={styles.label}>
+                Phone Number <AppText style={styles.required}>*</AppText>
+              </AppText>
               <View style={[styles.inputBox, form.errors.phone && styles.inputError]}>
                 <Ionicons name="call-outline" size={18} color={Colors.text.tertiary} />
-                <TextInput
+                <AppTextInput
                   style={styles.input}
                   placeholder="03xx xxxxxxx"
                   placeholderTextColor={Colors.text.tertiary}
@@ -174,10 +176,10 @@ export default function AddStaffScreen() {
 
             {/* CNIC */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>CNIC Number</Text>
+              <AppText style={styles.label}>CNIC Number</AppText>
               <View style={styles.inputBox}>
                 <Ionicons name="card-outline" size={18} color={Colors.text.tertiary} />
-                <TextInput
+                <AppTextInput
                   style={styles.input}
                   placeholder="xxxxx-xxxxxxx-x"
                   placeholderTextColor={Colors.text.tertiary}
@@ -190,10 +192,10 @@ export default function AddStaffScreen() {
 
             {/* Experience */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Experience</Text>
+              <AppText style={styles.label}>Experience</AppText>
               <View style={styles.inputBox}>
                 <Ionicons name="briefcase-outline" size={18} color={Colors.text.tertiary} />
-                <TextInput
+                <AppTextInput
                   style={styles.input}
                   placeholder="e.g. 3 years AC repair"
                   placeholderTextColor={Colors.text.tertiary}
@@ -206,7 +208,7 @@ export default function AddStaffScreen() {
 
           {/* CNIC Images */}
           <View style={styles.formCard}>
-            <Text style={styles.sectionLabel}>CNIC Images</Text>
+            <AppText style={styles.sectionLabel}>CNIC Images</AppText>
             <View style={styles.cnicRow}>
               {/* Front */}
               <TouchableOpacity
@@ -226,7 +228,7 @@ export default function AddStaffScreen() {
                       size={24}
                       color={Colors.text.tertiary}
                     />
-                    <Text style={styles.cnicPickerText}>Front</Text>
+                    <AppText style={styles.cnicPickerText}>Front</AppText>
                   </View>
                 )}
                 {form.data.cnic_front && (
@@ -258,7 +260,7 @@ export default function AddStaffScreen() {
                       size={24}
                       color={Colors.text.tertiary}
                     />
-                    <Text style={styles.cnicPickerText}>Back</Text>
+                    <AppText style={styles.cnicPickerText}>Back</AppText>
                   </View>
                 )}
                 {form.data.cnic_back && (
@@ -278,21 +280,21 @@ export default function AddStaffScreen() {
           <View style={styles.credentialCard}>
             <View style={styles.credentialHeader}>
               <Ionicons name="key" size={18} color={Colors.themes.provider.primary} />
-              <Text style={styles.credentialTitle}>Login Credentials</Text>
+              <AppText style={styles.credentialTitle}>Login Credentials</AppText>
             </View>
             <View style={styles.credentialRow}>
-              <Text style={styles.credentialLabel}>Username:</Text>
-              <Text style={styles.credentialValue}>
+              <AppText style={styles.credentialLabel}>Username:</AppText>
+              <AppText style={styles.credentialValue}>
                 {form.data.phone || "Phone number"}
-              </Text>
+              </AppText>
             </View>
             <View style={styles.credentialRow}>
-              <Text style={styles.credentialLabel}>Password:</Text>
-              <Text style={styles.credentialValueBold}>{defaultPassword}</Text>
+              <AppText style={styles.credentialLabel}>Password:</AppText>
+              <AppText style={styles.credentialValueBold}>{defaultPassword}</AppText>
             </View>
-            <Text style={styles.credentialNote}>
+            <AppText style={styles.credentialNote}>
               Staff will use these credentials to login from the app.
-            </Text>
+            </AppText>
           </View>
 
           {/* Submit */}
@@ -307,7 +309,7 @@ export default function AddStaffScreen() {
             ) : (
               <View style={styles.submitRow}>
                 <Ionicons name="person-add" size={20} color={Colors.neutral.white} />
-                <Text style={styles.submitBtnText}>Add Staff Member</Text>
+                <AppText style={styles.submitBtnText}>Add Staff Member</AppText>
               </View>
             )}
           </TouchableOpacity>

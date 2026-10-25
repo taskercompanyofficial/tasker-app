@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
@@ -9,7 +10,6 @@ import {
   Image,
   Modal,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -89,11 +89,11 @@ export default function IncomingCallModal({
           <View style={styles.header}>
             <View style={styles.badgeRow}>
               <Ionicons name="call" size={14} color="#10B981" />
-              <Text style={styles.badgeText}>INCOMING CALL</Text>
+              <AppText style={styles.badgeText}>INCOMING CALL</AppText>
             </View>
-            <Text style={styles.subHeader}>
+            <AppText style={styles.subHeader}>
               {workOrderNumber ? `Work Order #${workOrderNumber}` : "Voice Call"}
-            </Text>
+            </AppText>
           </View>
 
           {/* Center Avatar & Caller Details */}
@@ -109,15 +109,15 @@ export default function IncomingCallModal({
                 <Image source={{ uri: avatarUri }} style={styles.avatar} />
               ) : (
                 <View style={styles.fallbackAvatar}>
-                  <Text style={styles.fallbackText}>{initialLetter}</Text>
+                  <AppText style={styles.fallbackText}>{initialLetter}</AppText>
                 </View>
               )}
             </View>
 
-            <Text style={styles.callerName} numberOfLines={1}>
+            <AppText style={styles.callerName} numberOfLines={1}>
               {callerName}
-            </Text>
-            <Text style={styles.ringingStatus}>Ringing...</Text>
+            </AppText>
+            <AppText style={styles.ringingStatus}>Ringing...</AppText>
           </View>
 
           {/* Action Buttons: Accept & Decline */}
@@ -136,7 +136,7 @@ export default function IncomingCallModal({
               >
                 <Ionicons name="call" size={28} color="#fff" style={{ transform: [{ rotate: "135deg" }] }} />
               </TouchableOpacity>
-              <Text style={styles.btnLabel}>Decline</Text>
+              <AppText style={styles.btnLabel}>Decline</AppText>
             </View>
 
             {/* Accept Button */}
@@ -153,7 +153,7 @@ export default function IncomingCallModal({
               >
                 <Ionicons name="call" size={28} color="#fff" />
               </TouchableOpacity>
-              <Text style={styles.btnLabel}>Accept</Text>
+              <AppText style={styles.btnLabel}>Accept</AppText>
             </View>
           </View>
         </SafeAreaView>

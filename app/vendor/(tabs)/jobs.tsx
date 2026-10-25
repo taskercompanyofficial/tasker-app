@@ -1,3 +1,5 @@
+import AppTextInput from "@/components/common/AppTextInput";
+import AppText from "@/components/common/AppText";
 import Header from "@/components/Header";
 import WorkOrderCard from "@/components/WorkOrderCard";
 import Colors from "@/constants/Colors";
@@ -15,18 +17,18 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   TouchableOpacity,
   View,
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useLanguage } from "@/context/language-context";
 
 type TabType = "pending" | "active" | "unposted" | "completed";
 
 export default function VendorJobs() {
+  const { t } = useLanguage();
   const { session } = useSession();
   const params = useLocalSearchParams<{ status?: string }>();
   
@@ -140,10 +142,10 @@ export default function VendorJobs() {
   const isStaff = session.appMode === "vendor_staff" || (session.user as any)?.user_type === "vendor_staff";
 
   const tabs = [
-    { key: "pending" as TabType, label: "Pending", icon: "notifications" },
-    { key: "active" as TabType, label: "Active", icon: "construct" },
+    { key: "pending" as TabType, label: t.vendor.jobs.pending, icon: "notifications" },
+    { key: "active" as TabType, label: t.vendor.jobs.inProgress, icon: "construct" },
     ...(!isStaff ? [{ key: "unposted" as TabType, label: "Unposted", icon: "alert-circle" }] : []),
-    { key: "completed" as TabType, label: "Done", icon: "checkmark-circle" },
+    { key: "completed" as TabType, label: t.vendor.jobs.completed, icon: "checkmark-circle" },
   ];
 
   const renderEmptyState = () => (
@@ -163,7 +165,7 @@ export default function VendorJobs() {
         size={64}
         color={Colors.text.tertiary}
       />
-      <Text style={styles.emptyTitle}>
+      <AppText style={styles.emptyTitle}>
         {searchQuery
           ? "No Matches Found"
           : activeTab === "pending"
@@ -173,32 +175,26 @@ export default function VendorJobs() {
               : activeTab === "unposted"
                 ? "No Unposted Jobs"
                 : "No Completed Jobs"}
-      </Text>
-      <Text style={styles.emptyText}>
+      </AppText>
+      <AppText style={styles.emptyText}>
         {searchQuery
           ? `We couldn't find any jobs matching "${searchQuery}"`
-          : activeTab === "pending"
-            ? "New assignments will appear here"
-            : activeTab === "active"
-              ? "Start working on a pending job"
-              : activeTab === "unposted"
-                ? "All your completed jobs have been posted"
-                : "Completed jobs will appear here"}
-      </Text>
+          : t.vendor.jobs.emptyJobs}
+      </AppText>
     </View>
   );
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <Header title="My Jobs" />
+      <Header title={t.vendor.jobs.title} />
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchWrapper}>
           <Ionicons name="search" size={20} color={Colors.text.tertiary} />
-          <TextInput
+          <AppTextInput
             style={styles.searchInput}
-            placeholder="Search WO#, customer, phone..."
+            placeholder={t.common.search}
             placeholderTextColor={Colors.text.tertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -230,14 +226,14 @@ export default function VendorJobs() {
               size={16}
               color={activeTab === tab.key ? '#fff' : '#64748B'}
             />
-            <Text
+            <AppText
               style={[
                 styles.tabText,
                 activeTab === tab.key && styles.tabTextActive,
               ]}
             >
               {tab.label}
-            </Text>
+            </AppText>
           </TouchableOpacity>
         ))}
       </View>
@@ -269,7 +265,7 @@ export default function VendorJobs() {
               size="large"
               color={Colors.themes.provider.primary}
             />
-            <Text style={styles.loadingText}>Loading jobs...</Text>
+            <AppText style={styles.loadingText}>Loading jobs...</AppText>
           </View>
         ) : workOrders.length === 0 ? (
           renderEmptyState()
@@ -301,7 +297,7 @@ export default function VendorJobs() {
             {loadingMore && (
               <View style={styles.loadingMoreContainer}>
                 <ActivityIndicator size="small" color={Colors.themes.provider.primary} />
-                <Text style={styles.loadingMoreText}>Loading more...</Text>
+                <AppText style={styles.loadingMoreText}>Loading more...</AppText>
               </View>
             )}
           </>

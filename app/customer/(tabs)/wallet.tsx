@@ -1,7 +1,9 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import React from "react";
-import { Modal, Pressable, StyleSheet, Text, View, FlatList } from "react-native";
+import { Modal, Pressable, StyleSheet, View, FlatList } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Input from "@/components/Input";
 import Toast from "react-native-toast-message";
@@ -11,9 +13,11 @@ import QuickActions from "@/components/wallet/QuickActions";
 import TransactionItem from "@/components/wallet/TransactionItem";
 import { Ionicons } from "@expo/vector-icons";
 import Button from "@/components/Button";
+import { useLanguage } from "@/context/language-context";
 
 export default function Wallet() {
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
 
   // Temporarily disable wallet — show Coming Soon
   const COMING_SOON = true;
@@ -25,14 +29,14 @@ export default function Wallet() {
           <View style={styles.comingSoonIconCircle}>
             <Ionicons name="wallet-outline" size={52} color={Colors.themes.customer.primary} />
           </View>
-          <Text style={styles.comingSoonTitle}>Wallet</Text>
-          <Text style={styles.comingSoonSubtitle}>Coming Soon</Text>
-          <Text style={styles.comingSoonDesc}>
-            We're working on an amazing wallet experience for you.{"\n"}Stay tuned!
-          </Text>
+          <AppText style={styles.comingSoonTitle}>{t.customer.wallet.title}</AppText>
+          <AppText style={styles.comingSoonSubtitle}>{t.common.comingSoon}</AppText>
+          <AppText style={styles.comingSoonDesc}>
+            {t.common.walletComingSoonDescription}
+          </AppText>
           <View style={styles.comingSoonBadge}>
             <Ionicons name="construct-outline" size={14} color={Colors.themes.customer.primary} />
-            <Text style={styles.comingSoonBadgeText}>Under Development</Text>
+            <AppText style={styles.comingSoonBadgeText}>{t.common.underDevelopment}</AppText>
           </View>
         </View>
       </SafeAreaView>
@@ -60,7 +64,7 @@ export default function Wallet() {
   const handleRecharge = async () => {
     const val = Number(amount);
     if (!val || val <= 0) {
-      Toast.show({ type: "error", text1: "Enter a valid amount" });
+      localizedToast({ type: "error", text1: "Enter a valid amount" });
       return;
     }
     const { balance: b, transactions } = await apiRecharge(val, "card");
@@ -68,13 +72,13 @@ export default function Wallet() {
     setTxns(transactions);
     setShowRecharge(false);
     setAmount("");
-    Toast.show({ type: "success", text1: "Wallet recharged" });
+    localizedToast({ type: "success", text1: "Wallet recharged" });
   };
 
   const handleRefund = async () => {
     const val = Number(amount);
     if (!val || val <= 0) {
-      Toast.show({ type: "error", text1: "Enter a valid amount" });
+      localizedToast({ type: "error", text1: "Enter a valid amount" });
       return;
     }
     const { balance: b, transactions } = await apiRefund(val);
@@ -82,7 +86,7 @@ export default function Wallet() {
     setTxns(transactions);
     setShowRefund(false);
     setAmount("");
-    Toast.show({ type: "success", text1: "Refund added" });
+    localizedToast({ type: "success", text1: "Refund added" });
   };
 
   const renderTxn = ({ item }: { item: WalletTransaction }) => <TransactionItem txn={item} />;
@@ -102,8 +106,8 @@ export default function Wallet() {
           }}
         />
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
-          <Text style={styles.sectionAction}>View all</Text>
+          <AppText style={styles.sectionTitle}>{t.common.recentActivity}</AppText>
+          <AppText style={styles.sectionAction}>{t.common.viewAll}</AppText>
         </View>
       </View>
       <View style={styles.listWrap}>
@@ -121,15 +125,15 @@ export default function Wallet() {
           <Pressable style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, Spacing.md) }]} onPress={(e) => e.stopPropagation()}>
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Recharge Wallet</Text>
+              <AppText style={styles.sheetTitle}>Recharge Wallet</AppText>
               <Pressable onPress={() => setShowRecharge(false)} style={styles.sheetClose}>
                 <Ionicons name="close" size={20} color={Colors.text.primary} />
               </Pressable>
             </View>
             <View style={styles.amountRow}>
-              <Pressable style={styles.amountPill} onPress={() => handlePreset(500)}><Text style={styles.amountPillText}>PKR 500</Text></Pressable>
-              <Pressable style={styles.amountPill} onPress={() => handlePreset(1000)}><Text style={styles.amountPillText}>PKR 1000</Text></Pressable>
-              <Pressable style={styles.amountPill} onPress={() => handlePreset(2000)}><Text style={styles.amountPillText}>PKR 2000</Text></Pressable>
+              <Pressable style={styles.amountPill} onPress={() => handlePreset(500)}><AppText style={styles.amountPillText}>PKR 500</AppText></Pressable>
+              <Pressable style={styles.amountPill} onPress={() => handlePreset(1000)}><AppText style={styles.amountPillText}>PKR 1000</AppText></Pressable>
+              <Pressable style={styles.amountPill} onPress={() => handlePreset(2000)}><AppText style={styles.amountPillText}>PKR 2000</AppText></Pressable>
             </View>
             <Input
               label="Amount"
@@ -142,11 +146,11 @@ export default function Wallet() {
             <View style={styles.payMethods}>
               <View style={styles.methodCard}>
                 <Ionicons name="card" size={16} color={Colors.themes.customer.primary} />
-                <Text style={styles.methodLabel}>Card</Text>
+                <AppText style={styles.methodLabel}>Card</AppText>
               </View>
               <View style={styles.methodCardDisabled}>
                 <Ionicons name="cash-outline" size={16} color={Colors.text.tertiary} />
-                <Text style={styles.methodLabelDisabled}>Bank</Text>
+                <AppText style={styles.methodLabelDisabled}>Bank</AppText>
               </View>
             </View>
             <Button title="Continue" onPress={handleRecharge} fullWidth size="medium" />
@@ -159,7 +163,7 @@ export default function Wallet() {
           <Pressable style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, Spacing.md) }]} onPress={(e) => e.stopPropagation()}>
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Refund to Wallet</Text>
+              <AppText style={styles.sheetTitle}>Refund to Wallet</AppText>
               <Pressable onPress={() => setShowRefund(false)} style={styles.sheetClose}>
                 <Ionicons name="close" size={20} color={Colors.text.primary} />
               </Pressable>

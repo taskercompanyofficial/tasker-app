@@ -1,10 +1,11 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { NOTIFICATION_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { BorderRadius } from "@/constants/Styles";
 import { useEcho } from "@/context/EchoProvider";
 
@@ -59,9 +60,9 @@ export default function NotificationBell({
       />
       {unreadCount > 0 && (
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>
+          <AppText style={styles.badgeText}>
             {unreadCount > 9 ? "9+" : unreadCount}
-          </Text>
+          </AppText>
         </View>
       )}
     </TouchableOpacity>

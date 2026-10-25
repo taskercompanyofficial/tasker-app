@@ -1,3 +1,6 @@
+import { localizedAlert } from "@/lib/i18n/localized-alert";
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -10,7 +13,6 @@ import {
   RefreshControl,
   StatusBar,
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
   View,
@@ -24,6 +26,7 @@ import Modal from "@/components/Modal";
 import Button from "@/components/Button";
 import { Alert, Image, Platform } from "react-native";
 import { useSession } from "@/context/ctx";
+import { useLanguage } from "@/context/language-context";
 
 type VendorTxn = {
   id: string;
@@ -54,6 +57,7 @@ type Summary = {
 export default function VendorEarnings() {
   const insets = useSafeAreaInsets();
   const { session } = useSession();
+  const { t } = useLanguage();
   const [loading, setLoading] = React.useState<boolean>(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [txns, setTxns] = React.useState<VendorTxn[]>([]);
@@ -174,7 +178,7 @@ export default function VendorEarnings() {
     if (Platform.OS !== "android") {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (permissionResult.status !== "granted") {
-        Alert.alert("Permission Required", "Gallery access is needed to upload screenshots.");
+        localizedAlert("Permission Required", "Gallery access is needed to upload screenshots.");
         return;
       }
     }
@@ -193,7 +197,7 @@ export default function VendorEarnings() {
 
   const handleSubmitPayout = async () => {
     if (!payoutImage) {
-      Alert.alert("Error", "Please select a payment screenshot first.");
+      localizedAlert("Error", "Please select a payment screenshot first.");
       return;
     }
 
@@ -217,12 +221,12 @@ export default function VendorEarnings() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      Alert.alert("Success", "Payment proof submitted successfully!");
+      localizedAlert("Success", "Payment proof submitted successfully!");
       setShowPayoutModal(false);
       setPayoutImage(null);
     } catch (error: any) {
       console.error("Payout submission error:", error);
-      Alert.alert("Error", error.response?.data?.message || "Failed to submit payment proof.");
+      localizedAlert("Error", error.response?.data?.message || "Failed to submit payment proof.");
     } finally {
       setIsSubmitting(false);
     }
@@ -268,11 +272,11 @@ export default function VendorEarnings() {
 
           <View style={styles.txnMain}>
             <View style={styles.txnTitleRow}>
-              <Text style={styles.txnTitle} numberOfLines={1}>
+              <AppText style={styles.txnTitle} numberOfLines={1}>
                 {txn.title}
-              </Text>
+              </AppText>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Text
+                <AppText
                   style={[
                     styles.txnAmount,
                     { color: isCredit ? Colors.success : Colors.error },
@@ -280,7 +284,7 @@ export default function VendorEarnings() {
                 >
                   {isCredit ? "+" : "-"}
                   {formatPKR(txn.amount)}
-                </Text>
+                </AppText>
                 {hasChildren && (
                   <Ionicons 
                     name={expanded ? "chevron-up" : "chevron-down"} 
@@ -293,23 +297,23 @@ export default function VendorEarnings() {
             </View>
 
             <View style={styles.txnMetaRow}>
-              <Text style={styles.txnDate}>
+              <AppText style={styles.txnDate}>
                 {new Date(txn.date).toLocaleDateString("en-PK", {
                   day: "numeric",
                   month: "short",
                   year: "numeric",
                 })}
-              </Text>
+              </AppText>
               <View style={styles.txnSubMeta}>
                 {txn.work_order_number && (
                   <View style={styles.woTag}>
-                    <Text style={styles.woText}>#{txn.work_order_number}</Text>
+                    <AppText style={styles.woText}>#{txn.work_order_number}</AppText>
                   </View>
                 )}
                 {txn.running_balance !== undefined && (
-                  <Text style={styles.runningBalance}>
+                  <AppText style={styles.runningBalance}>
                     Bal: {formatPKR(txn.running_balance)}
-                  </Text>
+                  </AppText>
                 )}
               </View>
             </View>
@@ -327,16 +331,16 @@ export default function VendorEarnings() {
                     <Ionicons name="return-down-forward" size={14} color={Colors.text.tertiary} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.childTitle} numberOfLines={2}>{child.title}</Text>
-                    <Text style={styles.childDate}>
+                    <AppText style={styles.childTitle} numberOfLines={2}>{child.title}</AppText>
+                    <AppText style={styles.childDate}>
                       {new Date(child.date).toLocaleDateString("en-PK", {
                         day: "numeric", month: "short"
                       })}
-                    </Text>
+                    </AppText>
                   </View>
-                  <Text style={[styles.childAmount, { color: cCredit ? Colors.success : Colors.error }]}>
+                  <AppText style={[styles.childAmount, { color: cCredit ? Colors.success : Colors.error }]}>
                     {cCredit ? "+" : "-"}{formatPKR(child.amount)}
-                  </Text>
+                  </AppText>
                 </View>
               );
             })}
@@ -356,10 +360,10 @@ export default function VendorEarnings() {
       <View style={styles.alertBar}>
         <Ionicons name="information-circle" size={20} color={Colors.warning} />
         <View style={{ flex: 1, marginLeft: 8 }}>
-          <Text style={styles.alertTitle}>Profile Incomplete</Text>
-          <Text style={styles.alertText}>Please complete your profile to receive jobs.</Text>
+          <AppText style={styles.alertTitle}>Profile Incomplete</AppText>
+          <AppText style={styles.alertText}>Please complete your profile to receive jobs.</AppText>
         </View>
-        <Ionicons name="chevron-forward" size={16} color={Colors.text.tertiary} />
+        <DirectionalIcon name="chevron-forward" size={16} color={Colors.text.tertiary} />
       </View>
     );
   };
@@ -378,10 +382,10 @@ export default function VendorEarnings() {
           {/* Wrap the core info in a button to trigger payout modal */}
           <View style={styles.headerTop}>
             <View>
-              <Text style={styles.headerTitle}>Account</Text>
-              <Text style={[styles.headerSubtitle, { opacity: 0.8 }]}>
-                Overview
-              </Text>
+              <AppText style={styles.headerTitle}>{t.vendor.earnings.title}</AppText>
+              <AppText style={[styles.headerSubtitle, { opacity: 0.8 }]}>
+                {t.vendor.earnings.recentLedger}
+              </AppText>
             </View>
             <TouchableOpacity
               onPress={onRefresh}
@@ -399,13 +403,13 @@ export default function VendorEarnings() {
           <View>
             {/* Big balance number */}
             <View style={styles.summaryValueContainer}>
-              <Text style={styles.currencySymbol}>₨</Text>
-              <Text style={[
+              <AppText style={styles.currencySymbol}>₨</AppText>
+              <AppText style={[
                 styles.totalValue,
                 { color: summary.net_balance >= 0 ? '#fff' : '#FFB3B3' }
               ]}>
                 {Math.abs(summary.net_balance).toLocaleString("en-PK")}
-              </Text>
+              </AppText>
             </View>
             <View style={[styles.balanceStatusBadge, { marginBottom: 12 }]}>
               <Ionicons
@@ -413,37 +417,37 @@ export default function VendorEarnings() {
                 size={12}
                 color={summary.net_balance >= 0 ? '#A5F3A5' : '#FFB3B3'}
               />
-              <Text style={[styles.balanceStatusText, { color: summary.net_balance >= 0 ? '#A5F3A5' : '#FFB3B3' }]}>
+              <AppText style={[styles.balanceStatusText, { color: summary.net_balance >= 0 ? '#A5F3A5' : '#FFB3B3' }]}>
                 {summary.net_balance >= 0
                   ? `Company owes you ₨${Math.abs(summary.net_balance).toLocaleString('en-PK')}`
                   : `You owe ₨${Math.abs(summary.net_balance).toLocaleString('en-PK')}`
                 }
-              </Text>
-              <Ionicons name="chevron-forward" size={10} color="#fff" style={{ opacity: 0.5, marginLeft: 2 }} />
+              </AppText>
+              <DirectionalIcon name="chevron-forward" size={10} color="#fff" style={{ opacity: 0.5, marginLeft: 2 }} />
             </View>
 
             <View style={styles.largeStatsRow}>
               <View style={styles.largeStatCard}>
-                <Text style={styles.largeStatLabel}>Today</Text>
-                <Text style={styles.largeStatValue}>{formatPKR(todayStats.dailyTotal)}</Text>
+                <AppText style={styles.largeStatLabel}>Today</AppText>
+                <AppText style={styles.largeStatValue}>{formatPKR(todayStats.dailyTotal)}</AppText>
               </View>
               <View style={styles.largeStatCard}>
-                <Text style={styles.largeStatLabel}>Share</Text>
-                <Text style={[styles.largeStatValue, { color: '#FECACA' }]}>{formatPKR(todayStats.companyShare)}</Text>
+                <AppText style={styles.largeStatLabel}>Share</AppText>
+                <AppText style={[styles.largeStatValue, { color: '#FECACA' }]}>{formatPKR(todayStats.companyShare)}</AppText>
               </View>
             </View>
 
             <View style={styles.urgencyInfo}>
-              <Text style={styles.urgencyWarning}>
-                <Text style={styles.hoursText}>Pay within 12h</Text> or the app will stop working.
-              </Text>
+              <AppText style={styles.urgencyWarning}>
+                <AppText style={styles.hoursText}>Pay within 12h</AppText> or the app will stop working.
+              </AppText>
               <TouchableOpacity 
                 style={styles.payNowBadge}
                 activeOpacity={0.7}
                 onPress={() => setShowPayoutModal(true)}
               >
-                <Text style={styles.payNowText}>PAY NOW</Text>
-                <Ionicons name="arrow-forward" size={10} color={Colors.themes.provider.primary} />
+                <AppText style={styles.payNowText}>PAY NOW</AppText>
+                <DirectionalIcon name="arrow-forward" size={10} color={Colors.themes.provider.primary} />
               </TouchableOpacity>
             </View>
           </View>
@@ -480,9 +484,9 @@ export default function VendorEarnings() {
                     onPress={() => setShowFromPicker(true)}
                   >
                     <Ionicons name="calendar-outline" size={14} color={Colors.text.tertiary} />
-                    <Text style={[styles.dateText, !dateFrom && { color: Colors.text.tertiary }]}>
+                    <AppText style={[styles.dateText, !dateFrom && { color: Colors.text.tertiary }]}>
                       {dateFrom || "From Date"}
-                    </Text>
+                    </AppText>
                   </TouchableOpacity>
                   
                   <TouchableOpacity 
@@ -490,9 +494,9 @@ export default function VendorEarnings() {
                     onPress={() => setShowToPicker(true)}
                   >
                     <Ionicons name="calendar-outline" size={14} color={Colors.text.tertiary} />
-                    <Text style={[styles.dateText, !dateTo && { color: Colors.text.tertiary }]}>
+                    <AppText style={[styles.dateText, !dateTo && { color: Colors.text.tertiary }]}>
                       {dateTo || "To Date"}
-                    </Text>
+                    </AppText>
                   </TouchableOpacity>
                   
                   {showFromPicker && (
@@ -542,12 +546,12 @@ export default function VendorEarnings() {
                 </View>
 
                 {/* Section Title & Type Filter Chips */}
-                <View style={styles.historyHeader}>
-                  <Text style={styles.historyTitle}>Activities</Text>
+                  <View style={styles.historyHeader}>
+                  <AppText style={styles.historyTitle}>{t.vendor.earnings.recentLedger}</AppText>
                   <View style={styles.filterRow}>
-                    <FilterTab active={filter === "all"} label="All" onPress={() => setFilter("all")} />
-                    <FilterTab active={filter === "credit"} label="Credits" onPress={() => setFilter("credit")} />
-                    <FilterTab active={filter === "debit"} label="Debits" onPress={() => setFilter("debit")} />
+                    <FilterTab active={filter === "all"} label={t.vendor.earnings.filterAll} onPress={() => setFilter("all")} />
+                    <FilterTab active={filter === "credit"} label={t.vendor.earnings.filterCredits} onPress={() => setFilter("credit")} />
+                    <FilterTab active={filter === "debit"} label={t.vendor.earnings.filterDebits} onPress={() => setFilter("debit")} />
                   </View>
                 </View>
               </View>
@@ -565,7 +569,7 @@ export default function VendorEarnings() {
                   size={48}
                   color={Colors.text.tertiary}
                 />
-                <Text style={styles.emptyText}>No activity found</Text>
+                <AppText style={styles.emptyText}>No activity found</AppText>
               </View>
             }
           />
@@ -580,8 +584,8 @@ export default function VendorEarnings() {
         type="confirm"
       >
         <View style={styles.modalContent}>
-          <Text style={styles.modalAmount}>{formatPKR(todayStats.companyShare)}</Text>
-          <Text style={styles.modalHint}>Upload payout screenshot to continue.</Text>
+          <AppText style={styles.modalAmount}>{formatPKR(todayStats.companyShare)}</AppText>
+          <AppText style={styles.modalHint}>Upload payout screenshot to continue.</AppText>
 
           {payoutImage ? (
             <View style={styles.imagePreviewContainer}>
@@ -593,7 +597,7 @@ export default function VendorEarnings() {
           ) : (
             <TouchableOpacity style={styles.uploadBtn} onPress={handlePickImage}>
               <Ionicons name="cloud-upload-outline" size={24} color={Colors.themes.provider.primary} />
-              <Text style={styles.uploadBtnText}>Upload Screenshot</Text>
+              <AppText style={styles.uploadBtnText}>Upload Screenshot</AppText>
             </TouchableOpacity>
           )}
 
@@ -614,7 +618,7 @@ export default function VendorEarnings() {
             onPress={() => setShowPayoutModal(false)}
             disabled={isSubmitting}
           >
-            <Text style={styles.cancelBtnText}>Back</Text>
+            <AppText style={styles.cancelBtnText}>Back</AppText>
           </TouchableOpacity>
         </View>
       </Modal>
@@ -637,11 +641,11 @@ function FilterTab({
       onPress={onPress}
       style={[styles.filterTab, active && styles.filterTabActive]}
     >
-      <Text
+      <AppText
         style={[styles.filterTabText, active && styles.filterTabTextActive]}
       >
         {label}
-      </Text>
+      </AppText>
     </TouchableOpacity>
   );
 }

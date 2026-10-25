@@ -1,3 +1,7 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppTextInput from "@/components/common/AppTextInput";
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
@@ -16,17 +20,17 @@ import {
   ScrollView,
   StatusBar,
   StyleSheet,
-  Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
+import { useLanguage } from "@/context/language-context";
 
 type Step = "phone" | "otp" | "success";
 
 export default function Signin() {
+  const { t } = useLanguage();
   const { signIn } = useSession();
   const router = useRouter();
   const [step, setStep] = useState<Step>("phone");
@@ -72,13 +76,13 @@ export default function Signin() {
       onSuccess: (response) => {
         setStep("otp");
         setResendTimer(90);
-        Toast.show({
+        localizedToast({
           type: "success",
           text1: response?.message || "OTP sent via WhatsApp successfully",
         });
       },
       onError: (error) => {
-        Toast.show({
+        localizedToast({
           type: "error",
           text1: error.message || "Failed to send OTP",
         });
@@ -103,7 +107,7 @@ export default function Signin() {
       },
       onError: (error) => {
         setData((prev) => ({ ...prev, otp: "" }));
-        Toast.show({
+        localizedToast({
           type: "error",
           text1: error?.message || "Invalid OTP",
         });
@@ -172,7 +176,7 @@ export default function Signin() {
             style={styles.circleIconButton}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={22} color="#18181B" />
+            <DirectionalIcon name="arrow-back" size={22} color="#18181B" />
           </TouchableOpacity>
 
           <Image
@@ -200,10 +204,10 @@ export default function Signin() {
                   size={12}
                   color={Colors.themes.customer.primaryDark}
                 />
-                <Text style={styles.licensedText}>Verified Experts</Text>
+                <AppText style={styles.licensedText}>{t.auth.verifiedExperts}</AppText>
               </View>
             </View>
-            <Text style={styles.brandSubtitle}>Get your service in minutes</Text>
+            <AppText style={styles.brandSubtitle}>{t.auth.customerTagline}</AppText>
           </View>
         </View>
       </SafeAreaView>
@@ -231,7 +235,7 @@ export default function Signin() {
                 {/* Active Tab Heading (OTP Login only) */}
                 <View style={styles.tabContainer}>
                   <View style={styles.activeTabWrapper}>
-                    <Text style={styles.tabTitle}>Sign in</Text>
+                    <AppText style={styles.tabTitle}>{t.auth.signIn}</AppText>
                     <View style={styles.tabUnderline} />
                   </View>
                 </View>
@@ -240,12 +244,13 @@ export default function Signin() {
                 <View style={styles.inputContainer}>
                   <Ionicons name="call-outline" size={20} color="#6B7280" />
                   <View style={styles.inputDivider} />
-                  <TextInput
+                  <AppTextInput
                     style={styles.phoneInput}
-                    placeholder="Enter phone number"
+                    placeholder={t.auth.enterPhone}
                     placeholderTextColor="#9CA3AF"
                     value={data.phone}
                     onChangeText={handlePhoneChange}
+                    textDirection="ltr"
                     keyboardType="phone-pad"
                     autoComplete="tel"
                     textContentType="telephoneNumber"
@@ -256,7 +261,7 @@ export default function Signin() {
                   />
                 </View>
                 {errors.phone && (
-                  <Text style={styles.errorText}>{errors.phone}</Text>
+                  <AppText style={styles.errorText}>{errors.phone}</AppText>
                 )}
 
                 {/* Send via WhatsApp Button */}
@@ -278,35 +283,35 @@ export default function Signin() {
                         size={21}
                         color="#25D366"
                       />
-                      <Text style={styles.smsButtonText}>
-                        Send via WhatsApp
-                      </Text>
+                      <AppText style={styles.smsButtonText}>
+                        {t.auth.sendViaWhatsApp}
+                      </AppText>
                     </>
                   )}
                 </TouchableOpacity>
 
                 {/* Terms and Privacy Policy */}
-                <Text style={styles.termsText}>
-                  By proceeding you agree to{" "}
-                  <Text
+                <AppText style={styles.termsText}>
+                  {t.auth.termsNotice}{" "}
+                  <AppText
                     style={styles.termsLink}
                     onPress={() =>
                       openUrl("https://taskercompany.com/privacy-policy")
                     }
                   >
-                    Privacy Policy
-                  </Text>{" "}
-                  and{" "}
-                  <Text
+                    {t.auth.privacyPolicy}
+                  </AppText>{" "}
+                  &{" "}
+                  <AppText
                     style={styles.termsLink}
                     onPress={() =>
                       openUrl("https://taskercompany.com/terms")
                     }
                   >
-                    Terms & Conditions
-                  </Text>
+                    {t.auth.termsOfService}
+                  </AppText>
                   .
-                </Text>
+                </AppText>
               </View>
             )}
 
@@ -314,19 +319,19 @@ export default function Signin() {
               <View style={styles.formSection}>
                 <View style={styles.tabContainer}>
                   <View style={styles.activeTabWrapper}>
-                    <Text style={styles.tabTitle}>Verify OTP</Text>
+                    <AppText style={styles.tabTitle}>{t.auth.verifyOtpTitle}</AppText>
                     <View style={styles.tabUnderline} />
                   </View>
                 </View>
 
-                <Text style={styles.otpSubtitle}>
-                  Enter the 6-digit code sent to{" "}
-                  <Text style={styles.boldPhone}>{data.phone}</Text>
-                </Text>
+                <AppText style={styles.otpSubtitle}>
+                  {t.auth.codeSentTo}{" "}
+                  <AppText style={styles.boldPhone}>{data.phone}</AppText>
+                </AppText>
 
                 {/* OTP Input */}
                 <View style={[styles.inputContainer, styles.otpContainer]}>
-                  <TextInput
+                  <AppTextInput
                     style={styles.otpInput}
                     placeholder="• • • • • •"
                     placeholderTextColor="#D1D5DB"
@@ -337,13 +342,14 @@ export default function Signin() {
                         otp: text.replace(/\D/g, ""),
                       }))
                     }
+                    textDirection="ltr"
                     keyboardType="number-pad"
                     maxLength={6}
                     autoFocus
                   />
                 </View>
                 {errors.otp && (
-                  <Text style={styles.errorText}>{errors.otp}</Text>
+                  <AppText style={styles.errorText}>{errors.otp}</AppText>
                 )}
 
                 {/* Verify Button */}
@@ -359,7 +365,7 @@ export default function Signin() {
                   {processing ? (
                     <ActivityIndicator color="#FFFFFF" size="small" />
                   ) : (
-                    <Text style={styles.smsButtonText}>Verify & Continue</Text>
+                    <AppText style={styles.smsButtonText}>{t.auth.verifyAndSignIn}</AppText>
                   )}
                 </TouchableOpacity>
 
@@ -367,12 +373,12 @@ export default function Signin() {
                 {resendTimer > 0 ? (
                   <View style={styles.resendRow}>
                     <Ionicons name="time-outline" size={15} color="#6B7280" />
-                    <Text style={styles.resendTimerText}>
-                      Resend code in{" "}
-                      <Text style={styles.resendTimerHighlight}>
+                    <AppText style={styles.resendTimerText}>
+                      {t.auth.resendIn}{" "}
+                      <AppText style={styles.resendTimerHighlight}>
                         {formatTimer(resendTimer)}
-                      </Text>
-                    </Text>
+                      </AppText>
+                    </AppText>
                   </View>
                 ) : (
                   <View style={styles.resendRow}>
@@ -382,9 +388,9 @@ export default function Signin() {
                       style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
                     >
                       <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
-                      <Text style={styles.resendActionText}>
-                        Resend via WhatsApp
-                      </Text>
+                      <AppText style={styles.resendActionText}>
+                        {t.auth.resendCode}
+                      </AppText>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -397,7 +403,7 @@ export default function Signin() {
                   }}
                   style={styles.changeNumberBtn}
                 >
-                  <Text style={styles.changeNumberText}>Change phone number</Text>
+                  <AppText style={styles.changeNumberText}>{t.auth.changeNumber}</AppText>
                 </TouchableOpacity>
               </View>
             )}
@@ -411,10 +417,10 @@ export default function Signin() {
                     color={Colors.themes.customer.primary}
                   />
                 </View>
-                <Text style={styles.successTitle}>Welcome Back!</Text>
-                <Text style={styles.successText}>
+                <AppText style={styles.successTitle}>Welcome Back!</AppText>
+                <AppText style={styles.successText}>
                   Redirecting to your dashboard...
-                </Text>
+                </AppText>
               </View>
             )}
           </ScrollView>

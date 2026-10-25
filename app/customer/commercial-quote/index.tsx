@@ -1,3 +1,5 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import AlertModal from "@/components/common/AlertModal";
 import Input from "@/components/Input";
 import Colors from "@/constants/Colors";
@@ -13,7 +15,6 @@ import {
   Image,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -131,9 +132,9 @@ export default function CommercialQuotePage() {
           onPress={() => router.back()}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+          <DirectionalIcon name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Request Quote</Text>
+        <AppText style={styles.headerTitle}>Request Quote</AppText>
         <View style={styles.placeholder} />
       </View>
 
@@ -177,20 +178,20 @@ export default function CommercialQuotePage() {
           </View>
 
           <View style={styles.heroContent}>
-            <Text style={styles.heroTitle}>
+            <AppText style={styles.heroTitle}>
               Commercial & Industrial Services
-            </Text>
-            <Text style={styles.heroSubtitle}>
+            </AppText>
+            <AppText style={styles.heroSubtitle}>
               Fill out the form below and our team will provide you with a
               custom quotation
-            </Text>
+            </AppText>
           </View>
         </View>
 
         {/* Form */}
         <View style={styles.formSection}>
           {/* Organization Details */}
-          <Text style={styles.sectionTitle}>Organization Details</Text>
+          <AppText style={styles.sectionTitle}>Organization Details</AppText>
 
           <Input
             label="Organization Name *"
@@ -208,7 +209,7 @@ export default function CommercialQuotePage() {
           />
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Business Type *</Text>
+            <AppText style={styles.label}>Business Type *</AppText>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -223,24 +224,24 @@ export default function CommercialQuotePage() {
                   ]}
                   onPress={() => setData("business_type", type)}
                 >
-                  <Text
+                  <AppText
                     style={[
                       styles.chipText,
                       data.business_type === type && styles.chipTextSelected,
                     ]}
                   >
                     {type}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </ScrollView>
             {errors.business_type && (
-              <Text style={styles.error}>{errors.business_type}</Text>
+              <AppText style={styles.error}>{errors.business_type}</AppText>
             )}
           </View>
 
           {/* Contact Information */}
-          <Text style={styles.sectionTitle}>Contact Information</Text>
+          <AppText style={styles.sectionTitle}>Contact Information</AppText>
 
           <Input
             label="Contact Person *"
@@ -291,7 +292,7 @@ export default function CommercialQuotePage() {
           />
 
           {/* Facility Details */}
-          <Text style={styles.sectionTitle}>Facility Details</Text>
+          <AppText style={styles.sectionTitle}>Facility Details</AppText>
 
           <Input
             label="Facility Address *"
@@ -325,7 +326,7 @@ export default function CommercialQuotePage() {
           />
 
           {/* Services Required */}
-          <Text style={styles.sectionTitle}>Services Required *</Text>
+          <AppText style={styles.sectionTitle}>Services Required *</AppText>
           <View style={styles.servicesGrid}>
             {SERVICE_CATEGORIES.map((service) => (
               <TouchableOpacity
@@ -349,7 +350,7 @@ export default function CommercialQuotePage() {
                       : Colors.text.tertiary
                   }
                 />
-                <Text
+                <AppText
                   style={[
                     styles.serviceText,
                     data.services.includes(service) &&
@@ -357,11 +358,11 @@ export default function CommercialQuotePage() {
                   ]}
                 >
                   {service}
-                </Text>
+                </AppText>
               </TouchableOpacity>
             ))}
             {errors.services && (
-              <Text style={styles.error}>{errors.services}</Text>
+              <AppText style={styles.error}>{errors.services}</AppText>
             )}
           </View>
 
@@ -386,9 +387,9 @@ export default function CommercialQuotePage() {
             disabled={processing}
           >
             <Ionicons name="send" size={20} color={Colors.neutral.white} />
-            <Text style={styles.submitButtonText}>
+            <AppText style={styles.submitButtonText}>
               {processing ? "Submitting..." : "Submit Quote Request"}
-            </Text>
+            </AppText>
           </TouchableOpacity>
 
           {/* Info Card */}
@@ -399,11 +400,11 @@ export default function CommercialQuotePage() {
               color={Colors.themes.customer.primary}
             />
             <View style={styles.infoContent}>
-              <Text style={styles.infoTitle}>What happens next?</Text>
-              <Text style={styles.infoText}>
+              <AppText style={styles.infoTitle}>What happens next?</AppText>
+              <AppText style={styles.infoText}>
                 Our team will review your request and contact you within 24
                 hours with a detailed quotation tailored to your needs.
-              </Text>
+              </AppText>
             </View>
           </View>
         </View>

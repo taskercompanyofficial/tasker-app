@@ -1,3 +1,5 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
@@ -9,17 +11,19 @@ import {
   Image,
   StatusBar,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+import { useLanguage } from "@/context/language-context";
 
 type Role = "customer" | "provider" | null;
 
 export default function RoleSelectionScreen() {
   const router = useRouter();
   const { setAppMode } = useSession();
+  const { t, language } = useLanguage();
   const [selectedRole, setSelectedRole] = useState<Role>(null);
 
   const handleRoleSelect = async (role: Role) => {
@@ -59,9 +63,25 @@ export default function RoleSelectionScreen() {
           </View>
         </View>
 
+        {/* Top Language Switcher Bar */}
+        <View style={styles.topLangRow}>
+          <TouchableOpacity
+            style={styles.langPill}
+            activeOpacity={0.75}
+            onPress={() => router.push("/auth/language-selection" as any)}
+          >
+            <Ionicons name="globe-outline" size={16} color="#1E3A8A" />
+            <AppText style={styles.langPillText}>
+              {language === "ur" ? "اردو" : language === "ur-Latn" ? "Roman Urdu" : "English"}
+            </AppText>
+            <DirectionalIcon name="chevron-forward" size={14} color="#64748B" />
+          </TouchableOpacity>
+        </View>
+
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Welcome to Tasker Company</Text>
+          <AppText style={styles.title}>{t.roleSelection.welcomeTitle}</AppText>
+          <AppText style={styles.subSubtitleText}>{t.roleSelection.welcomeSubtitle}</AppText>
         </View>
 
         {/* Compact Role Selection Buttons */}
@@ -89,13 +109,13 @@ export default function RoleSelectionScreen() {
                 />
               </View>
               <View style={styles.roleTextWrapper}>
-                <Text style={styles.roleButtonTitle}>I&apos;m a Customer</Text>
-                <Text style={styles.roleButtonSubtitle}>
-                  Book & track home services
-                </Text>
+                <AppText style={styles.roleButtonTitle}>{t.roleSelection.customerTitle}</AppText>
+                <AppText style={styles.roleButtonSubtitle}>
+                  {t.roleSelection.customerDesc}
+                </AppText>
               </View>
               <View style={styles.arrowContainer}>
-                <Ionicons
+                <DirectionalIcon
                   name="arrow-forward"
                   size={18}
                   color={Colors.neutral.white}
@@ -127,15 +147,15 @@ export default function RoleSelectionScreen() {
                 />
               </View>
               <View style={styles.roleTextWrapper}>
-                <Text style={styles.roleButtonTitle}>
-                  I&apos;m a Service Provider
-                </Text>
-                <Text style={styles.roleButtonSubtitle}>
-                  Manage jobs, staff & earnings
-                </Text>
+                <AppText style={styles.roleButtonTitle}>
+                  {t.roleSelection.vendorTitle}
+                </AppText>
+                <AppText style={styles.roleButtonSubtitle}>
+                  {t.roleSelection.vendorDesc}
+                </AppText>
               </View>
               <View style={styles.arrowContainer}>
-                <Ionicons
+                <DirectionalIcon
                   name="arrow-forward"
                   size={18}
                   color={Colors.neutral.white}
@@ -229,12 +249,41 @@ const styles = StyleSheet.create({
     color: Colors.themes.customer.primary,
     letterSpacing: 0.8,
   },
+  topLangRow: {
+    width: "100%",
+    alignItems: "flex-end",
+    paddingHorizontal: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  langPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F1F5F9",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  langPillText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#1E3A8A",
+  },
   title: {
     fontSize: 22,
     fontWeight: "700",
     color: Colors.text.primary,
     marginBottom: 4,
     textAlign: "center",
+  },
+  subSubtitleText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: Colors.text.secondary,
+    textAlign: "center",
+    paddingHorizontal: Spacing.md,
   },
   subtitle: {
     fontSize: 13,

@@ -1,3 +1,5 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Spacing } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,7 +15,6 @@ import {
   Platform,
   StatusBar,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
   useColorScheme,
@@ -186,7 +187,7 @@ function AnimatedFloatingBadge({
       ]}
     >
       <Ionicons name={chip.icon} size={13} color={chip.iconColor} />
-      <Text style={styles.floatingChipText}>{chip.text}</Text>
+      <AppText style={styles.floatingChipText}>{chip.text}</AppText>
     </Animated.View>
   );
 }
@@ -220,7 +221,7 @@ export default function Onboarding() {
     } catch {
       // Ignore storage errors and continue navigation
     }
-    router.replace("/auth/role-selection");
+    router.replace("/auth/language-selection" as any);
   };
 
   const handleNext = () => {
@@ -286,11 +287,11 @@ export default function Onboarding() {
         {/* Text Area */}
         <View style={styles.textContainer}>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{item.badge}</Text>
+            <AppText style={styles.badgeText}>{item.badge}</AppText>
           </View>
 
-          <Text style={styles.title}>{item.title}</Text>
-          <Text style={styles.description}>{item.description}</Text>
+          <AppText style={styles.title}>{item.title}</AppText>
+          <AppText style={styles.description}>{item.description}</AppText>
         </View>
       </View>
     );
@@ -323,7 +324,7 @@ export default function Onboarding() {
             onPress={() => void navigateToRoleSelection()}
             activeOpacity={0.6}
           >
-            <Text style={styles.skipText}>Skip</Text>
+            <AppText style={styles.skipText}>Skip</AppText>
           </TouchableOpacity>
         </View>
 
@@ -392,20 +393,20 @@ export default function Onboarding() {
             onPress={handleNext}
             activeOpacity={0.85}
           >
-            <Text style={styles.primaryButtonText}>
+            <AppText style={styles.primaryButtonText}>
               {currentIndex === slides.length - 1 ? "Get Started" : "Continue"}
-            </Text>
-            <Ionicons
+            </AppText>
+            <DirectionalIcon
               name="arrow-forward"
               size={18}
-              color="#18181B"
+              color="#ffffff"
             />
           </TouchableOpacity>
 
           {/* Minimal Trust Subtext */}
-          <Text style={styles.trustText}>
+          <AppText style={styles.trustText}>
             Verified Technicians • Quality Guaranteed
-          </Text>
+          </AppText>
         </View>
       </SafeAreaView>
     </Animated.View>
@@ -424,7 +425,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: Spacing.lg,
+    // paddingHorizontal: Spacing.lg,
     paddingTop: Platform.OS === "android" ? 12 : 4,
     paddingBottom: 4,
   },
@@ -477,6 +478,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: BorderRadius.full,
     zIndex: 10,
+    marginHorizontal: 11,
   },
   floatingChipText: {
     fontSize: 11.5,
@@ -544,7 +546,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 15.5,
     fontWeight: "600",
-    color: "#18181B",
+    color: "#ffffff",
   },
   trustText: {
     fontSize: 12,

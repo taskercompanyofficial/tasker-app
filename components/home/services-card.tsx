@@ -1,5 +1,8 @@
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
+import AppText from "@/components/common/AppText";
+import { useLanguage } from "@/context/language-context";
+import { localizeCategoryDescription } from "@/lib/i18n/category-copy";
 import getImageUrl from "@/lib/utils";
 import { Category } from "@/types/category";
 import { Image } from "expo-image";
@@ -9,7 +12,6 @@ import {
   Dimensions,
   FlatList, NativeScrollEvent, NativeSyntheticEvent,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -23,6 +25,7 @@ const CARD_WIDTH =
   SERVICES_PER_ROW;
 
 export default function ServicesCard({ data }: { data?: Category }) {
+  const { t, language } = useLanguage();
   const services = data?.services || [];
   const pages = useMemo(() => {
     const arr = [];
@@ -59,9 +62,9 @@ export default function ServicesCard({ data }: { data?: Category }) {
                 style={styles.image}
                 contentFit="contain"
               />
-              <Text style={styles.imageText} numberOfLines={2}>
+              <AppText style={styles.imageText} numberOfLines={2}>
                 {service.name}
-              </Text>
+              </AppText>
             </TouchableOpacity>
           ))}
         </View>
@@ -74,22 +77,24 @@ export default function ServicesCard({ data }: { data?: Category }) {
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
-          <Text style={styles.title}>{data?.name}</Text>
-          <Text style={styles.description} numberOfLines={1}>{data?.description}</Text>
+          <AppText style={styles.title}>{data?.name}</AppText>
+          <AppText style={styles.description} numberOfLines={1}>
+            {data?.description ? localizeCategoryDescription(data.description, language) : ""}
+          </AppText>
         </View>
         {data?.slug && (
           <TouchableOpacity
             style={styles.viewAllBtn}
             onPress={() => router.push(`/customer/(tabs)/${data.slug}` as any)}
           >
-            <Text style={styles.viewAllText}>View All</Text>
+            <AppText style={styles.viewAllText}>{t.common.viewAll}</AppText>
           </TouchableOpacity>
         )}
       </View>
 
       {services.length === 0 ? (
         <View style={styles.noServicesContainer}>
-          <Text style={styles.noServicesText}>No services available</Text>
+          <AppText style={styles.noServicesText}>{t.common.noServicesAvailable}</AppText>
         </View>
       ) : (
         <FlatList

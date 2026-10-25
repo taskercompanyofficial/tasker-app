@@ -1,3 +1,5 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import { ChatRoom } from "@/components/Chat/ChatRoom";
@@ -13,7 +15,6 @@ import {
   FlatList,
   Linking,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
   Image,
@@ -167,7 +168,7 @@ export default function CustomerSupportChatHub({
       {/* App Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color={Colors.text.primary} />
+          <DirectionalIcon name="chevron-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
 
         {/* Profile Info (Clickable for assigned technician) */}
@@ -210,9 +211,9 @@ export default function CustomerSupportChatHub({
 
           <View style={styles.headerTextContainer}>
             <View style={styles.headerTitleRow}>
-              <Text style={styles.headerTitle} numberOfLines={1}>
+              <AppText style={styles.headerTitle} numberOfLines={1}>
                 {headerTitle}
-              </Text>
+              </AppText>
               <MaterialCommunityIcons
                 name="check-decagram"
                 size={14}
@@ -221,9 +222,9 @@ export default function CustomerSupportChatHub({
             </View>
             <View style={styles.statusRow}>
               <View style={styles.statusDot} />
-              <Text style={styles.headerSubtitle} numberOfLines={1}>
+              <AppText style={styles.headerSubtitle} numberOfLines={1}>
                 {headerSubtitle}
-              </Text>
+              </AppText>
             </View>
           </View>
         </TouchableOpacity>
@@ -318,7 +319,7 @@ function ScrollViewHorizontalSelector({
               size={13}
               color={isSelected ? Colors.neutral.white : Colors.text.secondary}
             />
-            <Text
+            <AppText
               style={[
                 styles.selectorText,
                 isSelected && styles.selectorTextSelected,
@@ -327,7 +328,7 @@ function ScrollViewHorizontalSelector({
               {isSupportTab
                 ? "Tasky AI"
                 : `#${item.order_number || item.id}`}
-            </Text>
+            </AppText>
           </TouchableOpacity>
         );
       }}

@@ -1,8 +1,11 @@
+import { localizedAlert } from "@/lib/i18n/localized-alert";
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from '@/constants/Colors'
 import { Spacing, BorderRadius, Typography } from '@/constants/Styles'
 import { Ionicons } from '@expo/vector-icons'
 import React from 'react'
-import { Alert, Linking, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Alert, Linking, Modal, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 interface ContactSupportModalProps {
     visible: boolean
@@ -21,10 +24,10 @@ export default function ContactSupportModal({ visible, onClose }: ContactSupport
                 await Linking.openURL(url)
                 onClose()
             } else {
-                Alert.alert('Error', 'Unable to make phone calls on this device')
+                localizedAlert('Error', 'Unable to make phone calls on this device')
             }
         } catch (error) {
-            Alert.alert('Error', 'Failed to open phone dialer')
+            localizedAlert('Error', 'Failed to open phone dialer')
         }
     }
 
@@ -36,10 +39,10 @@ export default function ContactSupportModal({ visible, onClose }: ContactSupport
                 await Linking.openURL(url)
                 onClose()
             } else {
-                Alert.alert('WhatsApp Not Installed', 'Please install WhatsApp to use this feature')
+                localizedAlert('WhatsApp Not Installed', 'Please install WhatsApp to use this feature')
             }
         } catch (error) {
-            Alert.alert('Error', 'Failed to open WhatsApp')
+            localizedAlert('Error', 'Failed to open WhatsApp')
         }
     }
 
@@ -57,8 +60,8 @@ export default function ContactSupportModal({ visible, onClose }: ContactSupport
                         <View style={styles.iconContainer}>
                             <Ionicons name="headset" size={Typography.sizes.xl} color={Colors.themes.customer.primary} />
                         </View>
-                        <Text style={styles.title}>Contact Support</Text>
-                        <Text style={styles.subtitle}>How would you like to reach us?</Text>
+                        <AppText style={styles.title}>Contact Support</AppText>
+                        <AppText style={styles.subtitle}>How would you like to reach us?</AppText>
                     </View>
 
                     {/* Contact Options */}
@@ -68,10 +71,10 @@ export default function ContactSupportModal({ visible, onClose }: ContactSupport
                                 <Ionicons name="call" size={Typography.sizes.lg} color={Colors.success} />
                             </View>
                             <View style={styles.optionContent}>
-                                <Text style={styles.optionTitle}>Phone Call</Text>
-                                <Text style={styles.optionSubtitle}>{PHONE_NUMBER}</Text>
+                                <AppText style={styles.optionTitle}>Phone Call</AppText>
+                                <AppText style={styles.optionSubtitle}>{PHONE_NUMBER}</AppText>
                             </View>
-                            <Ionicons name="chevron-forward" size={Typography.sizes.base} color={Colors.text.tertiary} />
+                            <DirectionalIcon name="chevron-forward" size={Typography.sizes.base} color={Colors.text.tertiary} />
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.optionButton} onPress={handleWhatsApp}>
@@ -79,16 +82,16 @@ export default function ContactSupportModal({ visible, onClose }: ContactSupport
                                 <Ionicons name="logo-whatsapp" size={Typography.sizes.lg} color={Colors.social.whatsapp} />
                             </View>
                             <View style={styles.optionContent}>
-                                <Text style={styles.optionTitle}>WhatsApp</Text>
-                                <Text style={styles.optionSubtitle}>Chat with us</Text>
+                                <AppText style={styles.optionTitle}>WhatsApp</AppText>
+                                <AppText style={styles.optionSubtitle}>Chat with us</AppText>
                             </View>
-                            <Ionicons name="chevron-forward" size={Typography.sizes.base} color={Colors.text.tertiary} />
+                            <DirectionalIcon name="chevron-forward" size={Typography.sizes.base} color={Colors.text.tertiary} />
                         </TouchableOpacity>
                     </View>
 
                     {/* Close Button */}
                     <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                        <Text style={styles.closeButtonText}>Cancel</Text>
+                        <AppText style={styles.closeButtonText}>Cancel</AppText>
                     </TouchableOpacity>
                 </View>
             </View>

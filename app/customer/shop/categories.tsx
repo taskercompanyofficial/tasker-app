@@ -1,10 +1,11 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { Spacing, Typography, BorderRadius, Shadows } from "@/constants/Styles";
 import React from "react";
 import {
   FlatList,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -23,17 +24,17 @@ export default function ShopCategories() {
         />
       </View>
       <View style={styles.textWrap}>
-        <Text style={styles.categoryName}>{item.name}</Text>
-        <Text style={styles.itemCount}>50+ Items</Text>
+        <AppText style={styles.categoryName}>{item.name}</AppText>
+        <AppText style={styles.itemCount}>50+ Items</AppText>
       </View>
-      <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
+      <DirectionalIcon name="chevron-forward" size={20} color={Colors.text.tertiary} />
     </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>All Categories</Text>
+        <AppText style={styles.headerTitle}>All Categories</AppText>
       </View>
 
       <FlatList

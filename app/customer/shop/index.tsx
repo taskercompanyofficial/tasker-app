@@ -1,3 +1,6 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
+import { useLanguage } from "@/context/language-context";
 import Colors from "@/constants/Colors";
 import { Spacing, Typography, BorderRadius, Shadows } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,7 +9,6 @@ import React from "react";
 import {
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
   Image,
@@ -86,6 +88,7 @@ export const SHOP_PRODUCTS = [
 ];
 
 export default function ShopHome() {
+  const { t } = useLanguage();
   const renderCategory = ({ item }: { item: (typeof SHOP_CATEGORIES)[0] }) => (
     <TouchableOpacity style={styles.categoryItem} activeOpacity={0.8}>
       <View style={styles.categoryIconWrap}>
@@ -95,9 +98,9 @@ export default function ShopHome() {
           color={Colors.text.primary}
         />
       </View>
-      <Text style={styles.categoryName} numberOfLines={1}>
+      <AppText style={styles.categoryName} numberOfLines={1}>
         {item.name}
-      </Text>
+      </AppText>
     </TouchableOpacity>
   );
 
@@ -109,9 +112,9 @@ export default function ShopHome() {
           onPress={() => router.back()}
           style={styles.headerButton}
         >
-          <Ionicons name="arrow-back" size={20} color={Colors.neutral.white} />
+          <DirectionalIcon name="arrow-back" size={20} color={Colors.neutral.white} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Tasker Shop</Text>
+        <AppText style={styles.headerTitle}>Tasker Shop</AppText>
         <TouchableOpacity style={styles.headerButton}>
           <Ionicons name="search" size={20} color={Colors.neutral.white} />
         </TouchableOpacity>
@@ -124,12 +127,12 @@ export default function ShopHome() {
         {/* Compact Banner */}
         <View style={styles.banner}>
           <View style={styles.bannerContent}>
-            <Text style={styles.bannerTitle}>Home Appliances</Text>
-            <Text style={styles.bannerSubtitle}>
+            <AppText style={styles.bannerTitle}>Home Appliances</AppText>
+            <AppText style={styles.bannerSubtitle}>
               Upgrade your home with modern appliances.
-            </Text>
+            </AppText>
             <TouchableOpacity style={styles.bannerBtn} activeOpacity={0.9}>
-              <Text style={styles.bannerBtnText}>Shop Sale</Text>
+              <AppText style={styles.bannerBtnText}>Shop Sale</AppText>
             </TouchableOpacity>
           </View>
           <Ionicons
@@ -143,9 +146,9 @@ export default function ShopHome() {
         {/* Categories Horizontal */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Categories</Text>
+            <AppText style={styles.sectionTitle}>{t.common.categories}</AppText>
             <TouchableOpacity>
-              <Text style={styles.seeAllText}>See All</Text>
+              <AppText style={styles.seeAllText}>{t.common.viewAll}</AppText>
             </TouchableOpacity>
           </View>
           <FlatList
@@ -161,7 +164,7 @@ export default function ShopHome() {
         {/* Products Grid */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Trending Now</Text>
+            <AppText style={styles.sectionTitle}>Trending Now</AppText>
           </View>
 
           <View style={styles.productGrid}>
@@ -185,21 +188,21 @@ export default function ShopHome() {
                   </TouchableOpacity>
                 </View>
                 <View style={styles.productInfo}>
-                  <Text style={styles.productCategory}>{product.category}</Text>
-                  <Text style={styles.productName} numberOfLines={2}>
+                  <AppText style={styles.productCategory}>{product.category}</AppText>
+                  <AppText style={styles.productName} numberOfLines={2}>
                     {product.name}
-                  </Text>
+                  </AppText>
 
                   <View style={styles.ratingRow}>
                     <Ionicons name="star" size={10} color={Colors.warning} />
-                    <Text style={styles.ratingText}>{product.rating}</Text>
-                    <Text style={styles.reviewsText}>({product.reviews})</Text>
+                    <AppText style={styles.ratingText}>{product.rating}</AppText>
+                    <AppText style={styles.reviewsText}>({product.reviews})</AppText>
                   </View>
 
                   <View style={styles.priceRow}>
-                    <Text style={styles.productPrice}>
+                    <AppText style={styles.productPrice}>
                       ${product.price.toFixed(2)}
-                    </Text>
+                    </AppText>
                     <TouchableOpacity style={styles.addBtn}>
                       <Ionicons
                         name="add"

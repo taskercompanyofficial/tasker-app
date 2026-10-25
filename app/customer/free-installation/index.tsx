@@ -1,3 +1,5 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import AlertModal from "@/components/common/AlertModal";
 import AddressSelector from "@/components/AddressSelector";
 import Input from "@/components/Input";
@@ -26,7 +28,6 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -260,9 +261,9 @@ export default function FreeInstallationPage() {
           onPress={() => router.back()}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={22} color={Colors.text.primary} />
+          <DirectionalIcon name="arrow-back" size={22} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Free Installation</Text>
+        <AppText style={styles.headerTitle}>Free Installation</AppText>
         <View style={styles.placeholder} />
       </View>
 
@@ -324,14 +325,14 @@ export default function FreeInstallationPage() {
         {/* Info Banner */}
         <View style={styles.infoBanner}>
           <Ionicons name="information-circle" size={18} color="#10B981" />
-          <Text style={styles.infoBannerText}>
+          <AppText style={styles.infoBannerText}>
             First installation only • Available in 4 major cities
-          </Text>
+          </AppText>
         </View>
 
         {/* Form Section */}
         <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>Contact Information</Text>
+          <AppText style={styles.sectionTitle}>Contact Information</AppText>
 
           <Input
             label="Contact Person"
@@ -367,7 +368,7 @@ export default function FreeInstallationPage() {
 
         {/* Address Selection */}
         <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>Installation Address</Text>
+          <AppText style={styles.sectionTitle}>Installation Address</AppText>
           <AddressSelector
             selectedAddressId={selectedAddress}
             onSelectAddress={(addressId, address) => {
@@ -381,7 +382,7 @@ export default function FreeInstallationPage() {
 
         {/* Product Information */}
         <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>Product Information</Text>
+          <AppText style={styles.sectionTitle}>Product Information</AppText>
 
           {/* Product Type */}
           <View style={styles.inputGroup}>
@@ -405,7 +406,7 @@ export default function FreeInstallationPage() {
                         : Colors.text.tertiary
                     }
                   />
-                  <Text
+                  <AppText
                     style={[
                       styles.productTypeText,
                       data.product_type === type.value &&
@@ -413,12 +414,12 @@ export default function FreeInstallationPage() {
                     ]}
                   >
                     {type.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
             {errors.product_type && (
-              <Text style={styles.error}>{errors.product_type}</Text>
+              <AppText style={styles.error}>{errors.product_type}</AppText>
             )}
           </View>
 
@@ -459,7 +460,7 @@ export default function FreeInstallationPage() {
 
           {/* Date Picker */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Date of Purchase</Text>
+            <AppText style={styles.label}>Date of Purchase</AppText>
             <TouchableOpacity
               style={styles.dateButton}
               onPress={() => setShowDatePicker(true)}
@@ -469,12 +470,12 @@ export default function FreeInstallationPage() {
                 size={18}
                 color={Colors.text.tertiary}
               />
-              <Text style={styles.dateText}>
+              <AppText style={styles.dateText}>
                 {data.purchase_date || "Select purchase date"}
-              </Text>
+              </AppText>
             </TouchableOpacity>
             {errors.purchase_date && (
-              <Text style={styles.error}>{errors.purchase_date}</Text>
+              <AppText style={styles.error}>{errors.purchase_date}</AppText>
             )}
           </View>
 
@@ -491,11 +492,11 @@ export default function FreeInstallationPage() {
 
         {/* Document Uploads */}
         <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>Documents</Text>
+          <AppText style={styles.sectionTitle}>Documents</AppText>
 
           {/* Invoice Upload */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Invoice Image</Text>
+            <AppText style={styles.label}>Invoice Image</AppText>
             {invoiceUri ? (
               <View style={styles.imagePreviewContainer}>
                 <Image
@@ -527,7 +528,7 @@ export default function FreeInstallationPage() {
                     size={22}
                     color={Colors.themes.customer.primary}
                   />
-                  <Text style={styles.uploadOptionText}>Camera</Text>
+                  <AppText style={styles.uploadOptionText}>Camera</AppText>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.uploadOptionButton}
@@ -538,18 +539,18 @@ export default function FreeInstallationPage() {
                     size={22}
                     color={Colors.themes.customer.primary}
                   />
-                  <Text style={styles.uploadOptionText}>Gallery</Text>
+                  <AppText style={styles.uploadOptionText}>Gallery</AppText>
                 </TouchableOpacity>
               </View>
             )}
             {errors.invoice_image && (
-              <Text style={styles.error}>{errors.invoice_image}</Text>
+              <AppText style={styles.error}>{errors.invoice_image}</AppText>
             )}
           </View>
 
           {/* Warranty Upload */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Warranty Card Image</Text>
+            <AppText style={styles.label}>Warranty Card Image</AppText>
             {warrantyUri ? (
               <View style={styles.imagePreviewContainer}>
                 <Image
@@ -581,7 +582,7 @@ export default function FreeInstallationPage() {
                     size={22}
                     color={Colors.themes.customer.primary}
                   />
-                  <Text style={styles.uploadOptionText}>Camera</Text>
+                  <AppText style={styles.uploadOptionText}>Camera</AppText>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.uploadOptionButton}
@@ -592,19 +593,19 @@ export default function FreeInstallationPage() {
                     size={22}
                     color={Colors.themes.customer.primary}
                   />
-                  <Text style={styles.uploadOptionText}>Gallery</Text>
+                  <AppText style={styles.uploadOptionText}>Gallery</AppText>
                 </TouchableOpacity>
               </View>
             )}
             {errors.warranty_image && (
-              <Text style={styles.error}>{errors.warranty_image}</Text>
+              <AppText style={styles.error}>{errors.warranty_image}</AppText>
             )}
           </View>
         </View>
 
         {/* Installation Status */}
         <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>Installation Status</Text>
+          <AppText style={styles.sectionTitle}>Installation Status</AppText>
 
           <TouchableOpacity
             style={styles.checkboxRow}
@@ -624,7 +625,7 @@ export default function FreeInstallationPage() {
                 />
               )}
             </View>
-            <Text style={styles.checkboxLabel}>Product is delivered</Text>
+            <AppText style={styles.checkboxLabel}>Product is delivered</AppText>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -647,13 +648,13 @@ export default function FreeInstallationPage() {
                 />
               )}
             </View>
-            <Text style={styles.checkboxLabel}>Wiring is done</Text>
+            <AppText style={styles.checkboxLabel}>Wiring is done</AppText>
           </TouchableOpacity>
         </View>
 
         {/* Additional Requirements */}
         <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>Additional Requirements</Text>
+          <AppText style={styles.sectionTitle}>Additional Requirements</AppText>
 
           <TouchableOpacity
             style={styles.checkboxRow}
@@ -678,7 +679,7 @@ export default function FreeInstallationPage() {
                 />
               )}
             </View>
-            <Text style={styles.checkboxLabel}>Outdoor bracket needed</Text>
+            <AppText style={styles.checkboxLabel}>Outdoor bracket needed</AppText>
           </TouchableOpacity>
 
           <Input
@@ -714,23 +715,23 @@ export default function FreeInstallationPage() {
 
         {/* What's Included */}
         <View style={styles.inclusionsSection}>
-          <Text style={styles.sectionTitle}>What&apos;s Included (Free)</Text>
+          <AppText style={styles.sectionTitle}>What&apos;s Included (Free)</AppText>
           <View style={styles.inclusionsList}>
             <View style={styles.inclusionItem}>
               <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-              <Text style={styles.inclusionText}>One wall hole</Text>
+              <AppText style={styles.inclusionText}>One wall hole</AppText>
             </View>
             <View style={styles.inclusionItem}>
               <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-              <Text style={styles.inclusionText}>10 feet pipe</Text>
+              <AppText style={styles.inclusionText}>10 feet pipe</AppText>
             </View>
             <View style={styles.inclusionItem}>
               <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-              <Text style={styles.inclusionText}>Indoor installation</Text>
+              <AppText style={styles.inclusionText}>Indoor installation</AppText>
             </View>
             <View style={styles.inclusionItem}>
               <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-              <Text style={styles.inclusionText}>Outdoor installation</Text>
+              <AppText style={styles.inclusionText}>Outdoor installation</AppText>
             </View>
           </View>
         </View>
@@ -745,9 +746,9 @@ export default function FreeInstallationPage() {
             onPress={handleSubmit}
             disabled={processing}
           >
-            <Text style={styles.submitButtonText}>
+            <AppText style={styles.submitButtonText}>
               {processing ? "Submitting..." : "Submit Application"}
-            </Text>
+            </AppText>
           </TouchableOpacity>
         </View>
       </ScrollView>

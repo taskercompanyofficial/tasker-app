@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { Spacing, Typography, BorderRadius, Shadows } from "@/constants/Styles";
 import React from "react";
@@ -5,7 +6,6 @@ import {
   FlatList,
   Image,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -20,15 +20,15 @@ export default function ShopCart() {
     <View style={styles.cartItem}>
       <Image source={{ uri: item.image }} style={styles.itemImage} />
       <View style={styles.itemDetails}>
-        <Text style={styles.itemName} numberOfLines={2}>
+        <AppText style={styles.itemName} numberOfLines={2}>
           {item.name}
-        </Text>
-        <Text style={styles.itemPrice}>${item.price.toFixed(2)}</Text>
+        </AppText>
+        <AppText style={styles.itemPrice}>${item.price.toFixed(2)}</AppText>
         <View style={styles.quantityControls}>
           <TouchableOpacity style={styles.controlBtn}>
             <Ionicons name="remove" size={16} color={Colors.text.primary} />
           </TouchableOpacity>
-          <Text style={styles.qtyText}>1</Text>
+          <AppText style={styles.qtyText}>1</AppText>
           <TouchableOpacity style={styles.controlBtn}>
             <Ionicons name="add" size={16} color={Colors.text.primary} />
           </TouchableOpacity>
@@ -43,7 +43,7 @@ export default function ShopCart() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Shopping Cart</Text>
+        <AppText style={styles.headerTitle}>Shopping Cart</AppText>
       </View>
 
       <FlatList
@@ -59,20 +59,20 @@ export default function ShopCart() {
           return (
             <View style={styles.summaryContainer}>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryText}>Subtotal</Text>
-                <Text style={styles.summaryValue}>${subtotal.toFixed(2)}</Text>
+                <AppText style={styles.summaryText}>Subtotal</AppText>
+                <AppText style={styles.summaryValue}>${subtotal.toFixed(2)}</AppText>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryText}>Delivery</Text>
-                <Text style={styles.summaryValue}>${delivery.toFixed(2)}</Text>
+                <AppText style={styles.summaryText}>Delivery</AppText>
+                <AppText style={styles.summaryValue}>${delivery.toFixed(2)}</AppText>
               </View>
               <View style={styles.divider} />
               <View style={styles.summaryRow}>
-                <Text style={styles.totalText}>Total</Text>
-                <Text style={styles.totalValue}>${total.toFixed(2)}</Text>
+                <AppText style={styles.totalText}>Total</AppText>
+                <AppText style={styles.totalValue}>${total.toFixed(2)}</AppText>
               </View>
               <TouchableOpacity style={styles.checkoutBtn} activeOpacity={0.9}>
-                <Text style={styles.checkoutBtnText}>Proceed to Checkout</Text>
+                <AppText style={styles.checkoutBtnText}>Proceed to Checkout</AppText>
               </TouchableOpacity>
             </View>
           );

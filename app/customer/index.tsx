@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import CategoriesCards from "@/components/home/categories-cards";
 import FreeInstallationCard from "@/components/home/free-installation-card";
 import HomeHeader from "@/components/home/Header";
@@ -12,7 +13,6 @@ import {
   Image,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View
 } from "react-native";
@@ -50,8 +50,8 @@ export default function LandingPage() {
       >
         <HomeHeader />
         <View style={styles.content}>
-          <Text style={styles.title}>Welcome to Tasker Company</Text>
-          <Text style={styles.subtitle}>Choose a service to get started</Text>
+          <AppText style={styles.title}>Welcome to Tasker Company</AppText>
+          <AppText style={styles.subtitle}>Choose a service to get started</AppText>
         </View>
         <CategoriesCards />
         <FreeInstallationCard />

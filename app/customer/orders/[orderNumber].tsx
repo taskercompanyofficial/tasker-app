@@ -1,3 +1,5 @@
+import AppText from "@/components/common/AppText";
+import { localizedAlert } from "@/lib/i18n/localized-alert";
 import Loader from "@/components/Loader";
 import CancelOrderModal from "@/components/orders/CancelOrderModal";
 import ContactSupportModal from "@/components/orders/ContactSupportModal";
@@ -176,7 +178,7 @@ export default function OrderDetailsPage() {
         { reason },
       );
       if (response.data.status === "success") {
-        Alert.alert(
+        localizedAlert(
           "Order Cancelled",
           "Your order has been cancelled successfully.",
           [
@@ -191,7 +193,7 @@ export default function OrderDetailsPage() {
         );
       }
     } catch (error: any) {
-      Alert.alert(
+      localizedAlert(
         "Error",
         error.response?.data?.message || "Failed to cancel order.",
       );
@@ -214,9 +216,9 @@ export default function OrderDetailsPage() {
       <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={48} color={Colors.text.tertiary} />
-          <Text style={styles.errorText}>Order not found</Text>
+          <AppText style={styles.errorText}>Order not found</AppText>
           <TouchableOpacity style={styles.backHomeBtn} onPress={() => router.back()}>
-            <Text style={styles.backHomeText}>Go Back</Text>
+            <AppText style={styles.backHomeText}>Go Back</AppText>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -242,10 +244,10 @@ export default function OrderDetailsPage() {
           <Ionicons name="chevron-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Order #{order.order_number}</Text>
-          <Text style={styles.headerSubtitle}>
+          <AppText style={styles.headerTitle}>Order #{order.order_number}</AppText>
+          <AppText style={styles.headerSubtitle}>
             {formatDate(order.order_date)}
-          </Text>
+          </AppText>
         </View>
         <TouchableOpacity
           onPress={() => router.push(`/customer/support-chat?initialWorkOrderId=${order.id}`)}
@@ -267,16 +269,16 @@ export default function OrderDetailsPage() {
         <View style={styles.heroCard}>
           <View style={styles.heroTopRow}>
             <View>
-              <Text style={styles.heroLabel}>STATUS</Text>
-              <Text style={[styles.heroStatusTitle, { color: statusTheme.color }]}>
+              <AppText style={styles.heroLabel}>STATUS</AppText>
+              <AppText style={[styles.heroStatusTitle, { color: statusTheme.color }]}>
                 {getStatusLabel(order.status)}
-              </Text>
+              </AppText>
             </View>
             <View style={[styles.statusBadge, { backgroundColor: statusTheme.bg }]}>
               <Ionicons name={statusTheme.icon} size={16} color={statusTheme.color} />
-              <Text style={[styles.statusText, { color: statusTheme.color }]}>
+              <AppText style={[styles.statusText, { color: statusTheme.color }]}>
                 {order.status.toUpperCase()}
-              </Text>
+              </AppText>
             </View>
           </View>
 
@@ -302,14 +304,14 @@ export default function OrderDetailsPage() {
                           color={isActive ? Colors.neutral.white : Colors.text.tertiary}
                         />
                       </View>
-                      <Text
+                      <AppText
                         style={[
                           styles.stepLabel,
                           isActive && styles.stepLabelActive,
                         ]}
                       >
                         {step.label}
-                      </Text>
+                      </AppText>
                     </View>
                     {idx < steps.length - 1 && (
                       <View
@@ -331,7 +333,7 @@ export default function OrderDetailsPage() {
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Ionicons name="navigate" size={18} color="#2563EB" />
-              <Text style={styles.cardTitle}>Technician Live Location</Text>
+              <AppText style={styles.cardTitle}>Technician Live Location</AppText>
               <View style={{ flexDirection: "row", alignItems: "center", marginLeft: "auto", gap: 5 }}>
                 <View
                   style={{
@@ -341,9 +343,9 @@ export default function OrderDetailsPage() {
                     backgroundColor: vendorCoords ? "#10B981" : "#F59E0B",
                   }}
                 />
-                <Text style={{ fontSize: 11, color: vendorCoords ? "#10B981" : "#F59E0B", fontWeight: "600" }}>
+                <AppText style={{ fontSize: 11, color: vendorCoords ? "#10B981" : "#F59E0B", fontWeight: "600" }}>
                   {vendorCoords ? "LIVE" : "WAITING"}
-                </Text>
+                </AppText>
               </View>
             </View>
 
@@ -406,11 +408,11 @@ export default function OrderDetailsPage() {
               )}
             </MapView>
 
-            <Text style={{ fontSize: 12, color: Colors.text.secondary, marginTop: 8, textAlign: "center" }}>
+            <AppText style={{ fontSize: 12, color: Colors.text.secondary, marginTop: 8, textAlign: "center" }}>
               {vendorCoords
                 ? "🔵 Technician is on the way to your location"
                 : "Waiting for technician to share location..."}
-            </Text>
+            </AppText>
           </View>
         )}
 
@@ -418,7 +420,7 @@ export default function OrderDetailsPage() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Ionicons name="build-outline" size={18} color={Colors.themes.customer.primary} />
-            <Text style={styles.cardTitle}>Booked Services ({order.items?.length || 0})</Text>
+            <AppText style={styles.cardTitle}>Booked Services ({order.items?.length || 0})</AppText>
           </View>
 
 
@@ -432,23 +434,23 @@ export default function OrderDetailsPage() {
             >
               <View style={styles.serviceItemHeader}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.serviceItemName}>
+                  <AppText style={styles.serviceItemName}>
                     {item.parentService?.name || "Service"}
-                  </Text>
-                  <Text style={styles.serviceItemQty}>Quantity: {item.quantity}</Text>
+                  </AppText>
+                  <AppText style={styles.serviceItemQty}>Quantity: {item.quantity}</AppText>
                 </View>
-                <Text style={styles.serviceItemPrice}>
+                <AppText style={styles.serviceItemPrice}>
                   ₨{Math.round(item.subtotal)}
-                </Text>
+                </AppText>
               </View>
 
               {item.scheduled_date ? (
                 <View style={styles.scheduleBadge}>
                   <Ionicons name="calendar-outline" size={12} color={Colors.themes.customer.primary} />
-                  <Text style={styles.scheduleBadgeText}>
+                  <AppText style={styles.scheduleBadgeText}>
                     {formatDate(item.scheduled_date)}
                     {item.scheduled_time ? ` • ${formatTime(item.scheduled_time)}` : ""}
-                  </Text>
+                  </AppText>
                 </View>
               ) : null}
             </View>
@@ -460,21 +462,21 @@ export default function OrderDetailsPage() {
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Ionicons name="location-outline" size={18} color={Colors.themes.customer.primary} />
-              <Text style={styles.cardTitle}>Service Address</Text>
+              <AppText style={styles.cardTitle}>Service Address</AppText>
             </View>
             <View style={styles.addressBody}>
               <View style={styles.addressBadge}>
-                <Text style={styles.addressBadgeText}>
+                <AppText style={styles.addressBadgeText}>
                   {order.address.address_type.toUpperCase()}
-                </Text>
+                </AppText>
               </View>
-              <Text style={styles.addressLineBold}>{order.address.address_line_1}</Text>
+              <AppText style={styles.addressLineBold}>{order.address.address_line_1}</AppText>
               {order.address.address_line_2 ? (
-                <Text style={styles.addressLine}>{order.address.address_line_2}</Text>
+                <AppText style={styles.addressLine}>{order.address.address_line_2}</AppText>
               ) : null}
-              <Text style={styles.addressLine}>
+              <AppText style={styles.addressLine}>
                 {order.address.city}, {order.address.state} {order.address.zip_code}
-              </Text>
+              </AppText>
             </View>
           </View>
         )}
@@ -484,32 +486,32 @@ export default function OrderDetailsPage() {
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Ionicons name="information-circle-outline" size={18} color={Colors.themes.customer.primary} />
-              <Text style={styles.cardTitle}>Booking Details & Instructions</Text>
+              <AppText style={styles.cardTitle}>Booking Details & Instructions</AppText>
             </View>
 
             {order.extra_number ? (
               <View style={styles.paymentDetailRow}>
-                <Text style={styles.paymentDetailLabel}>Contact Phone</Text>
-                <Text style={styles.paymentDetailValue}>{order.extra_number}</Text>
+                <AppText style={styles.paymentDetailLabel}>Contact Phone</AppText>
+                <AppText style={styles.paymentDetailValue}>{order.extra_number}</AppText>
               </View>
             ) : null}
 
             {order.reminders ? (
               <View style={styles.paymentDetailRow}>
-                <Text style={styles.paymentDetailLabel}>Reminder</Text>
+                <AppText style={styles.paymentDetailLabel}>Reminder</AppText>
                 <View style={[styles.miniBadge, { backgroundColor: Colors.themes.customer.primary + "15" }]}>
-                  <Text style={[styles.miniBadgeText, { color: Colors.themes.customer.primary }]}>
+                  <AppText style={[styles.miniBadgeText, { color: Colors.themes.customer.primary }]}>
                     {order.reminders === "1h" ? "1 hour before" : order.reminders === "2h" ? "2 hours before" : order.reminders === "1d" ? "1 day before" : order.reminders}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
             ) : null}
 
             {order.notes ? (
               <View style={{ marginTop: Spacing.xs }}>
-                <Text style={[styles.paymentDetailLabel, { marginBottom: 4 }]}>Notes / Special Instructions</Text>
+                <AppText style={[styles.paymentDetailLabel, { marginBottom: 4 }]}>Notes / Special Instructions</AppText>
                 <View style={styles.notesBox}>
-                  <Text style={styles.notesText}>{order.notes}</Text>
+                  <AppText style={styles.notesText}>{order.notes}</AppText>
                 </View>
               </View>
             ) : null}
@@ -521,7 +523,7 @@ export default function OrderDetailsPage() {
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Ionicons name="images-outline" size={18} color={Colors.themes.customer.primary} />
-              <Text style={styles.cardTitle}>Attached Photos ({order.attachments.length})</Text>
+              <AppText style={styles.cardTitle}>Attached Photos ({order.attachments.length})</AppText>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.attachmentList}>
               {order.attachments.map((imgUri, idx) => (
@@ -545,30 +547,30 @@ export default function OrderDetailsPage() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Ionicons name="card-outline" size={18} color={Colors.themes.customer.primary} />
-            <Text style={styles.cardTitle}>Payment Summary</Text>
+            <AppText style={styles.cardTitle}>Payment Summary</AppText>
           </View>
 
           <View style={styles.paymentDetailRow}>
-            <Text style={styles.paymentDetailLabel}>Payment Method</Text>
-            <Text style={styles.paymentDetailValue}>{getPaymentMethodLabel(order.payment_method)}</Text>
+            <AppText style={styles.paymentDetailLabel}>Payment Method</AppText>
+            <AppText style={styles.paymentDetailValue}>{getPaymentMethodLabel(order.payment_method)}</AppText>
           </View>
 
           <View style={styles.paymentDetailRow}>
-            <Text style={styles.paymentDetailLabel}>Payment Status</Text>
+            <AppText style={styles.paymentDetailLabel}>Payment Status</AppText>
             <View style={[styles.miniBadge, { backgroundColor: getStatusTheme(order.payment_status).bg }]}>
-              <Text style={[styles.miniBadgeText, { color: getStatusTheme(order.payment_status).color }]}>
+              <AppText style={[styles.miniBadgeText, { color: getStatusTheme(order.payment_status).color }]}>
                 {order.payment_status.toUpperCase()}
-              </Text>
+              </AppText>
             </View>
           </View>
 
           <View style={styles.cardDivider} />
 
           <View style={styles.paymentDetailRow}>
-            <Text style={styles.totalRowLabel}>Total Amount</Text>
-            <Text style={styles.totalRowValue}>
+            <AppText style={styles.totalRowLabel}>Total Amount</AppText>
+            <AppText style={styles.totalRowValue}>
               ₨{Math.round(order.total_amount).toLocaleString()}
-            </Text>
+            </AppText>
           </View>
         </View>
 
@@ -580,7 +582,7 @@ export default function OrderDetailsPage() {
               onPress={() => setShowRescheduleModal(true)}
             >
               <Ionicons name="calendar-outline" size={18} color={Colors.themes.customer.primary} />
-              <Text style={styles.rescheduleActionText}>Reschedule / Set Reminder</Text>
+              <AppText style={styles.rescheduleActionText}>Reschedule / Set Reminder</AppText>
             </TouchableOpacity>
           )}
 
@@ -589,7 +591,7 @@ export default function OrderDetailsPage() {
             onPress={() => router.push(`/customer/support-chat?initialWorkOrderId=${order.id}`)}
           >
             <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
-            <Text style={styles.chatActionText}>Chat with Technician & Support</Text>
+            <AppText style={styles.chatActionText}>Chat with Technician & Support</AppText>
           </TouchableOpacity>
 
           {order.status !== "cancelled" && (
@@ -605,7 +607,7 @@ export default function OrderDetailsPage() {
               activeOpacity={0.85}
             >
               <Ionicons name="call" size={19} color="#FFFFFF" />
-              <Text style={styles.voiceCallActionText}>Call Service Provider</Text>
+              <AppText style={styles.voiceCallActionText}>Call Service Provider</AppText>
             </TouchableOpacity>
           )}
 
@@ -615,7 +617,7 @@ export default function OrderDetailsPage() {
               onPress={() => setShowCancelModal(true)}
             >
               <Ionicons name="close-circle-outline" size={18} color={Colors.error} />
-              <Text style={styles.cancelActionText}>Cancel Order</Text>
+              <AppText style={styles.cancelActionText}>Cancel Order</AppText>
             </TouchableOpacity>
           )}
         </View>

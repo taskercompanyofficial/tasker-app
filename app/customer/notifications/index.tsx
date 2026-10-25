@@ -1,3 +1,5 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Loader from "@/components/Loader";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
@@ -11,7 +13,6 @@ import {
   FlatList,
   RefreshControl,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -184,7 +185,7 @@ export default function NotificationsPage() {
     return (
       <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
         <View style={[styles.statusDot, { backgroundColor: dotColor }]} />
-        <Text style={[styles.statusLabel, { color: dotColor }]}>{label}</Text>
+        <AppText style={[styles.statusLabel, { color: dotColor }]}>{label}</AppText>
       </View>
     );
   };
@@ -210,10 +211,10 @@ export default function NotificationsPage() {
 
       <View style={styles.notificationContent}>
         <View style={styles.notificationHeader}>
-          <Text style={styles.notificationTitle} numberOfLines={1}>{item.title}</Text>
-          <Text style={styles.notificationTime}>{formatTime(item.created_at)}</Text>
+          <AppText style={styles.notificationTitle} numberOfLines={1}>{item.title}</AppText>
+          <AppText style={styles.notificationTime}>{formatTime(item.created_at)}</AppText>
         </View>
-        <Text style={styles.notificationMessage} numberOfLines={2}>{item.message}</Text>
+        <AppText style={styles.notificationMessage} numberOfLines={2}>{item.message}</AppText>
         {!item.read && <View style={styles.unreadDot} />}
       </View>
     </TouchableOpacity>
@@ -228,15 +229,15 @@ export default function NotificationsPage() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+          <DirectionalIcon name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Text style={styles.headerTitle}>Notifications</Text>
+            <AppText style={styles.headerTitle}>Notifications</AppText>
             <ConnectionIndicator />
           </View>
           {unreadCount > 0 && (
-            <Text style={styles.headerSubtitle}>{unreadCount} unread</Text>
+            <AppText style={styles.headerSubtitle}>{unreadCount} unread</AppText>
           )}
         </View>
       </View>
@@ -253,8 +254,8 @@ export default function NotificationsPage() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="notifications-off-outline" size={64} color={Colors.text.tertiary} />
-            <Text style={styles.emptyTitle}>No Notifications</Text>
-            <Text style={styles.emptyText}>You&apos;re all caught up!</Text>
+            <AppText style={styles.emptyTitle}>No Notifications</AppText>
+            <AppText style={styles.emptyText}>You&apos;re all caught up!</AppText>
           </View>
         }
       />

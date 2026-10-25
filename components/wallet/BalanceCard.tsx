@@ -1,5 +1,6 @@
+import AppText from "@/components/common/AppText";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing } from "@/constants/Styles";
@@ -12,17 +13,17 @@ export default function BalanceCard({ balance }: Props) {
   return (
     <View style={styles.card}>
       <View style={styles.left}>
-        <Text style={styles.label}>Wallet Balance</Text>
-        <Text style={styles.value}>PKR {balance.toFixed(2)}</Text>
-        <Text style={styles.meta}>Updated just now • Wallet ID: **** 4821</Text>
+        <AppText style={styles.label}>Wallet Balance</AppText>
+        <AppText style={styles.value}>PKR {balance.toFixed(2)}</AppText>
+        <AppText style={styles.meta}>Updated just now • Wallet ID: **** 4821</AppText>
         <View style={styles.metaRow}>
           <View style={styles.badge}>
             <Ionicons name="shield-checkmark" size={12} color={Colors.neutral.white} />
-            <Text style={styles.badgeText}>Secure</Text>
+            <AppText style={styles.badgeText}>Secure</AppText>
           </View>
           <View style={styles.badge}>
             <Ionicons name="card" size={12} color={Colors.neutral.white} />
-            <Text style={styles.badgeText}>Default: Card</Text>
+            <AppText style={styles.badgeText}>Default: Card</AppText>
           </View>
         </View>
       </View>

@@ -1,3 +1,4 @@
+import AppText from "@/components/common/AppText";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -6,7 +7,6 @@ import {
   Linking,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -150,10 +150,10 @@ export default function VendorPermissionsScreen() {
               color={Colors.themes.provider.primary}
             />
           </View>
-          <Text style={styles.title}>Service Permissions</Text>
-          <Text style={styles.subtitle}>
+          <AppText style={styles.title}>Service Permissions</AppText>
+          <AppText style={styles.subtitle}>
             Enable the required device permissions to receive customer bookings and provide live arrival tracking.
-          </Text>
+          </AppText>
         </View>
 
         {/* Minimal Cards List */}
@@ -164,15 +164,15 @@ export default function VendorPermissionsScreen() {
               <Ionicons name="navigate-sharp" size={20} color="#16A34A" />
             </View>
             <View style={styles.cardInfo}>
-              <Text style={styles.cardTitle}>Location Navigation</Text>
-              <Text style={styles.cardDesc}>
+              <AppText style={styles.cardTitle}>Location Navigation</AppText>
+              <AppText style={styles.cardDesc}>
                 Route tracking for live arrival updates to customers
-              </Text>
+              </AppText>
             </View>
             {locGranted ? (
               <View style={styles.pillGranted}>
                 <Ionicons name="checkmark-circle" size={14} color="#16A34A" />
-                <Text style={styles.pillGrantedText}>Enabled</Text>
+                <AppText style={styles.pillGrantedText}>Enabled</AppText>
               </View>
             ) : (
               <TouchableOpacity
@@ -184,7 +184,7 @@ export default function VendorPermissionsScreen() {
                 {loadingAction === "location" ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.pillActionText}>Enable</Text>
+                  <AppText style={styles.pillActionText}>Enable</AppText>
                 )}
               </TouchableOpacity>
             )}
@@ -196,15 +196,15 @@ export default function VendorPermissionsScreen() {
               <Ionicons name="notifications-sharp" size={20} color="#D97706" />
             </View>
             <View style={styles.cardInfo}>
-              <Text style={styles.cardTitle}>Instant Alerts</Text>
-              <Text style={styles.cardDesc}>
+              <AppText style={styles.cardTitle}>Instant Alerts</AppText>
+              <AppText style={styles.cardDesc}>
                 Sound and push notifications for new incoming jobs
-              </Text>
+              </AppText>
             </View>
             {notifGranted ? (
               <View style={styles.pillGranted}>
                 <Ionicons name="checkmark-circle" size={14} color="#16A34A" />
-                <Text style={styles.pillGrantedText}>Enabled</Text>
+                <AppText style={styles.pillGrantedText}>Enabled</AppText>
               </View>
             ) : (
               <TouchableOpacity
@@ -216,7 +216,7 @@ export default function VendorPermissionsScreen() {
                 {loadingAction === "notification" ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.pillActionText}>Enable</Text>
+                  <AppText style={styles.pillActionText}>Enable</AppText>
                 )}
               </TouchableOpacity>
             )}
@@ -226,9 +226,9 @@ export default function VendorPermissionsScreen() {
         {/* Security & Privacy Assurance Note */}
         <View style={styles.privacyNote}>
           <Ionicons name="lock-closed-outline" size={13} color="#94A3B8" />
-          <Text style={styles.privacyText}>
+          <AppText style={styles.privacyText}>
             Your privacy is protected. Location is only active during scheduled working jobs.
-          </Text>
+          </AppText>
         </View>
 
         {/* Action Footer */}
@@ -241,9 +241,9 @@ export default function VendorPermissionsScreen() {
             onPress={handlePrimaryAction}
             activeOpacity={0.88}
           >
-            <Text style={styles.primaryBtnText}>
+            <AppText style={styles.primaryBtnText}>
               {isAllGranted ? "Continue to Dashboard" : "Grant All Permissions"}
-            </Text>
+            </AppText>
             <Ionicons
               name={isAllGranted ? "arrow-forward" : "shield-checkmark-outline"}
               size={18}
@@ -257,7 +257,7 @@ export default function VendorPermissionsScreen() {
             activeOpacity={0.7}
           >
             <Ionicons name="settings-outline" size={14} color="#64748B" />
-            <Text style={styles.settingsLinkText}>Open Device Settings</Text>
+            <AppText style={styles.settingsLinkText}>Open Device Settings</AppText>
           </TouchableOpacity>
         </View>
       </ScrollView>

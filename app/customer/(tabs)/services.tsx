@@ -1,7 +1,11 @@
+import AppTextInput from "@/components/common/AppTextInput";
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import CheckoutModal from "@/components/checkout/CheckoutModal";
 import Loader from "@/components/Loader";
 import ParentServiceCard from "@/components/services/ParentServiceCard";
 import NotificationBell from "@/components/common/NotificationBell";
+import { useLanguage } from "@/context/language-context";
 import Colors from "@/constants/Colors";
 import { Spacing, BorderRadius, Typography } from "@/constants/Styles";
 import { PARENT_SERVICE_URL } from "@/lib/api-endpoints";
@@ -15,14 +19,13 @@ import {
   FlatList,
   RefreshControl,
   StyleSheet,
-  Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ServicesPage() {
+  const { t } = useLanguage();
   const [services, setServices] = useState<ParentService[]>([]);
   const [filteredServices, setFilteredServices] = useState<ParentService[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,21 +149,23 @@ export default function ServicesPage() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: Math.max(insets.top, Spacing.sm) }]}>
         <View>
-          <Text style={styles.headerTitle}>Our Services</Text>
-          <Text style={styles.headerSubtitle}>
-            {filteredServices.length} services available
-          </Text>
+          <AppText style={styles.headerTitle}>{t.customer.services.title}</AppText>
+          <AppText style={styles.headerSubtitle}>
+            {filteredServices.length} {t.customer.services.availableCount}
+          </AppText>
         </View>
-        <NotificationBell />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <NotificationBell />
+        </View>
       </View>
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
           <Ionicons name="search" size={20} color={Colors.text.tertiary} />
-          <TextInput
+          <AppTextInput
             style={styles.searchInput}
-            placeholder="Search services..."
+            placeholder={t.customer.services.searchPlaceholder}
             placeholderTextColor={Colors.text.tertiary}
             value={searchQuery}
             onChangeText={handleSearch}
@@ -194,12 +199,12 @@ export default function ServicesPage() {
               size={64}
               color={Colors.text.tertiary}
             />
-            <Text style={styles.emptyTitle}>No Services Found</Text>
-            <Text style={styles.emptyText}>
+            <AppText style={styles.emptyTitle}>{t.common.noServicesFound}</AppText>
+            <AppText style={styles.emptyText}>
               {searchQuery
-                ? "Try adjusting your search"
-                : "No services available at the moment"}
-            </Text>
+                ? t.common.tryAdjustSearch
+                : t.common.noServicesAvailable}
+            </AppText>
             {searchQuery && (
               <TouchableOpacity
                 style={styles.clearButton}
@@ -208,7 +213,7 @@ export default function ServicesPage() {
                   setFilteredServices(services);
                 }}
               >
-                <Text style={styles.clearButtonText}>Clear Search</Text>
+                <AppText style={styles.clearButtonText}>{t.common.clearSearch}</AppText>
               </TouchableOpacity>
             )}
           </View>
@@ -221,23 +226,23 @@ export default function ServicesPage() {
           <View style={styles.checkoutInfo}>
             <View style={styles.itemsCount}>
               <Ionicons name="cart" size={20} color={Colors.text.secondary} />
-              <Text style={styles.itemsCountText}>
+              <AppText style={styles.itemsCountText}>
                 {getTotalItems()} item(s)
-              </Text>
+              </AppText>
             </View>
             <View style={styles.totalSection}>
-              <Text style={styles.totalLabel}>Total</Text>
-              <Text style={styles.totalPrice}>
+              <AppText style={styles.totalLabel}>Total</AppText>
+              <AppText style={styles.totalPrice}>
                 ₨{Math.round(calculateTotal())}
-              </Text>
+              </AppText>
             </View>
           </View>
           <TouchableOpacity
             style={styles.checkoutButton}
             onPress={handleCheckout}
           >
-            <Text style={styles.checkoutButtonText}>Checkout</Text>
-            <Ionicons
+            <AppText style={styles.checkoutButtonText}>Checkout</AppText>
+            <DirectionalIcon
               name="arrow-forward"
               size={20}
               color={Colors.neutral.white}

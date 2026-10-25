@@ -1,3 +1,6 @@
+import { localizedAlert } from "@/lib/i18n/localized-alert";
+import AppTextInput from "@/components/common/AppTextInput";
+import AppText from "@/components/common/AppText";
 import Button from "@/components/Button";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
@@ -11,8 +14,6 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
-  TextInput,
   View,
   ScrollView,
   Keyboard,
@@ -121,7 +122,7 @@ export default function MapPicker({
       setLoading(true);
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission Denied", "Default location will be used. You can pan to select your address manually.");
+        localizedAlert("Permission Denied", "Default location will be used. You can pan to select your address manually.");
         fetchAddress(region.latitude, region.longitude);
         setLoading(false);
         return;
@@ -223,10 +224,10 @@ export default function MapPicker({
         setSuggestions([]);
         fetchAddress(newRegion.latitude, newRegion.longitude);
       } else {
-        Alert.alert("Not Found", "Could not find that location.");
+        localizedAlert("Not Found", "Could not find that location.");
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to search location. Please try again.");
+      localizedAlert("Error", "Failed to search location. Please try again.");
     } finally {
       setSearching(false);
     }
@@ -276,13 +277,13 @@ export default function MapPicker({
           {Platform.OS === "web" ? (
             <View style={styles.loadingContainer}>
               <Ionicons name="map-outline" size={64} color={Colors.text.tertiary} />
-              <Text style={styles.loadingText}>Map selection is only available on mobile app</Text>
+              <AppText style={styles.loadingText}>Map selection is only available on mobile app</AppText>
               <Button title="Close" onPress={onClose} variant="outline" />
             </View>
           ) : loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={Colors.themes.customer.primary} />
-              <Text style={styles.loadingText}>Loading map...</Text>
+              <AppText style={styles.loadingText}>Loading map...</AppText>
             </View>
           ) : (
             <View style={StyleSheet.absoluteFill}>
@@ -315,7 +316,7 @@ export default function MapPicker({
         {/* Floating Header & Search */}
         <View style={[styles.floatingHeader, { paddingTop: Math.max(insets.top, 16) }]} pointerEvents="box-none">
           <View style={styles.headerTop}>
-            <Text style={styles.title}>Select Location</Text>
+            <AppText style={styles.title}>Select Location</AppText>
             <Pressable onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={Colors.text.primary} />
             </Pressable>
@@ -323,7 +324,7 @@ export default function MapPicker({
 
           <View style={styles.searchContainer}>
             <Ionicons name="search" size={20} color={Colors.text.tertiary} style={styles.searchIcon} />
-            <TextInput
+            <AppTextInput
               style={styles.searchInput}
               placeholder="Search city, area, or street..."
               placeholderTextColor={Colors.text.tertiary}
@@ -347,12 +348,12 @@ export default function MapPicker({
                   >
                     <Ionicons name="location-outline" size={16} color={Colors.text.secondary} />
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.suggestionTitle} numberOfLines={1}>
+                      <AppText style={styles.suggestionTitle} numberOfLines={1}>
                         {item.name || item.display_name.split(',')[0]}
-                      </Text>
-                      <Text style={styles.suggestionSubtitle} numberOfLines={1}>
+                      </AppText>
+                      <AppText style={styles.suggestionSubtitle} numberOfLines={1}>
                         {item.display_name}
-                      </Text>
+                      </AppText>
                     </View>
                   </Pressable>
                 ))}
@@ -375,12 +376,12 @@ export default function MapPicker({
                 color={Colors.themes.customer.primary}
               />
               <View style={{ flex: 1 }}>
-                <Text style={styles.addressPreviewTitle}>
+                <AppText style={styles.addressPreviewTitle}>
                   {isMoving ? "Locating..." : "Selected Address"}
-                </Text>
-                <Text style={styles.addressPreviewText} numberOfLines={2}>
+                </AppText>
+                <AppText style={styles.addressPreviewText} numberOfLines={2}>
                   {isMoving ? "Move map to pin location" : formatFullAddress(currentAddressObj)}
-                </Text>
+                </AppText>
               </View>
             </View>
 

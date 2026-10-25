@@ -1,6 +1,9 @@
+import DirectionalIcon from "@/components/common/DirectionalIcon";
+import AppText from "@/components/common/AppText";
 import Loader from "@/components/Loader";
 import ContactSupportModal from "@/components/orders/ContactSupportModal";
 import NotificationBell from "@/components/common/NotificationBell";
+import { useLanguage } from "@/context/language-context";
 import Colors from "@/constants/Colors";
 import { Spacing, BorderRadius, Typography } from "@/constants/Styles";
 import { ORDER_URL } from "@/lib/api-endpoints";
@@ -12,27 +15,34 @@ import React, { useCallback, useState } from "react";
 import {
   FlatList,
   RefreshControl,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
+  StyleSheet,  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const STATUS_FILTERS = [
-  { id: "all", label: "All", icon: "list" },
-  { id: "pending", label: "Allocated", icon: "hourglass" },
-  { id: "in_progress", label: "In Progress", icon: "time" },
-  { id: "completed", label: "Completed", icon: "checkmark-circle" },
-  { id: "cancelled", label: "Cancelled", icon: "close-circle" },
+  { id: "all", icon: "list" },
+  { id: "pending", icon: "hourglass" },
+  { id: "in_progress", icon: "time" },
+  { id: "completed", icon: "checkmark-circle" },
+  { id: "cancelled", icon: "close-circle" },
 ];
 
 export default function OrdersPage() {
+  const { t } = useLanguage();
+  const filterLabels: Record<string, string> = {
+    all: t.customer.orders.filterAll,
+    pending: t.customer.orders.pending,
+    in_progress: t.customer.orders.inProgress,
+    completed: t.customer.orders.completed,
+    cancelled: t.customer.orders.cancelled,
+  };
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState("all");
+  const selectedStatus = (filterLabels[selectedFilter] || "").toLowerCase();
   const [showContactModal, setShowContactModal] = useState(false);
 
   // Pagination states
@@ -193,7 +203,7 @@ export default function OrdersPage() {
             size={16}
             color={Colors.themes.customer.primary}
           />
-          <Text style={styles.orderNumber}>{item.order_number}</Text>
+          <AppText style={styles.orderNumber}>{item.order_number}</AppText>
         </View>
         <View
           style={[
@@ -206,11 +216,11 @@ export default function OrdersPage() {
             size={12}
             color={getStatusColor(item.status)}
           />
-          <Text
+          <AppText
             style={[styles.statusText, { color: getStatusColor(item.status) }]}
           >
             {getStatusLabel(item.status)}
-          </Text>
+          </AppText>
         </View>
       </View>
 
@@ -221,7 +231,7 @@ export default function OrdersPage() {
             size={14}
             color={Colors.text.tertiary}
           />
-          <Text style={styles.detailText}>{formatDate(item.order_date)}</Text>
+          <AppText style={styles.detailText}>{formatDate(item.order_date)}</AppText>
         </View>
         <View style={styles.detailRow}>
           <Ionicons
@@ -229,9 +239,9 @@ export default function OrdersPage() {
             size={14}
             color={Colors.text.tertiary}
           />
-          <Text style={styles.detailText}>
+          <AppText style={styles.detailText}>
             {item.items?.length || 0} service(s)
-          </Text>
+          </AppText>
         </View>
         <View style={styles.detailRow}>
           <Ionicons
@@ -239,22 +249,22 @@ export default function OrdersPage() {
             size={14}
             color={Colors.text.tertiary}
           />
-          <Text style={[styles.detailText, { textTransform: "capitalize" }]}>
+          <AppText style={[styles.detailText, { textTransform: "capitalize" }]}>
             {item.payment_method}
-          </Text>
+          </AppText>
         </View>
       </View>
 
       <View style={styles.orderFooter}>
         <View>
-          <Text style={styles.totalLabel}>Total Amount</Text>
-          <Text style={styles.totalAmount}>
+          <AppText style={styles.totalLabel}>Total Amount</AppText>
+          <AppText style={styles.totalAmount}>
             ₨{Math.round(item.total_amount)}
-          </Text>
+          </AppText>
         </View>
         <View style={styles.viewButton}>
-          <Text style={styles.viewButtonText}>View Details</Text>
-          <Ionicons
+          <AppText style={styles.viewButtonText}>View Details</AppText>
+          <DirectionalIcon
             name="chevron-forward"
             size={16}
             color={Colors.themes.customer.primary}
@@ -274,8 +284,8 @@ export default function OrdersPage() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>My Orders</Text>
-          <Text style={styles.headerSubtitle}>{stats.total} total orders</Text>
+          <AppText style={styles.headerTitle}>{t.customer.orders.title}</AppText>
+          <AppText style={styles.headerSubtitle}>{stats.total} {t.common.details}</AppText>
         </View>
         <View style={styles.headerActions}>
           <NotificationBell />
@@ -317,14 +327,14 @@ export default function OrdersPage() {
                 }
               />
               <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Text
+                <AppText
                   style={[
                     styles.filterTabText,
                     selectedFilter === item.id && styles.filterTabTextActive,
                   ]}
                 >
-                  {item.label}
-                </Text>
+                  {filterLabels[item.id]}
+                </AppText>
                 {item.id !== "all" && (
                   <View
                     style={[
@@ -332,7 +342,7 @@ export default function OrdersPage() {
                       selectedFilter === item.id && styles.countBadgeActive,
                     ]}
                   >
-                    <Text
+                    <AppText
                       style={[
                         styles.countText,
                         selectedFilter === item.id && styles.countTextActive,
@@ -347,7 +357,7 @@ export default function OrdersPage() {
                             : item.id === "cancelled"
                               ? stats.cancelled
                               : 0}
-                    </Text>
+                    </AppText>
                   </View>
                 )}
               </View>
@@ -374,16 +384,14 @@ export default function OrdersPage() {
           if (loadingMore) {
             return (
               <View style={styles.loadingMoreContainer}>
-                <Text style={styles.loadingMoreText}>
-                  Loading more orders...
-                </Text>
+                <AppText style={styles.loadingMoreText}>{t.customer.orders.loadingMore}</AppText>
               </View>
             );
           }
           if (currentPage >= lastPage && filteredOrders.length > 0) {
             return (
               <View style={styles.endOfListContainer}>
-                <Text style={styles.endOfListText}>No more orders</Text>
+                <AppText style={styles.endOfListText}>{t.customer.orders.noMoreOrders}</AppText>
               </View>
             );
           }
@@ -396,22 +404,22 @@ export default function OrdersPage() {
               size={64}
               color={Colors.text.tertiary}
             />
-            <Text style={styles.emptyTitle}>
+            <AppText style={styles.emptyTitle}>
               {selectedFilter === "all"
-                ? "No Orders Yet"
-                : `No ${selectedFilter.replace("_", " ")} Orders`}
-            </Text>
-            <Text style={styles.emptyText}>
+                ? t.customer.orders.emptyTitle
+                : t.customer.orders.emptyFilteredTitle.replace("{{status}}", selectedStatus)}
+            </AppText>
+            <AppText style={styles.emptyText}>
               {selectedFilter === "all"
-                ? "You haven't placed any orders yet."
-                : `You don't have any ${selectedFilter.replace("_", " ")} orders.`}
-            </Text>
+                ? t.customer.orders.emptyMessage
+                : t.customer.orders.emptyFilteredMessage.replace("{{status}}", selectedStatus)}
+            </AppText>
             {selectedFilter === "all" && (
               <TouchableOpacity
                 style={styles.browseButton}
                 onPress={() => router.push("/customer/(tabs)/services")}
               >
-                <Text style={styles.browseButtonText}>Browse Services</Text>
+                <AppText style={styles.browseButtonText}>{t.customer.orders.browseServices}</AppText>
               </TouchableOpacity>
             )}
           </View>

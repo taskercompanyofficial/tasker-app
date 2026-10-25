@@ -7,8 +7,12 @@ import * as Application from "expo-application";
 import { AppState, AppStateStatus, Linking, Platform } from "react-native";
 
 import Toast from "react-native-toast-message";
+import axios from "axios";
+import { BACKEND_URL } from "@/lib/api-endpoints";
 
 export const VENDOR_BG_LOCATION_TASK = "TASKER_VENDOR_BG_LOCATION_TASK";
+
+let iosLocationSubscription: Location.LocationSubscription | null = null;
 
 export const isExpoGo =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
@@ -34,20 +38,10 @@ export async function requestVendorNotificationPermissions(): Promise<boolean> {
 }
 
 /**
- * Request Android Overlay Permission ("Display over other apps" / SYSTEM_ALERT_WINDOW)
- * Allows Tasker floating logo/bubble and popups when the app is minimized.
+ * Request Android Overlay Permission (No-op when SYSTEM_ALERT_WINDOW is disabled)
  */
 export async function requestVendorOverlayPermission(): Promise<void> {
-  if (Platform.OS !== "android") return;
-  try {
-    await Linking.sendIntent("android.settings.action.MANAGE_OVERLAY_PERMISSION");
-  } catch (err) {
-    try {
-      await Linking.openSettings();
-    } catch (e) {
-      console.warn("[VendorBGLocation] Overlay settings open error:", e);
-    }
-  }
+  return;
 }
 
 /**
@@ -77,11 +71,85 @@ export async function requestVendorBatteryOptimizationIgnore(): Promise<void> {
 
 
 /**
- * Request Vendor Foreground + Background Location Permissions & Notifications
+ * Helper to ping vendor location to backend (used by iOS foreground tracking)
+ */
+async function pingVendorLocationToBackend(loc: Location.LocationObject, workOrderId: string | number) {
+  try {
+    const [token, appMode] = await Promise.all([
+      AsyncStorage.getItem("bg_auth_token"),
+      AsyncStorage.getItem("bg_app_mode"),
+    ]);
+
+    if (!token) return;
+
+    const prefix = appMode === "vendor_staff" ? "vendor-staff" : "vendor";
+    const targetUrl = `${BACKEND_URL}/api/${prefix}/location/ping`;
+
+    const payload = {
+      latitude: loc.coords.latitude,
+      longitude: loc.coords.longitude,
+      heading: loc.coords.heading ?? null,
+      speed: loc.coords.speed ?? null,
+      accuracy: loc.coords.accuracy ?? null,
+      battery_level: 100,
+      is_charging: false,
+      work_order_id: Number(workOrderId),
+      app_state: "foreground",
+    };
+
+    await axios.post(targetUrl, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+      timeout: 6000,
+    });
+  } catch (err: any) {
+    console.warn("[VendorLocation:iOS] Ping error:", err?.message);
+  }
+}
+
+/**
+ * Start iOS Foreground Location Watcher
+ */
+export async function startIosForegroundTracking(workOrderId: string | number): Promise<void> {
+  if (iosLocationSubscription) {
+    iosLocationSubscription.remove();
+    iosLocationSubscription = null;
+  }
+
+  try {
+    iosLocationSubscription = await Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: 4000,
+        distanceInterval: 8,
+      },
+      (loc) => {
+        void pingVendorLocationToBackend(loc, workOrderId);
+      }
+    );
+  } catch (e) {
+    console.warn("[VendorLocation:iOS] watchPositionAsync error:", e);
+  }
+}
+
+/**
+ * Stop iOS Foreground Location Watcher
+ */
+export function stopIosForegroundTracking(): void {
+  if (iosLocationSubscription) {
+    iosLocationSubscription.remove();
+    iosLocationSubscription = null;
+  }
+}
+
+/**
+ * Request Vendor Foreground Location Permissions & Notifications
  */
 export async function requestVendorBackgroundLocationPermissions(): Promise<boolean> {
   try {
-    // 1. Foreground location ("While using the app")
+    // Foreground location ("While using the app")
     const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
     if (fgStatus !== "granted") {
       Toast.show({
@@ -92,18 +160,7 @@ export async function requestVendorBackgroundLocationPermissions(): Promise<bool
       return false;
     }
 
-    // 2. Background location — shows system dialog on Android 10+
-    //    On iOS this upgrades the permission to "Always Allow"
-    if (!isExpoGo) {
-      try {
-        await Location.requestBackgroundPermissionsAsync();
-        // Proceed even if background is denied — foreground task still works
-      } catch (_) {
-        // Some older device APIs don't support this call
-      }
-    }
-
-    // 3. Notifications for the Android Foreground Service banner
+    // Notifications
     await requestVendorNotificationPermissions();
 
     return true;
@@ -114,16 +171,10 @@ export async function requestVendorBackgroundLocationPermissions(): Promise<bool
 }
 
 /**
- * Start Vendor Background Navigation
+ * Start Vendor Navigation
  *
- * - Stores work order context in AsyncStorage for the background task to read
- * - Starts expo-location background updates (foreground service on Android)
- * - The task handler is defined in tasks/vendorLocationTask.ts which MUST be
- *   imported at the app root (_layout.tsx) before any navigation loads
- *
- * @param workOrderId     - DB id of the active work order (passed to backend ping)
- * @param workOrderNumber - Human-readable number shown in the notification
- * @param customerName    - Optional customer name for the notification body
+ * - Stores work order context in AsyncStorage for pings
+ * - Starts foreground watchPositionAsync compliant with foreground-only location
  */
 export async function startVendorBackgroundNavigation(
   workOrderId: string | number,
@@ -131,53 +182,15 @@ export async function startVendorBackgroundNavigation(
   customerName?: string,
 ): Promise<boolean> {
   try {
-    // Expo Go doesn't support custom native background tasks
-    if (isExpoGo) {
-      console.log("[VendorBGLocation] Expo Go — background task skipped");
-      return true;
-    }
-
     const hasPermissions = await requestVendorBackgroundLocationPermissions();
     if (!hasPermissions) return false;
 
-    // Persist work order ID so the background task can send it in each ping
+    // Persist work order ID so the location service can send it in each ping
     await AsyncStorage.setItem("active_work_order_id", String(workOrderId));
-    // auth_token & app_mode are synced separately in auth-store.ts persistState()
 
-    // Guard against double-start
-    const alreadyRunning = await Location.hasStartedLocationUpdatesAsync(
-      VENDOR_BG_LOCATION_TASK,
-    ).catch(() => false);
+    await startIosForegroundTracking(workOrderId);
+    console.log("[VendorLocation] Foreground tracking started ✅");
 
-    if (alreadyRunning) {
-      console.log("[VendorBGLocation] Task already running — skipping start");
-      return true;
-    }
-
-    await Location.startLocationUpdatesAsync(VENDOR_BG_LOCATION_TASK, {
-      accuracy: Location.Accuracy.BestForNavigation,
-
-      // Fire every 4s OR when moved 8m (whichever comes first)
-      timeInterval: 4000,
-      distanceInterval: 8,
-
-      // Android: persistent Foreground Service notification (required for reliable GPS)
-      foregroundService: {
-        notificationTitle: "On The Way",
-        notificationBody: customerName
-          ? `Heading to ${customerName} • Job #${workOrderNumber}`
-          : `Live tracking active • Job #${workOrderNumber}`,
-        notificationColor: "#10B981",
-        killServiceOnDestroy: false, // survive force-close
-      },
-
-      // iOS: show the blue bar at the top of the screen
-      showsBackgroundLocationIndicator: true,
-      pausesUpdatesAutomatically: false,
-      mayShowUserSettingsDialog: true,
-    });
-
-    console.log("[VendorBGLocation] Background task started ✅");
     return true;
   } catch (err) {
     console.warn("[VendorBGLocation] Start error:", err);
@@ -186,23 +199,14 @@ export async function startVendorBackgroundNavigation(
 }
 
 /**
- * Stop Vendor Background Location Task
+ * Stop Vendor Location Task
  * Call when the trip ends or the vendor goes offline.
  */
 export async function stopVendorBackgroundNavigation(): Promise<void> {
   try {
     await AsyncStorage.removeItem("active_work_order_id");
-
-    if (isExpoGo) return;
-
-    const isRunning = await Location.hasStartedLocationUpdatesAsync(
-      VENDOR_BG_LOCATION_TASK,
-    ).catch(() => false);
-
-    if (isRunning) {
-      await Location.stopLocationUpdatesAsync(VENDOR_BG_LOCATION_TASK);
-      console.log("[VendorBGLocation] Background task stopped ✅");
-    }
+    stopIosForegroundTracking();
+    console.log("[VendorLocation] Foreground tracking stopped ✅");
   } catch (err) {
     console.warn("[VendorBGLocation] Stop error:", err);
   }
@@ -251,8 +255,7 @@ export interface VendorPermissionsCheck {
 
 /**
  * Checks all required permissions before allowing the vendor to go ONLINE.
- * Returns true for isReady only when Foreground, Background ("Allow all the time"),
- * and Android Overlay ("Display over other apps") are all granted.
+ * Returns true for isReady when Foreground location is granted.
  */
 export async function checkVendorOnlineReadiness(): Promise<VendorPermissionsCheck> {
   if (isExpoGo) {
@@ -264,28 +267,15 @@ export async function checkVendorOnlineReadiness(): Promise<VendorPermissionsChe
     };
   }
 
-  // 1. Foreground Location
+  // Foreground Location ("While using the app")
   const fg = await Location.getForegroundPermissionsAsync();
   const hasForeground = fg.status === "granted";
 
-  // 2. Background Location ("Allow all the time")
-  let hasBackground = false;
-  if (hasForeground) {
-    const bg = await Location.getBackgroundPermissionsAsync();
-    hasBackground = bg.status === "granted";
-  }
-
-  // 3. Display over other apps (Android only)
-  let hasOverlay = true;
-  if (Platform.OS === "android") {
-    hasOverlay = await checkSystemOverlayPermission();
-  }
-
   return {
     hasForeground,
-    hasBackground,
-    hasOverlay,
-    isReady: hasForeground && hasBackground && hasOverlay,
+    hasBackground: true,
+    hasOverlay: true,
+    isReady: hasForeground,
   };
 }
 

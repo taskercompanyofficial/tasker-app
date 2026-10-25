@@ -1,3 +1,6 @@
+import { localizedAlert } from "@/lib/i18n/localized-alert";
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import AddAddressForm from "@/components/home/AddAddressForm";
 import Loader from "@/components/Loader";
 import Colors from "@/constants/Colors";
@@ -14,7 +17,6 @@ import {
   FlatList,
   RefreshControl,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -71,7 +73,7 @@ export default function MyAddressesPage() {
   };
 
   const handleDeleteAddress = (addressId: number) => {
-    Alert.alert(
+    localizedAlert(
       "Delete Address",
       "Are you sure you want to delete this address?",
       [
@@ -83,9 +85,9 @@ export default function MyAddressesPage() {
             try {
               await myAxios.delete(`${ADDRESS_URL}/${addressId}`);
               fetchAddresses();
-              Alert.alert("Success", "Address deleted successfully");
+              localizedAlert("Success", "Address deleted successfully");
             } catch (error) {
-              Alert.alert("Error", "Failed to delete address");
+              localizedAlert("Error", "Failed to delete address");
             }
           },
         },
@@ -128,10 +130,10 @@ export default function MyAddressesPage() {
               color={Colors.themes.customer.primary}
             />
           </View>
-          <Text style={styles.addressType}>
+          <AppText style={styles.addressType}>
             {item.address_type.charAt(0).toUpperCase() +
               item.address_type.slice(1)}
-          </Text>
+          </AppText>
         </View>
         <View style={styles.addressActions}>
           <TouchableOpacity
@@ -154,19 +156,19 @@ export default function MyAddressesPage() {
       </View>
 
       <View style={styles.addressContent}>
-        <Text style={styles.addressText}>{item.address_line_1}</Text>
+        <AppText style={styles.addressText}>{item.address_line_1}</AppText>
         {item.address_line_2 && (
-          <Text style={styles.addressText}>{item.address_line_2}</Text>
+          <AppText style={styles.addressText}>{item.address_line_2}</AppText>
         )}
-        <Text style={styles.addressText}>
+        <AppText style={styles.addressText}>
           {item.city}, {item.state} {item.zip_code}
-        </Text>
-        <Text style={styles.addressText}>{item.country}</Text>
+        </AppText>
+        <AppText style={styles.addressText}>{item.country}</AppText>
       </View>
 
       <View style={styles.addressFooter}>
         <View style={styles.areaTypeBadge}>
-          <Text style={styles.areaTypeText}>{item.area_type}</Text>
+          <AppText style={styles.areaTypeText}>{item.area_type}</AppText>
         </View>
       </View>
     </View>
@@ -184,9 +186,9 @@ export default function MyAddressesPage() {
           onPress={() => router.back()}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+          <DirectionalIcon name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Addresses</Text>
+        <AppText style={styles.headerTitle}>My Addresses</AppText>
         <TouchableOpacity onPress={handleAddNew} style={styles.addButton}>
           <Ionicons name="add" size={24} color={Colors.themes.customer.primary} />
         </TouchableOpacity>
@@ -208,10 +210,10 @@ export default function MyAddressesPage() {
               size={64}
               color={Colors.text.tertiary}
             />
-            <Text style={styles.emptyTitle}>No Addresses</Text>
-            <Text style={styles.emptyText}>
+            <AppText style={styles.emptyTitle}>No Addresses</AppText>
+            <AppText style={styles.emptyText}>
               You haven&apos;t added any addresses yet.
-            </Text>
+            </AppText>
             <TouchableOpacity
               style={styles.addNewButton}
               onPress={handleAddNew}
@@ -221,7 +223,7 @@ export default function MyAddressesPage() {
                 size={20}
                 color={Colors.neutral.white}
               />
-              <Text style={styles.addNewButtonText}>Add Address</Text>
+              <AppText style={styles.addNewButtonText}>Add Address</AppText>
             </TouchableOpacity>
           </View>
         }

@@ -1,7 +1,8 @@
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { Spacing, Typography } from "@/constants/Styles";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -9,7 +10,7 @@ export default function ShopOrders() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Orders</Text>
+        <AppText style={styles.headerTitle}>My Orders</AppText>
       </View>
       <View style={styles.content}>
         <Ionicons
@@ -17,7 +18,7 @@ export default function ShopOrders() {
           size={64}
           color={Colors.text.tertiary}
         />
-        <Text style={styles.emptyText}>You haven't placed any orders yet.</Text>
+        <AppText style={styles.emptyText}>You haven't placed any orders yet.</AppText>
       </View>
     </SafeAreaView>
   );

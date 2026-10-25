@@ -1,3 +1,5 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Loader from "@/components/Loader";
 import Colors from "@/constants/Colors";
 import { Spacing, BorderRadius, Typography } from "@/constants/Styles";
@@ -7,7 +9,7 @@ import { Order, OrderItem } from "@/types/order";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ServiceDetailPage() {
@@ -86,11 +88,11 @@ export default function ServiceDetailPage() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>Service not found</Text>
-          <Text style={styles.errorText}>The requested service could not be loaded.</Text>
+          <AppText style={styles.errorTitle}>Service not found</AppText>
+          <AppText style={styles.errorText}>The requested service could not be loaded.</AppText>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.8}>
-            <Ionicons name="arrow-back" size={18} color={Colors.themes.customer.primary} />
-            <Text style={styles.backBtnText}>Go Back</Text>
+            <DirectionalIcon name="arrow-back" size={18} color={Colors.themes.customer.primary} />
+            <AppText style={styles.backBtnText}>Go Back</AppText>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -101,9 +103,9 @@ export default function ServiceDetailPage() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+          <DirectionalIcon name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Service Details</Text>
+        <AppText style={styles.headerTitle}>Service Details</AppText>
         <View style={styles.placeholder} />
       </View>
 
@@ -116,44 +118,44 @@ export default function ServiceDetailPage() {
         <View style={styles.card}>
           <View style={styles.serviceHeader}>
             <View style={styles.serviceInfo}>
-              <Text style={styles.serviceName}>{item.parentService?.name || "Service"}</Text>
-              <Text style={styles.serviceMeta}>Quantity: {item.quantity}</Text>
+              <AppText style={styles.serviceName}>{item.parentService?.name || "Service"}</AppText>
+              <AppText style={styles.serviceMeta}>Quantity: {item.quantity}</AppText>
             </View>
             <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + "15" }]}>
               <Ionicons name="ellipse" size={10} color={getStatusColor(item.status)} />
-              <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{item.status}</Text>
+              <AppText style={[styles.statusText, { color: getStatusColor(item.status) }]}>{item.status}</AppText>
             </View>
           </View>
 
           <View style={styles.row}>
             <Ionicons name="time-outline" size={16} color={Colors.text.tertiary} />
-            <Text style={styles.rowText}>
+            <AppText style={styles.rowText}>
               {formatDate(item.scheduled_date)} at {formatTime(item.scheduled_time)}
-            </Text>
+            </AppText>
           </View>
 
           <View style={styles.divider} />
 
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Unit Price</Text>
-            <Text style={styles.priceValue}>₨{Math.round(item.unit_price || item.subtotal)}</Text>
+            <AppText style={styles.priceLabel}>Unit Price</AppText>
+            <AppText style={styles.priceValue}>₨{Math.round(item.unit_price || item.subtotal)}</AppText>
           </View>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Subtotal</Text>
-            <Text style={styles.priceValue}>₨{Math.round(item.subtotal)}</Text>
+            <AppText style={styles.priceLabel}>Subtotal</AppText>
+            <AppText style={styles.priceValue}>₨{Math.round(item.subtotal)}</AppText>
           </View>
         </View>
 
         {item.parentService && (
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Service Info</Text>
+            <AppText style={styles.sectionTitle}>Service Info</AppText>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Name</Text>
-              <Text style={styles.infoValue}>{item.parentService.name}</Text>
+              <AppText style={styles.infoLabel}>Name</AppText>
+              <AppText style={styles.infoValue}>{item.parentService.name}</AppText>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Description</Text>
-              <Text style={styles.infoValue}>{item.parentService.description || "-"}</Text>
+              <AppText style={styles.infoLabel}>Description</AppText>
+              <AppText style={styles.infoValue}>{item.parentService.description || "-"}</AppText>
             </View>
           </View>
         )}
@@ -208,7 +210,7 @@ export default function ServiceDetailPage() {
                       />
                     )}
                   </View>
-                  <Text
+                  <AppText
                     style={[
                       styles.stepLabelSmall,
                       isActive && { color: Colors.themes.customer.primary, fontWeight: "700" },
@@ -216,7 +218,7 @@ export default function ServiceDetailPage() {
                     numberOfLines={1}
                   >
                     {label}
-                  </Text>
+                  </AppText>
                 </View>
               );
             })}

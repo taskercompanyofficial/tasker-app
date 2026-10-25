@@ -3,6 +3,7 @@ import { Service } from "./service";
 
 export type Category = {
   id: number;
+  main_category_id?: number;
   name: string;
   slug: string;
   description?: string;

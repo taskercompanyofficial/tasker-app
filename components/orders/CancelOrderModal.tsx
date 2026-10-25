@@ -1,3 +1,5 @@
+import AppTextInput from "@/components/common/AppTextInput";
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,8 +9,6 @@ import {
   Modal,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   TouchableOpacity,
   useWindowDimensions,
   View,
@@ -98,15 +98,15 @@ export default function CancelOrderModal({
             </View>
 
             {/* Title & Message */}
-            <Text style={[styles.title, isSmallScreen && { fontSize: 18 }]}>
+            <AppText style={[styles.title, isSmallScreen && { fontSize: 18 }]}>
               Cancel Service Order?
-            </Text>
-            <Text style={styles.message}>
+            </AppText>
+            <AppText style={styles.message}>
               Please let us know why you need to cancel. This helps us improve our service.
-            </Text>
+            </AppText>
 
             {/* Preset Reasons Chips */}
-            <Text style={styles.sectionLabel}>SELECT REASON</Text>
+            <AppText style={styles.sectionLabel}>SELECT REASON</AppText>
             <View style={styles.presetsList}>
               {presetReasons.map((r) => (
                 <TouchableOpacity
@@ -126,22 +126,22 @@ export default function CancelOrderModal({
                   >
                     {selectedPreset === r && <View style={styles.radioDot} />}
                   </View>
-                  <Text
+                  <AppText
                     style={[
                       styles.presetText,
                       selectedPreset === r && styles.presetTextSelected,
                     ]}
                   >
                     {r}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Additional Note Input */}
             <View style={styles.inputContainer}>
-              <Text style={styles.sectionLabel}>ADDITIONAL DETAILS (OPTIONAL)</Text>
-              <TextInput
+              <AppText style={styles.sectionLabel}>ADDITIONAL DETAILS (OPTIONAL)</AppText>
+              <AppTextInput
                 style={styles.input}
                 placeholder="Provide any additional comments..."
                 placeholderTextColor={Colors.text.tertiary}
@@ -162,7 +162,7 @@ export default function CancelOrderModal({
                 disabled={loading}
                 activeOpacity={0.7}
               >
-                <Text style={styles.cancelButtonText}>Keep Order</Text>
+                <AppText style={styles.cancelButtonText}>Keep Order</AppText>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -178,7 +178,7 @@ export default function CancelOrderModal({
                   <ActivityIndicator color={Colors.neutral.white} size="small" />
                 ) : (
                   <>
-                    <Text style={styles.confirmButtonText}>Yes, Cancel</Text>
+                    <AppText style={styles.confirmButtonText}>Yes, Cancel</AppText>
                     <Ionicons name="close-circle" size={16} color={Colors.neutral.white} />
                   </>
                 )}

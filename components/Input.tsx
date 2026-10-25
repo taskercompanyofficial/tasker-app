@@ -1,8 +1,8 @@
+import AppTextInput from "@/components/common/AppTextInput";
+import AppText from "@/components/common/AppText";
 import React, { useState } from "react";
 import {
   View,
-  TextInput,
-  Text,
   StyleSheet,
   TouchableOpacity,
   TextInputProps,
@@ -39,7 +39,7 @@ export default function Input({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <AppText style={styles.label}>{label}</AppText>}
       <View
         style={[
           styles.inputContainer,
@@ -51,7 +51,7 @@ export default function Input({
         ]}
       >
         {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
-        <TextInput
+        <AppTextInput
           style={styles.input}
           placeholderTextColor={Colors.neutral.gray[400]}
           onFocus={() => setIsFocused(true)}
@@ -68,7 +68,7 @@ export default function Input({
           </TouchableOpacity>
         )}
       </View>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && <AppText style={styles.errorText}>{error}</AppText>}
     </View>
   );
 }

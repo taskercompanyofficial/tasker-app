@@ -1,5 +1,7 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image, Linking } from "react-native";
+import { View, StyleSheet, TouchableOpacity, Image, Linking } from "react-native";
 import { Ionicons, MaterialCommunityIcons, FontAwesome } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Colors from "@/constants/Colors";
@@ -78,7 +80,7 @@ export function ChatHeader({
         style={styles.backButton}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Ionicons name="chevron-back" size={24} color={Colors.text.primary} />
+        <DirectionalIcon name="chevron-back" size={24} color={Colors.text.primary} />
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -114,9 +116,9 @@ export function ChatHeader({
 
         <View style={styles.infoContainer}>
           <View style={styles.nameRow}>
-            <Text style={styles.name} numberOfLines={1}>
+            <AppText style={styles.name} numberOfLines={1}>
               {displayName}
-            </Text>
+            </AppText>
             <MaterialCommunityIcons
               name="check-decagram"
               size={15}
@@ -126,7 +128,7 @@ export function ChatHeader({
           </View>
           <View style={styles.statusRow}>
             <View style={styles.statusDot} />
-            <Text style={styles.statusText}>{subtitle}</Text>
+            <AppText style={styles.statusText}>{subtitle}</AppText>
           </View>
         </View>
       </TouchableOpacity>

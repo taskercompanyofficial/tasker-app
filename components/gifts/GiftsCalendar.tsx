@@ -1,5 +1,6 @@
+import AppText from "@/components/common/AppText";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import { DefaultRewardPolicy } from "@/constants/Rewards";
@@ -22,8 +23,8 @@ export default function GiftsCalendar({ streak }: Props) {
         const achieved = day <= streak;
         return (
           <View key={day} style={[styles.cell, achieved && styles.cellAchieved]}>
-            <Text style={[styles.day, achieved && styles.dayAchieved]}>Day {day}</Text>
-            <Text style={[styles.reward, achieved && styles.rewardAchieved]}>{percent}% Off</Text>
+            <AppText style={[styles.day, achieved && styles.dayAchieved]}>Day {day}</AppText>
+            <AppText style={[styles.reward, achieved && styles.rewardAchieved]}>{percent}% Off</AppText>
           </View>
         );
       })}

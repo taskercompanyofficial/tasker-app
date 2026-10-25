@@ -1,3 +1,7 @@
+import AppTextInput from "@/components/common/AppTextInput";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
+import AppText from "@/components/common/AppText";
+import { useLanguage } from '@/context/language-context'
 import CheckoutModal from '@/components/checkout/CheckoutModal'
 import AlertModal from '@/components/common/AlertModal'
 import Loader from '@/components/Loader'
@@ -12,10 +16,11 @@ import { Ionicons } from '@expo/vector-icons'
 import { BottomSheetModal } from '@gorhom/bottom-sheet'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
-import { RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { RefreshControl, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 export default function ServiceDetail() {
+    const { t } = useLanguage()
     const { slug } = useLocalSearchParams<{ slug: string }>()
     const [service, setService] = useState<Service | null>(null)
     const [loading, setLoading] = useState(true)
@@ -23,6 +28,7 @@ export default function ServiceDetail() {
     const [searchQuery, setSearchQuery] = useState('')
     const [showFilters, setShowFilters] = useState(false)
     const [showInfoModal, setShowInfoModal] = useState(false)
+    const [sortOrder, setSortOrder] = useState<'default' | 'price-asc' | 'price-desc' | 'popular'>('default')
 
     const checkoutModalRef = useRef<BottomSheetModal>(null)
     const insets = useSafeAreaInsets()
@@ -96,10 +102,17 @@ export default function ServiceDetail() {
         checkoutModalRef.current?.present()
     }
 
-    const filteredServices = service?.parent_services?.filter(ps =>
-        ps.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ps.description.toLowerCase().includes(searchQuery.toLowerCase())
-    ) || []
+    const filteredServices = (service?.parent_services || [])
+        .filter(ps =>
+            ps.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            ps.description.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        .sort((a, b) => {
+            if (sortOrder === 'price-asc') return a.price - b.price
+            if (sortOrder === 'price-desc') return b.price - a.price
+            if (sortOrder === 'popular') return (b.usage_count ?? b.rating ?? 0) - (a.usage_count ?? a.rating ?? 0)
+            return 0
+        })
 
     if (loading) {
         return <Loader size='medium' fullScreen />
@@ -108,7 +121,7 @@ export default function ServiceDetail() {
     if (!service) {
         return (
             <View style={[styles.container, { paddingTop: insets.top }]}>
-                <Text style={styles.errorText}>Service not found</Text>
+                <AppText style={styles.errorText}>{t.customer.services.serviceNotFound}</AppText>
             </View>
         )
     }
@@ -121,26 +134,26 @@ export default function ServiceDetail() {
             <View style={[styles.customHeader, { paddingTop: insets.top }]}>
                 <View style={styles.headerTop}>
                     <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                        <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+                        <DirectionalIcon name="arrow-back" size={24} color={Colors.text.primary} />
                     </TouchableOpacity>
                     <View style={styles.headerTitleContainer}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
-                            <Text style={styles.headerTitle}>{service.name}</Text>
+                            <AppText style={styles.headerTitle}>{service.name}</AppText>
                             <TouchableOpacity
                                 accessibilityRole="button"
-                                accessibilityLabel="More information"
+                                accessibilityLabel={t.common.moreInformation}
                                 onPress={() => setShowInfoModal(true)}
                             >
                                 <Ionicons name="information-circle-outline" size={18} color={Colors.text.secondary} />
                             </TouchableOpacity>
                         </View>
-                        <Text
+                        <AppText
                             style={styles.headerSubtitle}
                             numberOfLines={2}
                             ellipsizeMode="tail"
                         >
                             {service.description}
-                        </Text>
+                        </AppText>
                     </View>
                     <TouchableOpacity
                         style={styles.filterButton}
@@ -157,9 +170,9 @@ export default function ServiceDetail() {
                 {/* Search Bar */}
                 <View style={styles.searchContainer}>
                     <Ionicons name="search" size={20} color={Colors.text.tertiary} />
-                    <TextInput
+                    <AppTextInput
                         style={styles.searchInput}
-                        placeholder="Search services..."
+                        placeholder={t.customer.services.searchPlaceholder}
                         placeholderTextColor={Colors.text.tertiary}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
@@ -174,16 +187,16 @@ export default function ServiceDetail() {
                 {/* Filter Options */}
                 {showFilters && (
                     <View style={styles.filterContainer}>
-                        <Text style={styles.filterTitle}>Sort by:</Text>
+                        <AppText style={styles.filterTitle}>{t.customer.services.sortBy}</AppText>
                         <View style={styles.filterOptions}>
-                            <TouchableOpacity style={styles.filterChip}>
-                                <Text style={styles.filterChipText}>Price: Low to High</Text>
+                            <TouchableOpacity style={styles.filterChip} onPress={() => setSortOrder('price-asc')}>
+                                <AppText style={styles.filterChipText}>{t.customer.services.priceLowToHigh}</AppText>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.filterChip}>
-                                <Text style={styles.filterChipText}>Price: High to Low</Text>
+                            <TouchableOpacity style={styles.filterChip} onPress={() => setSortOrder('price-desc')}>
+                                <AppText style={styles.filterChipText}>{t.customer.services.priceHighToLow}</AppText>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.filterChip}>
-                                <Text style={styles.filterChipText}>Most Popular</Text>
+                            <TouchableOpacity style={styles.filterChip} onPress={() => setSortOrder('popular')}>
+                                <AppText style={styles.filterChipText}>{t.customer.services.mostPopular}</AppText>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -200,10 +213,10 @@ export default function ServiceDetail() {
                 {/* Parent Services */}
                 <View style={styles.servicesSection}>
                     <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Available Services</Text>
-                        <Text style={styles.servicesCount}>
-                            {filteredServices.length} service{filteredServices.length !== 1 ? 's' : ''}
-                        </Text>
+                        <AppText style={styles.sectionTitle}>{t.customer.services.availableServices}</AppText>
+                        <AppText style={styles.servicesCount}>
+                            {filteredServices.length} {filteredServices.length === 1 ? t.customer.services.serviceCount : t.customer.services.servicesCount}
+                        </AppText>
                     </View>
                     {filteredServices.length > 0 ? (
                         filteredServices.map((parentService: ParentService) => (
@@ -217,9 +230,9 @@ export default function ServiceDetail() {
                     ) : (
                         <View style={styles.emptyState}>
                             <Ionicons name="search-outline" size={48} color={Colors.text.tertiary} />
-                            <Text style={styles.noServicesText}>
-                                {searchQuery ? 'No services match your search' : 'No services available'}
-                            </Text>
+                            <AppText style={styles.noServicesText}>
+                                {searchQuery ? t.customer.services.noMatchSearch : t.common.noServicesAvailable}
+                            </AppText>
                         </View>
                     )}
                 </View>
@@ -231,16 +244,16 @@ export default function ServiceDetail() {
                     <View style={styles.checkoutInfo}>
                         <View style={styles.itemsCount}>
                             <Ionicons name="cart" size={20} color={Colors.text.secondary} />
-                            <Text style={styles.itemsCountText}>{getTotalItems()} item(s)</Text>
+                            <AppText style={styles.itemsCountText}>{getTotalItems()} {t.common.items}</AppText>
                         </View>
                         <View style={styles.totalSection}>
-                            <Text style={styles.totalLabel}>Total</Text>
-                            <Text style={styles.totalPrice}>₨{Math.round(calculateTotal())}</Text>
+                            <AppText style={styles.totalLabel}>{t.common.total}</AppText>
+                            <AppText style={styles.totalPrice}>₨{Math.round(calculateTotal())}</AppText>
                         </View>
                     </View>
                     <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
-                        <Text style={styles.checkoutButtonText}>Checkout</Text>
-                        <Ionicons name="arrow-forward" size={20} color={Colors.neutral.white} />
+                        <AppText style={styles.checkoutButtonText}>{t.common.checkout}</AppText>
+                        <DirectionalIcon name="arrow-forward" size={20} color={Colors.neutral.white} />
                     </TouchableOpacity>
                 </View>
             )}

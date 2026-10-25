@@ -2,7 +2,7 @@
   "expo": {
     "name": "Tasker Company",
     "slug": "tasker-company",
-    "version": "1.0.1",
+    "version": "1.0.36",
     "orientation": "portrait",
     "icon": "./assets/icons/adaptive-icon.png",
     "scheme": "tasker-company",
@@ -17,27 +17,11 @@
       "bundleIdentifier": "com.taskercompany.company",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": false,
-          "NSExceptionDomains": {
-            "taskercompany.cloud": {
-              "NSIncludesSubdomains": true,
-              "NSTemporaryExceptionAllowsInsecureHTTPLoads": true
-            }
-          }
-        },
         "NSCameraUsageDescription": "Tasker requires camera access to scan your CNIC identity documents and capture biometric selfie photos for verification.",
         "NSPhotoLibraryUsageDescription": "Tasker requires photo library access so you can upload your CNIC card photos and portfolio images.",
-        "NSPhotoLibraryAddUsageDescription": "Tasker requires permission to save receipts and scanned documents.",
         "NSLocationWhenInUseUsageDescription": "Tasker requires access to your location to find nearby customer service requests and provide turn-by-turn navigation.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Tasker requires background location access to share live real-time location updates with customers while you are on the way to a job.",
-        "NSLocationAlwaysUsageDescription": "Tasker requires background location access to update customers on your arrival status even when the app is in background.",
         "NSMicrophoneUsageDescription": "Tasker requires microphone access so you can speak directly with customers and service technicians on voice calls.",
         "UIBackgroundModes": [
-          "audio",
-          "voip",
-          "location",
-          "fetch",
           "remote-notification"
         ]
       }
@@ -56,29 +40,7 @@
       "googleServicesFile": "./google-services.json",
       "predictiveBackGestureEnabled": false,
       "package": "com.taskercompany.company",
-      "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_BACKGROUND_LOCATION",
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_LOCATION",
-        "android.permission.SYSTEM_ALERT_WINDOW",
-        "android.permission.POST_NOTIFICATIONS",
-        "android.permission.WAKE_LOCK",
-        "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.VIBRATE"
-      ],
-      "blockedPermissions": [
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_MEDIA_VIDEO",
-        "android.permission.READ_MEDIA_AUDIO",
-        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
-      ],
+      "permissions": [],
       "intentFilters": [
         {
           "action": "VIEW",
@@ -95,7 +57,10 @@
               "pathPrefix": "/"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -107,15 +72,15 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Tasker to access your photo library so you can upload documents and receipts."
+          "photosPermission": "Tasker requires photo library access so you can upload your CNIC card photos and portfolio images."
         }
       ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow Tasker to access your location to calculate distance and navigate to customer appointments.",
-          "isAndroidBackgroundLocationEnabled": true,
-          "isAndroidForegroundServiceEnabled": true
+          "locationWhenInUsePermission": "Allow Tasker to access your location to calculate distance and navigate to customer appointments.",
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": false
         }
       ],
       [
@@ -137,7 +102,13 @@
       "expo-secure-store",
       "expo-maps",
       "expo-video",
-      "expo-audio",
+      [
+        "expo-audio",
+        {
+          "enableBackgroundPlayback": false,
+          "enableBackgroundRecording": false
+        }
+      ],
       "@react-native-community/datetimepicker",
       "expo-font",
       "expo-image",

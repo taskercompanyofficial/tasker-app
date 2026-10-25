@@ -1,3 +1,7 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import { localizedAlert } from "@/lib/i18n/localized-alert";
+import AppTextInput from "@/components/common/AppTextInput";
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { Spacing } from "@/constants/Styles";
 import { WORK_ORDER_URL } from "@/lib/api-endpoints";
@@ -12,8 +16,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   TouchableOpacity,
   useWindowDimensions,
   View,
@@ -153,7 +155,7 @@ export default function RescheduleModal({
       );
 
       if (res.data.status === "success" || res.status === 200) {
-        Toast.show({
+        localizedToast({
           type: "success",
           text1: "Schedule Updated",
           text2: `Rescheduled to ${formatDate(scheduledDate)} at ${formatTime(scheduledTime)}`,
@@ -161,14 +163,14 @@ export default function RescheduleModal({
         onSuccess();
         onClose();
       } else {
-        Alert.alert("Error", res.data?.message || "Failed to update schedule.");
+        localizedAlert("Error", res.data?.message || "Failed to update schedule.");
       }
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||
         err?.message ||
         "Failed to update schedule. Please try again.";
-      Alert.alert("Reschedule Error", msg);
+      localizedAlert("Reschedule Error", msg);
     } finally {
       setSubmitting(false);
     }
@@ -206,8 +208,8 @@ export default function RescheduleModal({
                   <Ionicons name="calendar" size={18} color={Colors.themes.customer.primary} />
                 </View>
                 <View>
-                  <Text style={[styles.title, isSmallScreen && { fontSize: 16 }]}>Reschedule Order</Text>
-                  <Text style={styles.subtitle}>Order #{orderNumber}</Text>
+                  <AppText style={[styles.title, isSmallScreen && { fontSize: 16 }]}>Reschedule Order</AppText>
+                  <AppText style={styles.subtitle}>Order #{orderNumber}</AppText>
                 </View>
               </View>
               <TouchableOpacity onPress={onClose} style={styles.closeBtn} hitSlop={10}>
@@ -216,21 +218,21 @@ export default function RescheduleModal({
             </View>
 
             {/* Quick Date Shortcuts */}
-            <Text style={styles.sectionLabel}>QUICK DATE SELECTION</Text>
+            <AppText style={styles.sectionLabel}>QUICK DATE SELECTION</AppText>
             <View style={styles.quickDateRow}>
               <TouchableOpacity style={styles.quickDateChip} onPress={() => setQuickDate(0)} activeOpacity={0.7}>
-                <Text style={styles.quickDateText}>Today</Text>
+                <AppText style={styles.quickDateText}>Today</AppText>
               </TouchableOpacity>
               <TouchableOpacity style={styles.quickDateChip} onPress={() => setQuickDate(1)} activeOpacity={0.7}>
-                <Text style={styles.quickDateText}>Tomorrow</Text>
+                <AppText style={styles.quickDateText}>Tomorrow</AppText>
               </TouchableOpacity>
               <TouchableOpacity style={styles.quickDateChip} onPress={() => setQuickDate(2)} activeOpacity={0.7}>
-                <Text style={styles.quickDateText}>In 2 Days</Text>
+                <AppText style={styles.quickDateText}>In 2 Days</AppText>
               </TouchableOpacity>
             </View>
 
             {/* Date & Time Selectors */}
-            <Text style={styles.sectionLabel}>APPOINTMENT TIMING</Text>
+            <AppText style={styles.sectionLabel}>APPOINTMENT TIMING</AppText>
             <View style={styles.scheduleRow}>
               <TouchableOpacity
                 style={styles.scheduleBtn}
@@ -244,8 +246,8 @@ export default function RescheduleModal({
                   <Ionicons name="calendar-outline" size={18} color={Colors.themes.customer.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.btnLabel}>DATE</Text>
-                  <Text style={styles.btnValue} numberOfLines={1}>{formatDate(scheduledDate)}</Text>
+                  <AppText style={styles.btnLabel}>DATE</AppText>
+                  <AppText style={styles.btnValue} numberOfLines={1}>{formatDate(scheduledDate)}</AppText>
                 </View>
               </TouchableOpacity>
 
@@ -261,16 +263,16 @@ export default function RescheduleModal({
                   <Ionicons name="time-outline" size={18} color={Colors.themes.customer.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.btnLabel}>TIME</Text>
-                  <Text style={styles.btnValue} numberOfLines={1}>{formatTime(scheduledTime)}</Text>
+                  <AppText style={styles.btnLabel}>TIME</AppText>
+                  <AppText style={styles.btnValue} numberOfLines={1}>{formatTime(scheduledTime)}</AppText>
                 </View>
               </TouchableOpacity>
             </View>
 
             {/* Reminder Options */}
             <View style={styles.reminderSection}>
-              <Text style={styles.sectionLabel}>SERVICE REMINDER</Text>
-              <Text style={styles.reminderSubtitle}>Notify me before technician arrival</Text>
+              <AppText style={styles.sectionLabel}>SERVICE REMINDER</AppText>
+              <AppText style={styles.reminderSubtitle}>Notify me before technician arrival</AppText>
               <View style={styles.reminderChips}>
                 {reminderOptions.map((opt) => (
                   <TouchableOpacity
@@ -287,14 +289,14 @@ export default function RescheduleModal({
                       size={12}
                       color={reminder === opt.id ? Colors.themes.customer.primary : Colors.text.tertiary}
                     />
-                    <Text
+                    <AppText
                       style={[
                         styles.reminderChipText,
                         reminder === opt.id && styles.reminderChipTextSelected,
                       ]}
                     >
                       {opt.label}
-                    </Text>
+                    </AppText>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -302,8 +304,8 @@ export default function RescheduleModal({
 
             {/* Reschedule Note */}
             <View style={styles.notesSection}>
-              <Text style={styles.sectionLabel}>OPTIONAL NOTE FOR TECHNICIAN</Text>
-              <TextInput
+              <AppText style={styles.sectionLabel}>OPTIONAL NOTE FOR TECHNICIAN</AppText>
+              <AppTextInput
                 style={styles.notesInput}
                 placeholder="Reason or time preferences (e.g., Please come after 3 PM)..."
                 placeholderTextColor={Colors.text.tertiary}
@@ -323,7 +325,7 @@ export default function RescheduleModal({
                 disabled={submitting}
                 activeOpacity={0.7}
               >
-                <Text style={styles.cancelText}>Cancel</Text>
+                <AppText style={styles.cancelText}>Cancel</AppText>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.submitBtn, submitting && { opacity: 0.6 }]}
@@ -335,7 +337,7 @@ export default function RescheduleModal({
                   <ActivityIndicator color={Colors.neutral.white} size="small" />
                 ) : (
                   <>
-                    <Text style={styles.submitText}>Save Changes</Text>
+                    <AppText style={styles.submitText}>Save Changes</AppText>
                     <Ionicons name="checkmark" size={16} color={Colors.neutral.white} />
                   </>
                 )}
@@ -352,16 +354,16 @@ export default function RescheduleModal({
             <View style={styles.iosPickerContainer}>
               <View style={styles.iosPickerHeader}>
                 <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                  <Text style={styles.iosCancelText}>Cancel</Text>
+                  <AppText style={styles.iosCancelText}>Cancel</AppText>
                 </TouchableOpacity>
-                <Text style={styles.iosPickerTitle}>Select Date</Text>
+                <AppText style={styles.iosPickerTitle}>Select Date</AppText>
                 <TouchableOpacity
                   onPress={() => {
                     setScheduledDate(tempDate);
                     setShowDatePicker(false);
                   }}
                 >
-                  <Text style={styles.iosDoneText}>Done</Text>
+                  <AppText style={styles.iosDoneText}>Done</AppText>
                 </TouchableOpacity>
               </View>
               <DateTimePicker
@@ -385,16 +387,16 @@ export default function RescheduleModal({
             <View style={styles.iosPickerContainer}>
               <View style={styles.iosPickerHeader}>
                 <TouchableOpacity onPress={() => setShowTimePicker(false)}>
-                  <Text style={styles.iosCancelText}>Cancel</Text>
+                  <AppText style={styles.iosCancelText}>Cancel</AppText>
                 </TouchableOpacity>
-                <Text style={styles.iosPickerTitle}>Select Time</Text>
+                <AppText style={styles.iosPickerTitle}>Select Time</AppText>
                 <TouchableOpacity
                   onPress={() => {
                     setScheduledTime(validateTime(tempTime));
                     setShowTimePicker(false);
                   }}
                 >
-                  <Text style={styles.iosDoneText}>Done</Text>
+                  <AppText style={styles.iosDoneText}>Done</AppText>
                 </TouchableOpacity>
               </View>
               <DateTimePicker

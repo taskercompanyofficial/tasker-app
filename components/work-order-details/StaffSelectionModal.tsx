@@ -1,8 +1,9 @@
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import React from "react";
 import {
   Modal,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
   FlatList,
@@ -37,7 +38,7 @@ export default function StaffSelectionModal({
       <Pressable style={styles.overlay} onPress={onClose}>
         <View style={styles.modalContent}>
           <View style={styles.header}>
-            <Text style={styles.title}>Assign Staff</Text>
+            <AppText style={styles.title}>Assign Staff</AppText>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color={Colors.text.primary} />
             </TouchableOpacity>
@@ -51,10 +52,10 @@ export default function StaffSelectionModal({
                   size={48}
                   color={Colors.text.tertiary}
                 />
-                <Text style={styles.emptyText}>No approved staff found</Text>
-                <Text style={styles.emptySubText}>
+                <AppText style={styles.emptyText}>No approved staff found</AppText>
+                <AppText style={styles.emptySubText}>
                   Please add staff and wait for their approval from admin.
-                </Text>
+                </AppText>
               </View>
             ) : (
               <FlatList
@@ -67,15 +68,15 @@ export default function StaffSelectionModal({
                     disabled={loading}
                   >
                     <View style={styles.staffAvatar}>
-                      <Text style={styles.avatarText}>
+                      <AppText style={styles.avatarText}>
                         {item.name.charAt(0).toUpperCase()}
-                      </Text>
+                      </AppText>
                     </View>
                     <View style={styles.staffInfo}>
-                      <Text style={styles.staffName}>{item.name}</Text>
-                      <Text style={styles.staffPhone}>{item.phone}</Text>
+                      <AppText style={styles.staffName}>{item.name}</AppText>
+                      <AppText style={styles.staffPhone}>{item.phone}</AppText>
                     </View>
-                    <Ionicons
+                    <DirectionalIcon
                       name="chevron-forward"
                       size={20}
                       color={Colors.text.tertiary}
@@ -88,7 +89,7 @@ export default function StaffSelectionModal({
           </View>
 
           <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <AppText style={styles.cancelButtonText}>Cancel</AppText>
           </TouchableOpacity>
         </View>
       </Pressable>

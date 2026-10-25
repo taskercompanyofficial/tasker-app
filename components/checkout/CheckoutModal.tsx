@@ -1,3 +1,8 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import { localizedAlert } from "@/lib/i18n/localized-alert";
+import AppTextInput from "@/components/common/AppTextInput";
+import AppText from "@/components/common/AppText";
+import DirectionalIcon from "@/components/common/DirectionalIcon";
 import AddressSelector, { Address, AddressSelectorRef } from "@/components/AddressSelector";
 import AddressDetailsModal from "@/components/checkout/AddressDetailsModal";
 import ConfirmOrderModal from "@/components/checkout/ConfirmOrderModal";
@@ -20,8 +25,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -117,7 +120,7 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
         if (Platform.OS !== "android") {
           const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (status !== "granted") {
-            Toast.show({
+            localizedToast({
               type: "error",
               text1: "Permission Required",
               text2: "Gallery permission is required to attach photos.",
@@ -165,15 +168,15 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
 
     const handleConfirmBookingClick = () => {
       if (!addressId) {
-        Alert.alert("Missing Address", "Please select a service address to continue.");
+        localizedAlert("Missing Address", "Please select a service address to continue.");
         return;
       }
       if (!customerName.trim()) {
-        Alert.alert("Missing Name", "Please provide your contact name.");
+        localizedAlert("Missing Name", "Please provide your contact name.");
         return;
       }
       if (!customerPhone.trim()) {
-        Alert.alert("Missing Phone", "Please provide your contact phone number.");
+        localizedAlert("Missing Phone", "Please provide your contact phone number.");
         return;
       }
       setShowConfirmModal(true);
@@ -189,7 +192,7 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
         setShowSuccessModal(true);
         return;
       }
-      Alert.alert("Booking Error", result.message || "Failed to create order. Please try again.");
+      localizedAlert("Booking Error", result.message || "Failed to create order. Please try again.");
     };
 
     const validateTime = (time: Date): Date => {
@@ -251,8 +254,8 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
             {/* Header */}
             <View style={styles.header}>
               <View>
-                <Text style={styles.headerTitle}>Checkout</Text>
-                <Text style={styles.headerSubtitle}>Review details & schedule booking</Text>
+                <AppText style={styles.headerTitle}>Checkout</AppText>
+                <AppText style={styles.headerSubtitle}>Review details & schedule booking</AppText>
               </View>
               <TouchableOpacity onPress={handleClose} style={styles.closeButton} activeOpacity={0.7}>
                 <Ionicons name="close" size={22} color={Colors.text.primary} />
@@ -267,10 +270,10 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
             >
               {/* Contact Info */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Contact Information</Text>
+                <AppText style={styles.sectionTitle}>Contact Information</AppText>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Full Name</Text>
-                  <TextInput
+                  <AppText style={styles.inputLabel}>Full Name</AppText>
+                  <AppTextInput
                     style={styles.input}
                     value={customerName}
                     onChangeText={setCustomerName}
@@ -280,8 +283,8 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
                   />
                 </View>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Phone Number</Text>
-                  <TextInput
+                  <AppText style={styles.inputLabel}>Phone Number</AppText>
+                  <AppTextInput
                     style={styles.input}
                     value={customerPhone}
                     onChangeText={setCustomerPhone}
@@ -294,9 +297,9 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
 
               {/* Service Overview */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
+                <AppText style={styles.sectionTitle}>
                   Selected Services ({items.length})
-                </Text>
+                </AppText>
                 {items.map((item, index) => {
                   const discountedPrice =
                     item.discountType === "percentage"
@@ -305,30 +308,30 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
                   return (
                     <View key={index} style={styles.serviceItem}>
                       <View style={styles.serviceInfo}>
-                        <Text style={styles.serviceName}>
+                        <AppText style={styles.serviceName}>
                           {item.serviceName}
-                        </Text>
-                        <Text style={styles.serviceQuantity}>
+                        </AppText>
+                        <AppText style={styles.serviceQuantity}>
                           Qty: {item.quantity} × ₨{Math.round(discountedPrice)}
-                        </Text>
+                        </AppText>
                       </View>
-                      <Text style={styles.servicePrice}>
+                      <AppText style={styles.servicePrice}>
                         ₨{Math.round(discountedPrice * item.quantity)}
-                      </Text>
+                      </AppText>
                     </View>
                   );
                 })}
                 <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Total Estimated Cost</Text>
-                  <Text style={styles.totalAmount}>
+                  <AppText style={styles.totalLabel}>Total Estimated Cost</AppText>
+                  <AppText style={styles.totalAmount}>
                     ₨{Math.round(totalAmount)}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
 
               {/* Address Selection */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Service Location</Text>
+                <AppText style={styles.sectionTitle}>Service Location</AppText>
                 <AddressSelector
                   ref={addressSelectorRef}
                   selectedAddressId={addressId}
@@ -345,10 +348,10 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
 
               {/* Schedule */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Schedule & Timing</Text>
-                <Text style={styles.workingHoursText}>
+                <AppText style={styles.sectionTitle}>Schedule & Timing</AppText>
+                <AppText style={styles.workingHoursText}>
                   Operating hours: 9:00 AM - 6:00 PM
-                </Text>
+                </AppText>
 
                 {/* Quick Date Shortcuts */}
                 <View style={{ flexDirection: "row", gap: Spacing.xs, marginBottom: Spacing.sm }}>
@@ -359,7 +362,7 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
                       setScheduledDate(d);
                     }}
                   >
-                    <Text style={{ fontSize: 11, fontWeight: "600", color: Colors.text.primary }}>Today</Text>
+                    <AppText style={{ fontSize: 11, fontWeight: "600", color: Colors.text.primary }}>Today</AppText>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={{ flex: 1, paddingVertical: 8, backgroundColor: Colors.neutral.gray[100], borderRadius: 8, alignItems: "center" }}
@@ -369,7 +372,7 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
                       setScheduledDate(d);
                     }}
                   >
-                    <Text style={{ fontSize: 11, fontWeight: "600", color: Colors.text.primary }}>Tomorrow</Text>
+                    <AppText style={{ fontSize: 11, fontWeight: "600", color: Colors.text.primary }}>Tomorrow</AppText>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={{ flex: 1, paddingVertical: 8, backgroundColor: Colors.neutral.gray[100], borderRadius: 8, alignItems: "center" }}
@@ -379,7 +382,7 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
                       setScheduledDate(d);
                     }}
                   >
-                    <Text style={{ fontSize: 11, fontWeight: "600", color: Colors.text.primary }}>In 2 Days</Text>
+                    <AppText style={{ fontSize: 11, fontWeight: "600", color: Colors.text.primary }}>In 2 Days</AppText>
                   </TouchableOpacity>
                 </View>
 
@@ -397,10 +400,10 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
                       />
                     </View>
                     <View style={styles.scheduleInfo}>
-                      <Text style={styles.scheduleLabel}>Date</Text>
-                      <Text style={styles.scheduleValue}>
+                      <AppText style={styles.scheduleLabel}>Date</AppText>
+                      <AppText style={styles.scheduleValue}>
                         {formatDate(scheduledDate)}
-                      </Text>
+                      </AppText>
                     </View>
                   </TouchableOpacity>
 
@@ -417,19 +420,19 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
                       />
                     </View>
                     <View style={styles.scheduleInfo}>
-                      <Text style={styles.scheduleLabel}>Time</Text>
-                      <Text style={styles.scheduleValue}>
+                      <AppText style={styles.scheduleLabel}>Time</AppText>
+                      <AppText style={styles.scheduleValue}>
                         {formatTime(scheduledTime)}
-                      </Text>
+                      </AppText>
                     </View>
                   </TouchableOpacity>
                 </View>
 
                 {/* Service Reminder Options */}
                 <View style={{ marginTop: Spacing.md }}>
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.text.primary, marginBottom: 6 }}>
+                  <AppText style={{ fontSize: 12, fontWeight: "700", color: Colors.text.primary, marginBottom: 6 }}>
                     Service Reminder Alert
-                  </Text>
+                  </AppText>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
                     {[
                       { id: "30m", label: "30 mins before" },
@@ -450,7 +453,7 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
                         }}
                         onPress={() => setReminderOption(opt.id)}
                       >
-                        <Text
+                        <AppText
                           style={{
                             fontSize: 11,
                             fontWeight: "600",
@@ -458,7 +461,7 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
                           }}
                         >
                           {opt.label}
-                        </Text>
+                        </AppText>
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
@@ -467,10 +470,10 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
 
               {/* Attachments Section */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Problem Photos & Attachments (Optional)</Text>
-                <Text style={styles.sectionSubtitle}>
+                <AppText style={styles.sectionTitle}>Problem Photos & Attachments (Optional)</AppText>
+                <AppText style={styles.sectionSubtitle}>
                   Add photos of the issue or requirement to help our technicians prepare.
-                </Text>
+                </AppText>
 
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: Spacing.md, marginTop: Spacing.sm }}>
                   {attachments.map((item, index) => {
@@ -494,15 +497,15 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
                     activeOpacity={0.8}
                   >
                     <Ionicons name="camera-outline" size={26} color={Colors.text.tertiary} />
-                    <Text style={styles.addAttachmentText}>Add Photo</Text>
+                    <AppText style={styles.addAttachmentText}>Add Photo</AppText>
                   </TouchableOpacity>
                 </ScrollView>
               </View>
 
               {/* Special Instructions Notes */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Special Instructions (Optional)</Text>
-                <TextInput
+                <AppText style={styles.sectionTitle}>Special Instructions (Optional)</AppText>
+                <AppTextInput
                   style={styles.notesInput}
                   placeholder="e.g. Please call before arrival, gate code, etc."
                   placeholderTextColor={Colors.text.tertiary}
@@ -515,7 +518,7 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
 
               {/* Payment Method */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Payment Method</Text>
+                <AppText style={styles.sectionTitle}>Payment Method</AppText>
                 <View style={styles.paymentColumn}>
                   {paymentMethods.map((method) => (
                     <TouchableOpacity
@@ -544,15 +547,15 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
                         />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text
+                        <AppText
                           style={[
                             styles.paymentName,
                             paymentMethod === method.id && styles.paymentNameSelected,
                           ]}
                         >
                           {method.name}
-                        </Text>
-                        <Text style={styles.paymentSubtext}>{method.subtitle}</Text>
+                        </AppText>
+                        <AppText style={styles.paymentSubtext}>{method.subtitle}</AppText>
                       </View>
                       <Ionicons
                         name={
@@ -576,10 +579,10 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
             {/* Sticky Footer */}
             <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Spacing.sm) }]}>
               <View style={styles.footerTotal}>
-                <Text style={styles.footerTotalLabel}>Total Amount</Text>
-                <Text style={styles.footerTotalAmount}>
+                <AppText style={styles.footerTotalLabel}>Total Amount</AppText>
+                <AppText style={styles.footerTotalAmount}>
                   ₨{Math.round(totalAmount)}
-                </Text>
+                </AppText>
               </View>
               <TouchableOpacity
                 style={[
@@ -590,10 +593,10 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
                 disabled={processing}
                 activeOpacity={0.85}
               >
-                <Text style={styles.confirmButtonText}>
+                <AppText style={styles.confirmButtonText}>
                   {processing ? "Processing..." : "Confirm Booking"}
-                </Text>
-                <Ionicons
+                </AppText>
+                <DirectionalIcon
                   name="chevron-forward"
                   size={18}
                   color={Colors.neutral.white}
@@ -653,14 +656,14 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
                     onPress={() => setShowDatePicker(false)}
                     style={styles.iosPickerHeaderBtn}
                   >
-                    <Text style={styles.iosPickerCancelText}>Cancel</Text>
+                    <AppText style={styles.iosPickerCancelText}>Cancel</AppText>
                   </TouchableOpacity>
-                  <Text style={styles.iosPickerTitle}>Select Service Date</Text>
+                  <AppText style={styles.iosPickerTitle}>Select Service Date</AppText>
                   <TouchableOpacity
                     onPress={() => setShowDatePicker(false)}
                     style={styles.iosPickerHeaderBtn}
                   >
-                    <Text style={styles.iosPickerDoneText}>Done</Text>
+                    <AppText style={styles.iosPickerDoneText}>Done</AppText>
                   </TouchableOpacity>
                 </View>
                 <DateTimePicker
@@ -698,14 +701,14 @@ export default React.forwardRef<BottomSheetModal, CheckoutModalProps>(
                     onPress={() => setShowTimePicker(false)}
                     style={styles.iosPickerHeaderBtn}
                   >
-                    <Text style={styles.iosPickerCancelText}>Cancel</Text>
+                    <AppText style={styles.iosPickerCancelText}>Cancel</AppText>
                   </TouchableOpacity>
-                  <Text style={styles.iosPickerTitle}>Select Service Time</Text>
+                  <AppText style={styles.iosPickerTitle}>Select Service Time</AppText>
                   <TouchableOpacity
                     onPress={() => setShowTimePicker(false)}
                     style={styles.iosPickerHeaderBtn}
                   >
-                    <Text style={styles.iosPickerDoneText}>Done</Text>
+                    <AppText style={styles.iosPickerDoneText}>Done</AppText>
                   </TouchableOpacity>
                 </View>
                 <DateTimePicker

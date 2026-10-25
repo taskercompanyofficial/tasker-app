@@ -1,3 +1,5 @@
+import { localizedToast } from "@/lib/i18n/localized-toast";
+import AppText from "@/components/common/AppText";
 import Colors from "@/constants/Colors";
 import { BorderRadius, Shadows, Spacing } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
@@ -15,7 +17,6 @@ import {
   Image,
   StyleSheet,
   Switch,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -163,7 +164,7 @@ export default function VendorOnlineStatusBar({
           await refetchUser(mode);
         } catch (_) {}
 
-        Toast.show({
+        localizedToast({
           type: "success",
           text1: targetValue ? "🟢 You are Online" : "⚪ You are Offline",
           text2: targetValue
@@ -179,7 +180,7 @@ export default function VendorOnlineStatusBar({
       } else {
         const msg =
           err?.response?.data?.message || "Failed to update online status.";
-        Toast.show({ type: "error", text1: "Status Error", text2: msg });
+        localizedToast({ type: "error", text1: "Status Error", text2: msg });
       }
     } finally {
       setLoading(false);
@@ -225,7 +226,7 @@ export default function VendorOnlineStatusBar({
                   { backgroundColor: isOnline ? "#059669" : "#6B7280" },
                 ]}
               >
-                <Text style={styles.avatarFallbackText}>{initialLetter}</Text>
+                <AppText style={styles.avatarFallbackText}>{initialLetter}</AppText>
               </View>
             )}
 
@@ -248,29 +249,29 @@ export default function VendorOnlineStatusBar({
                   { transform: [{ scale: pulseAnim }] },
                 ]}
               />
-              <Text
+              <AppText
                 style={[
                   styles.statusTitle,
                   { color: isOnline ? "#065F46" : "#374151" },
                 ]}
               >
                 {isOnline ? "YOU ARE ONLINE" : "YOU ARE OFFLINE"}
-              </Text>
+              </AppText>
             </View>
 
-            <Text style={styles.statusSubtitle} numberOfLines={1}>
+            <AppText style={styles.statusSubtitle} numberOfLines={1}>
               {isOnline
                 ? "Active on job • Accepting dispatches"
                 : "Switch online to receive assigned jobs"}
-            </Text>
+            </AppText>
 
             {/* 24-Hour Timer Chip if verified */}
             {isVerified && secondsRemaining > 0 && isOnline && (
               <View style={styles.timerChip}>
                 <Ionicons name="time" size={11} color="#047857" />
-                <Text style={styles.timerChipText}>
+                <AppText style={styles.timerChipText}>
                   Selfie valid • {formatTimeLeft(secondsRemaining)}
-                </Text>
+                </AppText>
               </View>
             )}
           </View>
@@ -306,14 +307,14 @@ export default function VendorOnlineStatusBar({
               size={13}
               color={isOnline ? "#047857" : "#4B5563"}
             />
-            <Text
+            <AppText
               style={[
                 styles.retakeActionText,
                 { color: isOnline ? "#047857" : "#4B5563" },
               ]}
             >
               {isVerified ? "Update Daily Selfie" : "Take Selfie to Go Online"}
-            </Text>
+            </AppText>
           </TouchableOpacity>
 
           <View style={styles.verifiedDotWrap}>
@@ -322,9 +323,9 @@ export default function VendorOnlineStatusBar({
               size={13}
               color={isVerified ? "#10B981" : "#9CA3AF"}
             />
-            <Text style={styles.verifiedLabel}>
+            <AppText style={styles.verifiedLabel}>
               {isVerified ? "24h Verified" : "Selfie Required"}
-            </Text>
+            </AppText>
           </View>
         </View>
       </View>
