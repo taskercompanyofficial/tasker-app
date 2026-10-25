@@ -224,6 +224,66 @@ export default function VendorNotificationsPage() {
 
   const renderNotification = ({ item }: { item: Notification }) => {
     const notifImage = item.data?.image || item.data?.image_url;
+
+    // Full-width Rich Media Card for notifications with large banner images (YouTube / modern app style)
+    if (notifImage) {
+      return (
+        <TouchableOpacity
+          style={[
+            styles.richMediaCard,
+            !item.read && styles.richMediaCardUnread,
+          ]}
+          onPress={() => handleNotificationPress(item)}
+          activeOpacity={0.8}
+        >
+          {/* Full-width 16:9 Large Image Banner */}
+          <View style={styles.richBannerContainer}>
+            <Image
+              source={{ uri: notifImage }}
+              style={styles.richBannerImage}
+              contentFit="cover"
+              transition={250}
+            />
+            <View style={styles.richBannerBadge}>
+              <Ionicons name="sparkles" size={11} color="#FFFFFF" />
+              <AppText style={styles.richBannerBadgeText}>ANNOUNCEMENT</AppText>
+            </View>
+            {!item.read && <View style={styles.richUnreadBadge} />}
+          </View>
+
+          {/* Card Body & Details */}
+          <View style={styles.richCardBody}>
+            <View style={styles.richCardHeader}>
+              <View
+                style={[
+                  styles.richIconSmall,
+                  { backgroundColor: `${getNotificationColor(item.type)}18` },
+                ]}
+              >
+                <Ionicons
+                  name={getNotificationIcon(item.type) as any}
+                  size={15}
+                  color={getNotificationColor(item.type)}
+                />
+              </View>
+              <AppText style={styles.richNotificationTitle} numberOfLines={2}>
+                {item.title}
+              </AppText>
+              <AppText style={styles.notificationTime}>{formatTime(item.created_at)}</AppText>
+            </View>
+
+            <AppText style={styles.richNotificationMessage} numberOfLines={3}>
+              {item.message}
+            </AppText>
+
+            <View style={styles.richActionRow}>
+              <AppText style={styles.richActionLink}>View Announcement →</AppText>
+            </View>
+          </View>
+        </TouchableOpacity>
+      );
+    }
+
     return (
       <TouchableOpacity
         style={[
@@ -236,7 +296,7 @@ export default function VendorNotificationsPage() {
         <View
           style={[
             styles.iconContainer,
-            { backgroundColor: getNotificationColor(item.type) + "15" },
+            { backgroundColor: `${getNotificationColor(item.type)}15` },
           ]}
         >
           <Ionicons
@@ -258,14 +318,6 @@ export default function VendorNotificationsPage() {
           <AppText style={styles.notificationMessage} numberOfLines={3}>
             {item.message}
           </AppText>
-          {notifImage && (
-            <Image
-              source={{ uri: notifImage }}
-              style={styles.notificationImage}
-              contentFit="cover"
-              transition={200}
-            />
-          )}
           {!item.read && <View style={styles.unreadDot} />}
         </View>
       </TouchableOpacity>
@@ -437,6 +489,102 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 8,
     backgroundColor: "#F3F4F6",
+  },
+  richMediaCard: {
+    backgroundColor: Colors.neutral.white,
+    borderRadius: 16,
+    marginBottom: Spacing.sm,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  richMediaCardUnread: {
+    borderColor: `${Colors.themes.provider.primary}45`,
+    backgroundColor: "#FAFAFA",
+  },
+  richBannerContainer: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    backgroundColor: "#E5E7EB",
+    position: "relative",
+  },
+  richBannerImage: {
+    width: "100%",
+    height: "100%",
+  },
+  richBannerBadge: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    backgroundColor: "rgba(17, 24, 39, 0.78)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  richBannerBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  richUnreadBadge: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.themes.provider.primary,
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
+  },
+  richCardBody: {
+    padding: Spacing.md,
+  },
+  richCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 6,
+  },
+  richIconSmall: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  richNotificationTitle: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "700",
+    color: Colors.text.primary,
+  },
+  richNotificationMessage: {
+    fontSize: 13,
+    color: Colors.text.secondary,
+    lineHeight: 19,
+    marginBottom: 8,
+  },
+  richActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingTop: 4,
+  },
+  richActionLink: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.themes.provider.primary,
   },
   unreadDot: {
     position: "absolute",

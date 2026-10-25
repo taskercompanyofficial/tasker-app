@@ -22,11 +22,7 @@ import {
   View,
 } from "react-native";
 
-const { width } = Dimensions.get("window");
-const SHEET_PADDING = Spacing.md; // 16
-const SHEET_CONTENT_WIDTH = width - SHEET_PADDING * 2;
 const GRID_GAP = 10;
-const GRID_CARD_WIDTH = Math.floor((SHEET_CONTENT_WIDTH - GRID_GAP * 2) / 3);
 
 interface CategoryServicesBottomSheetProps {
   bottomSheetModalRef: React.RefObject<BottomSheetModal | null>;
@@ -71,6 +67,15 @@ export default function CategoryServicesBottomSheet({
         s.description?.toLowerCase().includes(q)
     );
   }, [searchQuery, services, activeCategory]);
+
+  // 3-column rows for Grid View so cards dynamically divide the row and never wrap into 2 columns
+  const gridRows = useMemo(() => {
+    const rows: Service[][] = [];
+    for (let i = 0; i < filteredServices.length; i += 3) {
+      rows.push(filteredServices.slice(i, i + 3));
+    }
+    return rows;
+  }, [filteredServices]);
 
   return (
     <BottomSheetModal
@@ -202,46 +207,54 @@ export default function CategoryServicesBottomSheet({
               </AppText>
             </View>
           ) : viewMode === "grid" ? (
-            /* GRID VIEW (Default) */
+            /* GRID VIEW (Default - Guaranteed 3 Columns per Row) */
             <View style={styles.sheetGridContainer}>
-              {filteredServices.map((service) => {
-                const imageUrl = service.image
-                  ? getImageUrl(service.image)
-                  : null;
+              {gridRows.map((row, rIdx) => (
+                <View key={rIdx} style={styles.sheetGridRow}>
+                  {row.map((service) => {
+                    const imageUrl = service.image
+                      ? getImageUrl(service.image)
+                      : null;
 
-                return (
-                  <TouchableOpacity
-                    key={service.slug || service.name}
-                    style={styles.sheetGridCard}
-                    activeOpacity={0.75}
-                    onPress={() => {
-                      bottomSheetModalRef.current?.dismiss();
-                      onSelectService(service);
-                    }}
-                  >
-                    <View style={styles.sheetGridImgWrap}>
-                      {imageUrl ? (
-                        <Image
-                          source={{ uri: imageUrl }}
-                          style={styles.sheetGridImg}
-                          contentFit="contain"
-                          transition={150}
-                        />
-                      ) : (
-                        <Ionicons
-                          name="construct-outline"
-                          size={24}
-                          color={Colors.themes.customer.primary}
-                        />
-                      )}
-                    </View>
+                    return (
+                      <TouchableOpacity
+                        key={service.slug || service.name}
+                        style={styles.sheetGridCard}
+                        activeOpacity={0.75}
+                        onPress={() => {
+                          bottomSheetModalRef.current?.dismiss();
+                          onSelectService(service);
+                        }}
+                      >
+                        <View style={styles.sheetGridImgWrap}>
+                          {imageUrl ? (
+                            <Image
+                              source={{ uri: imageUrl }}
+                              style={styles.sheetGridImg}
+                              contentFit="contain"
+                              transition={150}
+                            />
+                          ) : (
+                            <Ionicons
+                              name="construct-outline"
+                              size={24}
+                              color={Colors.themes.customer.primary}
+                            />
+                          )}
+                        </View>
 
-                    <AppText style={styles.sheetGridTitle} numberOfLines={2}>
-                      {service.name.toUpperCase()}
-                    </AppText>
-                  </TouchableOpacity>
-                );
-              })}
+                        <AppText style={styles.sheetGridTitle} numberOfLines={2}>
+                          {service.name.toUpperCase()}
+                        </AppText>
+                      </TouchableOpacity>
+                    );
+                  })}
+                  {row.length < 3 &&
+                    Array.from({ length: 3 - row.length }).map((_, i) => (
+                      <View key={`placeholder-${i}`} style={styles.sheetGridCardPlaceholder} />
+                    ))}
+                </View>
+              ))}
             </View>
           ) : (
             /* LIST VIEW */
@@ -409,19 +422,29 @@ const styles = StyleSheet.create({
   },
   /* Grid View Styles */
   sheetGridContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "column",
     gap: GRID_GAP,
     paddingTop: 4,
   },
+  sheetGridRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    width: "100%",
+    gap: GRID_GAP,
+  },
   sheetGridCard: {
-    width: GRID_CARD_WIDTH,
+    flex: 1, // Dynamically divides row into 3 equal columns
     alignItems: "center",
     justifyContent: "flex-start",
     paddingVertical: 10,
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
     borderRadius: BorderRadius.md,
     backgroundColor: "#F8FAFC",
+  },
+  sheetGridCardPlaceholder: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
   },
   sheetGridImgWrap: {
     width: 52,

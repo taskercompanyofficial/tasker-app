@@ -71,19 +71,24 @@ export default function Skeleton({
 
 // 1. Category Grid Skeleton (Matches 3x2 category cards)
 export function CategoryGridSkeleton({ count = 6 }: { count?: number }) {
+  const rowCount = Math.ceil(count / 3);
   return (
     <View style={styles.catGrid}>
-      {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={styles.catCardSkeleton}>
-          {/* Circular Image Placeholder */}
-          <Skeleton
-            width={54}
-            height={46}
-            borderRadius={BorderRadius.md}
-            style={styles.mb8}
-          />
-          {/* Label placeholder */}
-          <Skeleton width="75%" height={12} borderRadius={3} />
+      {Array.from({ length: rowCount }).map((_, rIdx) => (
+        <View key={rIdx} style={styles.catRowSkeleton}>
+          {Array.from({ length: 3 }).map((_, cIdx) => (
+            <View key={cIdx} style={styles.catCardSkeleton}>
+              {/* Circular Image Placeholder */}
+              <Skeleton
+                width={54}
+                height={46}
+                borderRadius={BorderRadius.md}
+                style={styles.mb8}
+              />
+              {/* Label placeholder */}
+              <Skeleton width="75%" height={12} borderRadius={3} />
+            </View>
+          ))}
         </View>
       ))}
     </View>
@@ -92,19 +97,24 @@ export function CategoryGridSkeleton({ count = 6 }: { count?: number }) {
 
 // 2. Services Grid Skeleton (Matches 3x2 service cards)
 export function ServicesGridSkeleton({ count = 6 }: { count?: number }) {
+  const rowCount = Math.ceil(count / 3);
   return (
     <View style={styles.servGrid}>
-      {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={styles.servCardSkeleton}>
-          {/* Image Thumbnail Placeholder */}
-          <Skeleton
-            width="100%"
-            height={68}
-            borderRadius={BorderRadius.md}
-            style={styles.mb6}
-          />
-          {/* Title Placeholder */}
-          <Skeleton width="80%" height={11} borderRadius={3} />
+      {Array.from({ length: rowCount }).map((_, rIdx) => (
+        <View key={rIdx} style={styles.servRowSkeleton}>
+          {Array.from({ length: 3 }).map((_, cIdx) => (
+            <View key={cIdx} style={styles.servCardSkeleton}>
+              {/* Image Thumbnail Placeholder */}
+              <Skeleton
+                width="100%"
+                height={68}
+                borderRadius={BorderRadius.md}
+                style={styles.mb6}
+              />
+              {/* Title Placeholder */}
+              <Skeleton width="80%" height={11} borderRadius={3} />
+            </View>
+          ))}
         </View>
       ))}
     </View>
@@ -307,12 +317,17 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   catGrid: {
+    flexDirection: "column",
+    gap: CAT_GAP,
+  },
+  catRowSkeleton: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    alignItems: "flex-start",
+    width: "100%",
     gap: CAT_GAP,
   },
   catCardSkeleton: {
-    width: CAT_CARD_WIDTH,
+    flex: 1,
     minHeight: 100,
     alignItems: "center",
     justifyContent: "flex-start",
@@ -327,14 +342,19 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   servGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "column",
     gap: SERV_GAP,
   },
+  servRowSkeleton: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    width: "100%",
+    gap: SERV_GAP,
+    marginBottom: 6,
+  },
   servCardSkeleton: {
-    width: SERV_CARD_WIDTH,
+    flex: 1,
     alignItems: "center",
-    marginBottom: 12,
   },
   sheetRowSkeleton: {
     flexDirection: "row",

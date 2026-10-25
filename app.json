@@ -136,9 +136,7 @@
       }
     },
     "owner": "tasker-company",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.36",
     "updates": {
       "url": "https://u.expo.dev/4408fc40-2932-4da5-9fc6-77ea2457a8da"
     }

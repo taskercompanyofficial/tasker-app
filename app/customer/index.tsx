@@ -7,14 +7,16 @@ import TaskerShopCard from "@/components/home/TaskerShopCard";
 import Colors from "@/constants/Colors";
 import { Spacing, Typography } from "@/constants/Styles";
 import { useSession } from "@/context/ctx";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Image,
+  Platform,
   ScrollView,
+  StatusBar,
   StyleSheet,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -22,6 +24,16 @@ export default function LandingPage() {
   const { session } = useSession();
   const router = useRouter();
   const [showPromo, setShowPromo] = useState(true);
+
+  // Guarantee dark status bar items and matching header background whenever focused
+  useFocusEffect(
+    useCallback(() => {
+      StatusBar.setBarStyle("dark-content");
+      if (Platform.OS === "android") {
+        StatusBar.setBackgroundColor(Colors.background.tertiary);
+      }
+    }, [])
+  );
 
   useEffect(() => {
     const user = session.customerUser || session.user;
@@ -41,47 +53,58 @@ export default function LandingPage() {
   useEffect(() => {
     setShowPromo(true);
   }, []);
+
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        <HomeHeader />
-        <View style={styles.content}>
-          <AppText style={styles.title}>Welcome to Tasker Company</AppText>
-          <AppText style={styles.subtitle}>Choose a service to get started</AppText>
-        </View>
-        <CategoriesCards />
-        <FreeInstallationCard />
-        <TaskerShopCard />
-        <IndustrialServicesCard />
-      </ScrollView>
-      {showPromo && (
-        <TouchableOpacity
-          style={styles.promoOverlay}
-          activeOpacity={1}
-          onPress={() => setShowPromo(false)}
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor={Colors.background.tertiary}
+        translucent={false}
+      />
+      <View style={styles.container}>
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
         >
-          <View style={styles.promoContent}>
-            <Image
-              source={require("@/assets/images/banner-1.png")}
-              style={styles.promoImage}
-              resizeMode="contain"
-            />
+          <HomeHeader />
+          <View style={styles.content}>
+            <AppText style={styles.title}>Welcome to Tasker Company</AppText>
+            <AppText style={styles.subtitle}>Choose a service to get started</AppText>
           </View>
-        </TouchableOpacity>
-      )}
+          <CategoriesCards />
+          <FreeInstallationCard />
+          <TaskerShopCard />
+          <IndustrialServicesCard />
+        </ScrollView>
+        {showPromo && (
+          <TouchableOpacity
+            style={styles.promoOverlay}
+            activeOpacity={1}
+            onPress={() => setShowPromo(false)}
+          >
+            <View style={styles.promoContent}>
+              <Image
+                source={require("@/assets/images/banner-1.png")}
+                style={styles.promoImage}
+                resizeMode="contain"
+              />
+            </View>
+          </TouchableOpacity>
+        )}
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.background.tertiary, // Seamless color match with HomeHeader
+  },
   container: {
     flex: 1,
     backgroundColor: "#ffffff",
-    // backgroundColor: Colors.background.white,
   },
   scrollView: {
     flex: 1,

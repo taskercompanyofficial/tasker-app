@@ -1,0 +1,20 @@
+diff --git a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/presentation/builders/ExpoNotificationBuilder.kt b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/presentation/builders/ExpoNotificationBuilder.kt
+index 610d303..c03da99 100644
+--- a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/presentation/builders/ExpoNotificationBuilder.kt
++++ b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/presentation/builders/ExpoNotificationBuilder.kt
+@@ -149,7 +149,14 @@ open class ExpoNotificationBuilder(
+ 
+     if (notificationContent.containsImage()) {
+       val bitmap = notificationContent.getImage(context)
+-      bitmap?.let { builder.setLargeIcon(it) }
++      bitmap?.let {
++        builder.setLargeIcon(it)
++        val bigPictureStyle = NotificationCompat.BigPictureStyle()
++          .bigPicture(it)
++          .bigLargeIcon(null as Bitmap?)
++        content.text?.let { text -> bigPictureStyle.setSummaryText(text) }
++        builder.setStyle(bigPictureStyle)
++      }
+     } else {
+       builder.setLargeIcon(largeIcon)
+     }

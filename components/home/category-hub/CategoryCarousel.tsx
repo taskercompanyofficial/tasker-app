@@ -1,27 +1,22 @@
+import React, { useMemo, useRef, useState } from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import { Image } from "expo-image";
+import { Ionicons } from "@expo/vector-icons";
 import AppText from "@/components/common/AppText";
 import DirectionalIcon from "@/components/common/DirectionalIcon";
 import Colors from "@/constants/Colors";
 import { Spacing, Typography } from "@/constants/Styles";
 import getImageUrl from "@/lib/utils";
 import { Category } from "@/types/category";
-import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
-import React, { useMemo, useRef, useState } from "react";
-import {
-  Dimensions,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
 
-const { width } = Dimensions.get("window");
 const HORIZONTAL_PADDING = Spacing.md; // 16
-const CONTENT_WIDTH = width - HORIZONTAL_PADDING * 2;
-
-// 3-column compact grid for Categories (borderless, big image)
 const CAT_GAP = 10;
-const CAT_CARD_WIDTH = (CONTENT_WIDTH - CAT_GAP * 2) / 3;
 
 interface CategoryCarouselProps {
   categories: Category[];
@@ -34,28 +29,92 @@ export default function CategoryCarousel({
   activeSlug,
   onSelectCategory,
 }: CategoryCarouselProps) {
+  const { width: windowWidth } = useWindowDimensions();
+  const contentWidth = windowWidth - HORIZONTAL_PADDING * 2;
+
   const catCarouselRef = useRef<ScrollView>(null);
   const [currentCatPage, setCurrentCatPage] = useState(0);
 
-  // 6 items per page (3 columns x 2 rows)
+  // Layout configuration:
+  // - If category count is < 5 and in a pair of 2 (i.e. 2 or 4 items):
+  //   Show 2 in a row, max 2 rows per page (max 4 items per page).
+  // - If 5 or further (or 3):
+  //   Show 3 in a row, max 2 rows per page (max 6 items per page).
+  // - If items exceed the 2-row page limit, slide proceed to next page.
+  const columnsPerRow = useMemo(() => {
+    if (categories.length < 5 && categories.length % 2 === 0) {
+      return 2;
+    }
+    return 3;
+  }, [categories.length]);
+
+  const maxRowsPerPage = 2;
+  const itemsPerPage = columnsPerRow * maxRowsPerPage; // 4 if 2 cols, 6 if 3 cols
+
   const categoryPages = useMemo(() => {
     const pages: Category[][] = [];
-    for (let i = 0; i < categories.length; i += 6) {
-      pages.push(categories.slice(i, i + 6));
+    for (let i = 0; i < categories.length; i += itemsPerPage) {
+      pages.push(categories.slice(i, i + itemsPerPage));
     }
     return pages.length > 0 ? pages : [[]];
-  }, [categories]);
+  }, [categories, itemsPerPage]);
 
   const handleNextPage = () => {
     const nextPage = (currentCatPage + 1) % categoryPages.length;
     setCurrentCatPage(nextPage);
     catCarouselRef.current?.scrollTo({
-      x: nextPage * CONTENT_WIDTH,
+      x: nextPage * contentWidth,
       animated: true,
     });
   };
 
   if (categories.length === 0) return null;
+
+  const renderCategoryCard = (cat: Category) => {
+    const isActive = cat.slug === activeSlug;
+    const imageUrl = cat.image ? getImageUrl(cat.image) : null;
+
+    return (
+      <TouchableOpacity
+        key={cat.id || cat.slug}
+        activeOpacity={0.75}
+        onPress={() => onSelectCategory(cat)}
+        style={styles.catCard}
+      >
+        {/* Big Category Image (68x58) */}
+        <View style={styles.catImageWrapper}>
+          {imageUrl ? (
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.catImage}
+              contentFit="contain"
+            />
+          ) : (
+            <Ionicons
+              name="grid-outline"
+              size={38}
+              color={
+                isActive
+                  ? Colors.themes.customer.primary
+                  : Colors.text.tertiary
+              }
+            />
+          )}
+        </View>
+
+        {/* Multi-line Text: only text is colored when active */}
+        <AppText
+          style={[
+            styles.catName,
+            isActive ? styles.catNameActive : styles.catNameInactive,
+          ]}
+          numberOfLines={2}
+        >
+          {cat.name.toUpperCase()}
+        </AppText>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -80,69 +139,41 @@ export default function CategoryCarousel({
         )}
       </View>
 
-      {/* Horizontally Scrollable Category Grid Pages (3 cols x 2 rows per page) */}
+      {/* Horizontally Scrollable Category Grid Pages */}
       <ScrollView
         ref={catCarouselRef}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={(e) => {
-          const page = Math.round(e.nativeEvent.contentOffset.x / CONTENT_WIDTH);
+          const page = Math.round(e.nativeEvent.contentOffset.x / contentWidth);
           setCurrentCatPage(page);
         }}
         scrollEventThrottle={16}
-        style={styles.catCarousel}
+        style={{ width: contentWidth }}
         contentContainerStyle={styles.catCarouselContent}
       >
-        {categoryPages.map((pageCats, pageIdx) => (
-          <View key={pageIdx} style={styles.catGridPage}>
-            {pageCats.map((cat) => {
-              const isActive = cat.slug === activeSlug;
-              const imageUrl = cat.image ? getImageUrl(cat.image) : null;
+        {categoryPages.map((pageCats, pageIdx) => {
+          // Chunk page into rows of columnsPerRow (max 2 rows per page)
+          const rows: Category[][] = [];
+          for (let i = 0; i < pageCats.length; i += columnsPerRow) {
+            rows.push(pageCats.slice(i, i + columnsPerRow));
+          }
 
-              return (
-                <TouchableOpacity
-                  key={cat.id || cat.slug}
-                  activeOpacity={0.75}
-                  onPress={() => onSelectCategory(cat)}
-                  style={styles.catCard}
-                >
-                  {/* Big Category Image (68x58) */}
-                  <View style={styles.catImageWrapper}>
-                    {imageUrl ? (
-                      <Image
-                        source={{ uri: imageUrl }}
-                        style={styles.catImage}
-                        contentFit="contain"
-                      />
-                    ) : (
-                      <Ionicons
-                        name="grid-outline"
-                        size={38}
-                        color={
-                          isActive
-                            ? Colors.themes.customer.primary
-                            : Colors.text.tertiary
-                        }
-                      />
-                    )}
-                  </View>
-
-                  {/* Multi-line Text: only text is colored when active */}
-                  <AppText
-                    style={[
-                      styles.catName,
-                      isActive ? styles.catNameActive : styles.catNameInactive,
-                    ]}
-                    numberOfLines={2}
-                  >
-                    {cat.name.toUpperCase()}
-                  </AppText>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        ))}
+          return (
+            <View key={pageIdx} style={[styles.catGridPage, { width: contentWidth }]}>
+              {rows.map((rowCats, rIdx) => (
+                <View key={`row-${rIdx}`} style={styles.catRow}>
+                  {rowCats.map((cat) => renderCategoryCard(cat))}
+                  {rowCats.length < columnsPerRow &&
+                    Array.from({ length: columnsPerRow - rowCats.length }).map((_, i) => (
+                      <View key={`empty-${rIdx}-${i}`} style={styles.catCardPlaceholder} />
+                    ))}
+                </View>
+              ))}
+            </View>
+          );
+        })}
       </ScrollView>
 
       {/* Dynamic Pagination Dash Indicators */}
@@ -192,20 +223,21 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.themes.customer.primary,
   },
-  catCarousel: {
-    width: CONTENT_WIDTH,
-  },
   catCarouselContent: {
     alignItems: "flex-start",
   },
   catGridPage: {
-    width: CONTENT_WIDTH,
+    flexDirection: "column",
+  },
+  catRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    alignItems: "flex-start",
+    width: "100%",
     gap: CAT_GAP,
+    marginBottom: 6,
   },
   catCard: {
-    width: CAT_CARD_WIDTH,
+    flex: 1, // Dynamically takes exactly 1/columnsPerRow of row width minus gaps on any screen size
     minHeight: 104,
     alignItems: "center",
     justifyContent: "flex-start",
@@ -214,6 +246,10 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     elevation: 0,
     shadowOpacity: 0,
+  },
+  catCardPlaceholder: {
+    flex: 1,
+    minHeight: 104,
   },
   catImageWrapper: {
     width: 68,

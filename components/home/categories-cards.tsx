@@ -5,13 +5,11 @@ import { BACKEND_URL, GET_MAIN_CATEGORIES_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
 import { localizeCategoryDescription } from "@/lib/i18n/category-copy";
 import { useLanguage } from "@/context/language-context";
-import { Category } from "@/types/category";
 import { MainCategory } from "@/types/main-category";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  Dimensions,
   Image,
   StyleSheet,
   TouchableOpacity,
@@ -20,10 +18,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Loader from "../Loader";
 
-const { width } = Dimensions.get("window");
 const CARD_GAP = Spacing.sm;
-const SINGLE_CARD_WIDTH = width - Spacing.md * 2;
-const DOUBLE_CARD_WIDTH = (width - Spacing.md * 2 - CARD_GAP) / 2;
 
 export default function CategoriesCards() {
   const { language } = useLanguage();
@@ -41,6 +36,7 @@ export default function CategoriesCards() {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     fetchCategories();
   }, []);
@@ -48,13 +44,12 @@ export default function CategoriesCards() {
   const renderCategoryCard = (item: MainCategory, isFullWidth: boolean) => {
     const imageUrl = item.image ? `${BACKEND_URL}/storage/${item.image}` : null;
     const tagCount = Array.isArray(item.tags) ? item.tags.length : 0;
-    const cardWidth = isFullWidth ? SINGLE_CARD_WIDTH : DOUBLE_CARD_WIDTH;
 
     if (isFullWidth) {
       return (
         <TouchableOpacity
           key={item.id}
-          style={[styles.card, styles.cardFullWidth, { width: cardWidth }]}
+          style={[styles.card, styles.cardFullWidth]}
           activeOpacity={0.8}
           onPress={() => router.push(`/customer/(tabs)/${item.slug}` as any)}
         >
@@ -100,6 +95,9 @@ export default function CategoriesCards() {
               </View>
             )}
           </View>
+
+          {/* Status Indicator */}
+          {item.status === "active" && <View style={styles.activeIndicator} />}
         </TouchableOpacity>
       );
     }
@@ -107,7 +105,7 @@ export default function CategoriesCards() {
     return (
       <TouchableOpacity
         key={item.id}
-        style={[styles.card, { width: cardWidth }]}
+        style={[styles.card, styles.cardHalf]}
         activeOpacity={0.8}
         onPress={() => router.push(`/customer/(tabs)/${item.slug}` as any)}
       >
@@ -183,18 +181,17 @@ export default function CategoriesCards() {
         <View style={styles.listContent}>
           {categories.reduce((rows: React.ReactElement[], category, index) => {
             if (index % 2 === 0) {
-              // Start a new row
               const isLastItem = index === categories.length - 1;
 
               if (isLastItem) {
-                // If it's the last item and odd, render it full width
+                // If it's the last item and odd (e.g. 3rd or 5th), span 2 (full width)
                 rows.push(
                   <View key={`row-${index}`} style={styles.row}>
                     {renderCategoryCard(category, true)}
                   </View>
                 );
               } else {
-                // Normal pair of items
+                // Normal pair of 2 items
                 const rowItems = categories.slice(index, index + 2);
                 rows.push(
                   <View key={`row-${index}`} style={styles.row}>
@@ -222,7 +219,8 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    alignItems: "stretch",
+    gap: CARD_GAP,
     marginBottom: Spacing.sm,
   },
   card: {
@@ -235,7 +233,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border.light,
   },
+  cardHalf: {
+    flex: 1,
+  },
   cardFullWidth: {
+    flex: 1,
+    width: "100%",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -269,9 +272,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.02)",
     bottom: -15,
     right: 40,
-  },
-  cardDisabled: {
-    opacity: 0.75,
   },
   imageContainer: {
     width: "100%",

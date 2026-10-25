@@ -9,24 +9,24 @@ import { Image } from "expo-image";
 import { router } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
-  Dimensions,
-  FlatList, NativeScrollEvent, NativeSyntheticEvent,
+  FlatList,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   StyleSheet,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 
-const { width } = Dimensions.get("window");
-const VIEWPORT_WIDTH = width - Spacing.md * 2;
-const SERVICES_PER_ROW = 3;
 const CARD_SPACING = 8;
-const CARD_WIDTH =
-  (VIEWPORT_WIDTH - CARD_SPACING * (SERVICES_PER_ROW - 1)) /
-  SERVICES_PER_ROW;
+const SERVICES_PER_ROW = 3;
 
 export default function ServicesCard({ data }: { data?: Category }) {
   const { t, language } = useLanguage();
+  const { width } = useWindowDimensions();
+  const viewportWidth = width - Spacing.md * 2;
   const services = data?.services || [];
+
   const pages = useMemo(() => {
     const arr = [];
     // Show 6 services per page (3 per row, 2 rows)
@@ -35,42 +35,63 @@ export default function ServicesCard({ data }: { data?: Category }) {
     }
     return arr;
   }, [services]);
+
   const [pageIndex, setPageIndex] = useState(0);
 
   const onMomentumEnd = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const idx = Math.round(e.nativeEvent.contentOffset.x / VIEWPORT_WIDTH);
+      const idx = Math.round(e.nativeEvent.contentOffset.x / viewportWidth);
       setPageIndex(Math.max(0, idx));
     },
-    []
+    [viewportWidth]
   );
 
   const renderPage = useCallback(
-    ({ item }: { item: typeof services }) => (
-      <View style={[styles.page, { width: VIEWPORT_WIDTH }]}>
-        <View style={styles.imageContainer}>
-          {item.map((service) => (
-            <TouchableOpacity
-              key={service.slug}
-              style={styles.serviceCard}
-              onPress={() => {
-                router.push(`/customer/services/${service.slug}`);
-              }}
-            >
-              <Image
-                source={{ uri: getImageUrl(service.image) }}
-                style={styles.image}
-                contentFit="contain"
-              />
-              <AppText style={styles.imageText} numberOfLines={2}>
-                {service.name}
-              </AppText>
-            </TouchableOpacity>
-          ))}
+    ({ item }: { item: typeof services }) => {
+      const pageRows: typeof services[] = [];
+      for (let i = 0; i < item.length; i += SERVICES_PER_ROW) {
+        pageRows.push(item.slice(i, i + SERVICES_PER_ROW));
+      }
+
+      return (
+        <View style={[styles.page, { width: viewportWidth }]}>
+          <View style={styles.imageContainer}>
+            {pageRows.map((rowItems, rIdx) => (
+              <View key={`row-${rIdx}`} style={styles.serviceRow}>
+                {rowItems.map((service) => (
+                  <TouchableOpacity
+                    key={service.slug}
+                    style={styles.serviceCard}
+                    activeOpacity={0.75}
+                    onPress={() => {
+                      router.push(`/customer/services/${service.slug}`);
+                    }}
+                  >
+                    <Image
+                      source={{ uri: getImageUrl(service.image) }}
+                      style={styles.image}
+                      contentFit="contain"
+                    />
+                    <AppText style={styles.imageText} numberOfLines={2}>
+                      {service.name}
+                    </AppText>
+                  </TouchableOpacity>
+                ))}
+                {Array.from({ length: SERVICES_PER_ROW - rowItems.length }).map(
+                  (_, pIdx) => (
+                    <View
+                      key={`placeholder-${pIdx}`}
+                      style={styles.serviceCardPlaceholder}
+                    />
+                  )
+                )}
+              </View>
+            ))}
+          </View>
         </View>
-      </View>
-    ),
-    []
+      );
+    },
+    [viewportWidth]
   );
 
   return (
@@ -79,7 +100,9 @@ export default function ServicesCard({ data }: { data?: Category }) {
         <View style={styles.headerLeft}>
           <AppText style={styles.title}>{data?.name}</AppText>
           <AppText style={styles.description} numberOfLines={1}>
-            {data?.description ? localizeCategoryDescription(data.description, language) : ""}
+            {data?.description
+              ? localizeCategoryDescription(data.description, language)
+              : ""}
           </AppText>
         </View>
         {data?.slug && (
@@ -94,7 +117,9 @@ export default function ServicesCard({ data }: { data?: Category }) {
 
       {services.length === 0 ? (
         <View style={styles.noServicesContainer}>
-          <AppText style={styles.noServicesText}>{t.common.noServicesAvailable}</AppText>
+          <AppText style={styles.noServicesText}>
+            {t.common.noServicesAvailable}
+          </AppText>
         </View>
       ) : (
         <FlatList
@@ -162,18 +187,26 @@ const styles = StyleSheet.create({
   },
   page: {},
   imageContainer: {
+    flexDirection: "column",
+  },
+  serviceRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    alignItems: "stretch",
     gap: CARD_SPACING,
+    marginBottom: CARD_SPACING,
   },
   serviceCard: {
-    width: CARD_WIDTH,
+    flex: 1,
     alignItems: "center",
     backgroundColor: Colors.background.tertiary,
     padding: 10,
     borderRadius: 8,
     borderWidth: 0.5,
     borderColor: Colors.border.light,
+    minHeight: 96,
+  },
+  serviceCardPlaceholder: {
+    flex: 1,
   },
   image: {
     width: 56,
