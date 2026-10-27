@@ -36,11 +36,19 @@ type VendorTxn = {
   id: string;
   type: "credit" | "debit";
   title: string;
+  service_name?: string;
+  payment_method_label?: string;
+  wo_status_label?: string;
+  customer_paid?: number;
+  vendor_share?: number;
+  company_share?: number;
+  accepted_at?: string | null;
+  completed_at?: string | null;
   date: string;
   amount: number;
   category: string;
   ledger_bucket?: "daily_payable" | "monthly_accrual";
-  settlement_status?: "pending" | "settled";
+  settlement_status?: "pending" | "settled" | "active";
   due_at?: string | null;
   status?: string;
   work_order_number?: string;
@@ -488,64 +496,171 @@ export default function VendorEarnings() {
     </View>
   );
 
-  // Render single transaction row (Clean: no unnecessary customer details)
+  // Render single transaction row with Work Order status, Customer Paid, Payment Method & Share Split
   const TxnItem = ({ txn }: { txn: VendorTxn }) => {
     const isCredit = txn.type === "credit";
     const [expanded, setExpanded] = useState(false);
     const hasChildren = txn.children && txn.children.length > 0;
+    const isWorkOrder = Boolean(
+      txn.work_order_number ||
+        txn.category === "grouped_bill_charge" ||
+        txn.category === "work_order_activity"
+    );
+    const custPaid = Number(txn.customer_paid) || 0;
+    const vendorShare = Number(txn.vendor_share) || 0;
+    const companyShare = Number(txn.company_share) || 0;
 
     return (
       <View style={styles.txnCard}>
         <TouchableOpacity
           activeOpacity={hasChildren ? 0.7 : 1}
           onPress={() => hasChildren && setExpanded(!expanded)}
-          style={styles.txnRowTouchable}
+          style={[styles.txnRowTouchable, { flexDirection: "column", alignItems: "stretch", gap: 8 }]}
         >
-          {/* Credit/Debit Arrow Icon Badge */}
-          <View style={[styles.txnIconWrap, isCredit ? styles.txnIconCredit : styles.txnIconDebit]}>
-            <AppText style={[styles.txnArrowText, isCredit ? styles.arrowCreditText : styles.arrowDebitText]}>
-              {isCredit ? "↘" : "↗"}
-            </AppText>
-          </View>
-
-          {/* Details */}
-          <View style={styles.txnInfo}>
-            <AppText style={styles.txnTitle} numberOfLines={1}>
-              {txn.title}
-            </AppText>
-            <View style={styles.txnMetaRow}>
-              {txn.work_order_number ? (
-                <AppText style={styles.txnMetaText}>#{txn.work_order_number} • </AppText>
-              ) : null}
-              <AppText style={styles.txnMetaText}>
-                {new Date(txn.date).toLocaleDateString("en-PK", {
-                  day: "numeric",
-                  month: "short",
-                })}
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            {/* Credit/Debit Arrow Icon Badge */}
+            <View style={[styles.txnIconWrap, isCredit ? styles.txnIconCredit : styles.txnIconDebit]}>
+              <AppText style={[styles.txnArrowText, isCredit ? styles.arrowCreditText : styles.arrowDebitText]}>
+                {isCredit ? "↘" : "↗"}
               </AppText>
-              {txn.ledger_bucket === "daily_payable" && txn.settlement_status === "pending" && (
-                <AppText style={{ fontSize: 10, color: "#D97706", fontWeight: "700", marginLeft: 4 }}>
-                  • Due Tonight
+            </View>
+
+            {/* Details */}
+            <View style={styles.txnInfo}>
+              <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+                <AppText style={styles.txnTitle} numberOfLines={1}>
+                  {txn.title}
                 </AppText>
-              )}
-              {txn.ledger_bucket === "daily_payable" && txn.settlement_status === "settled" && (
-                <AppText style={{ fontSize: 10, color: "#059669", fontWeight: "700", marginLeft: 4 }}>
-                  • Settled
+                {txn.wo_status_label ? (
+                  <View
+                    style={{
+                      backgroundColor: txn.wo_status_label.includes("Accepted")
+                        ? "#EFF6FF"
+                        : txn.wo_status_label.includes("Verified")
+                          ? "#ECFDF5"
+                          : "#F1F5F9",
+                      paddingHorizontal: 6,
+                      paddingVertical: 1,
+                      borderRadius: 6,
+                    }}
+                  >
+                    <AppText
+                      style={{
+                        fontSize: 9.5,
+                        fontWeight: "800",
+                        color: txn.wo_status_label.includes("Accepted")
+                          ? "#2563EB"
+                          : txn.wo_status_label.includes("Verified")
+                            ? "#059669"
+                            : "#475569",
+                      }}
+                    >
+                      {txn.wo_status_label}
+                    </AppText>
+                  </View>
+                ) : null}
+              </View>
+
+              <View style={[styles.txnMetaRow, { flexWrap: "wrap", marginTop: 2 }]}>
+                {txn.service_name ? (
+                  <AppText style={styles.txnMetaText}>{txn.service_name} • </AppText>
+                ) : null}
+                <AppText style={styles.txnMetaText}>
+                  {new Date(txn.date).toLocaleDateString("en-PK", {
+                    day: "numeric",
+                    month: "short",
+                  })}
                 </AppText>
+                {txn.payment_method_label ? (
+                  <AppText style={[styles.txnMetaText, { fontWeight: "700", color: "#334155" }]}>
+                    {" "}
+                    • {txn.payment_method_label}
+                  </AppText>
+                ) : null}
+                {txn.ledger_bucket === "daily_payable" && txn.settlement_status === "pending" && (
+                  <AppText style={{ fontSize: 10, color: "#D97706", fontWeight: "700", marginLeft: 4 }}>
+                    • Due Tonight
+                  </AppText>
+                )}
+                {txn.ledger_bucket === "daily_payable" && txn.settlement_status === "settled" && (
+                  <AppText style={{ fontSize: 10, color: "#059669", fontWeight: "700", marginLeft: 4 }}>
+                    • Settled
+                  </AppText>
+                )}
+              </View>
+            </View>
+
+            {/* Amounts */}
+            <View style={styles.txnRightCol}>
+              <AppText style={[styles.txnAmountText, isCredit ? styles.amountCredit : styles.amountDebit]}>
+                {isCredit ? "+" : "-"}
+                {formatPKR(txn.amount)}
+              </AppText>
+              {txn.running_balance !== undefined && (
+                <AppText style={styles.txnBalText}>Bal: {formatPKR(txn.running_balance)}</AppText>
               )}
             </View>
           </View>
 
-          {/* Amounts */}
-          <View style={styles.txnRightCol}>
-            <AppText style={[styles.txnAmountText, isCredit ? styles.amountCredit : styles.amountDebit]}>
-              {isCredit ? "+" : "-"}
-              {formatPKR(txn.amount)}
-            </AppText>
-            {txn.running_balance !== undefined && (
-              <AppText style={styles.txnBalText}>Bal: {formatPKR(txn.running_balance)}</AppText>
-            )}
-          </View>
+          {/* Inline Customer Paid / Your Share / Company Cut Pills for Work Orders */}
+          {isWorkOrder && custPaid > 0 && (
+            <View
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 6,
+                paddingTop: 6,
+                borderTopWidth: StyleSheet.hairlineWidth,
+                borderTopColor: "#E2E8F0",
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  borderWidth: 1,
+                  borderColor: "#E2E8F0",
+                  borderRadius: 7,
+                  paddingHorizontal: 7,
+                  paddingVertical: 3,
+                }}
+              >
+                <AppText style={{ fontSize: 10, fontWeight: "700", color: "#334155" }}>
+                  Customer Paid: {formatPKR(custPaid)}
+                </AppText>
+              </View>
+
+              {vendorShare > 0 && (
+                <View
+                  style={{
+                    backgroundColor: "#ECFDF5",
+                    borderRadius: 7,
+                    paddingHorizontal: 7,
+                    paddingVertical: 3,
+                  }}
+                >
+                  <AppText style={{ fontSize: 10, fontWeight: "800", color: "#059669" }}>
+                    Your 65%: +{formatPKR(vendorShare)}
+                  </AppText>
+                </View>
+              )}
+
+              {companyShare > 0 && (
+                <View
+                  style={{
+                    backgroundColor: "#FEF2F2",
+                    borderRadius: 7,
+                    paddingHorizontal: 7,
+                    paddingVertical: 3,
+                  }}
+                >
+                  <AppText style={{ fontSize: 10, fontWeight: "800", color: "#DC2626" }}>
+                    Co. 35%: -{formatPKR(companyShare)}
+                  </AppText>
+                </View>
+              )}
+            </View>
+          )}
         </TouchableOpacity>
 
         {/* Expandable Children for grouped charges */}

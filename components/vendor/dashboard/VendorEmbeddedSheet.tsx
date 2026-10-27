@@ -7,6 +7,16 @@ interface VendorTransaction {
   id: string | number;
   type?: "credit" | "debit";
   title?: string;
+  service_name?: string;
+  payment_method_label?: string;
+  wo_status_label?: string;
+  customer_paid?: number;
+  vendor_share?: number;
+  company_share?: number;
+  accepted_at?: string | null;
+  completed_at?: string | null;
+  ledger_bucket?: "daily_payable" | "monthly_accrual";
+  settlement_status?: "pending" | "settled" | "active";
   date?: string;
   amount: number;
   category?: string;
@@ -390,75 +400,208 @@ export default function VendorEmbeddedSheet({
       <View style={styles.activityList}>
         {displayList.length > 0 ? (
           displayList.map((item, idx) => {
-            const isCredit = item.type === "credit" || Number(item.amount) > 0;
+            const isCredit = item.type === "credit";
             const amtStr = Math.abs(Number(item.amount)).toLocaleString();
+            const isWorkOrder = Boolean(
+              item.work_order_number ||
+                item.category === "grouped_bill_charge" ||
+                item.category === "work_order_activity"
+            );
+            const isSettlement =
+              item.category === "settlement" ||
+              (!isWorkOrder && item.ledger_bucket === "daily_payable" && isCredit);
+
+            const custPaid = Number(item.customer_paid) || 0;
+            const vendorShare = Number(item.vendor_share) || 0;
+            const companyShare = Number(item.company_share) || 0;
+            const statusBadgeLabel =
+              item.wo_status_label ||
+              (isSettlement
+                ? "Receipt Verified"
+                : item.settlement_status === "settled"
+                  ? "Settled"
+                  : "Completed");
 
             return (
-              <View key={item.id ? `${item.id}-${idx}` : idx} style={styles.activityItem}>
-                <View style={styles.activityLeft}>
-                  <View
-                    style={[
-                      styles.activityIconWrap,
-                      {
-                        backgroundColor: isDaily
-                          ? isCredit
-                            ? "#ECFDF5"
-                            : "#FEF2F2"
-                          : "#EFF6FF",
-                      },
-                    ]}
-                  >
-                    <Ionicons
-                      name={
-                        isDaily
-                          ? isCredit
-                            ? "checkmark-circle"
-                            : "arrow-up"
-                          : "shield-checkmark"
-                      }
-                      size={18}
-                      color={
-                        isDaily
-                          ? isCredit
-                            ? "#059669"
-                            : "#DC2626"
-                          : "#2563EB"
-                      }
-                    />
+              <View
+                key={item.id ? `${item.id}-${idx}` : idx}
+                style={[styles.activityItem, { flexDirection: "column", alignItems: "stretch", gap: 10 }]}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <View style={styles.activityLeft}>
+                    <View
+                      style={[
+                        styles.activityIconWrap,
+                        {
+                          backgroundColor: isDaily
+                            ? isSettlement || isCredit
+                              ? "#ECFDF5"
+                              : "#FEF2F2"
+                            : "#EFF6FF",
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={
+                          isDaily
+                            ? isSettlement
+                              ? "checkmark-done-circle"
+                              : isWorkOrder
+                                ? "construct-outline"
+                                : isCredit
+                                  ? "checkmark-circle"
+                                  : "arrow-up"
+                            : "shield-checkmark"
+                        }
+                        size={18}
+                        color={
+                          isDaily
+                            ? isSettlement || isCredit
+                              ? "#059669"
+                              : "#DC2626"
+                            : "#2563EB"
+                        }
+                      />
+                    </View>
+
+                    <View style={{ flex: 1, paddingRight: 8 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+                        <AppText style={styles.activityItemTitle} numberOfLines={1}>
+                          {item.title ||
+                            (item.work_order_number
+                              ? `Work Order #${item.work_order_number}`
+                              : "Customer Service")}
+                        </AppText>
+                        <View
+                          style={{
+                            backgroundColor:
+                              statusBadgeLabel.includes("Accepted")
+                                ? "#EFF6FF"
+                                : statusBadgeLabel.includes("Verified") || statusBadgeLabel.includes("Settled")
+                                  ? "#ECFDF5"
+                                  : "#F1F5F9",
+                            paddingHorizontal: 6,
+                            paddingVertical: 1.5,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <AppText
+                            style={{
+                              fontSize: 9.5,
+                              fontWeight: "800",
+                              color:
+                                statusBadgeLabel.includes("Accepted")
+                                  ? "#2563EB"
+                                  : statusBadgeLabel.includes("Verified") || statusBadgeLabel.includes("Settled")
+                                    ? "#059669"
+                                    : "#475569",
+                            }}
+                          >
+                            {statusBadgeLabel}
+                          </AppText>
+                        </View>
+                      </View>
+
+                      <AppText style={styles.activityItemSub} numberOfLines={1}>
+                        {formatTimeOrDate(item.date)} ·{" "}
+                        {item.service_name
+                          ? `${item.service_name} · `
+                          : ""}
+                        {item.payment_method_label ||
+                          (isDaily
+                            ? isSettlement
+                              ? "Paid to Company"
+                              : "Cash Paid to Vendor"
+                            : "100% Reimbursed Claim")}
+                      </AppText>
+                    </View>
                   </View>
 
-                  <View style={{ flex: 1, paddingRight: 8 }}>
-                    <AppText style={styles.activityItemTitle} numberOfLines={1}>
-                      {item.title ||
-                        (item.work_order_number
-                          ? `Order #${item.work_order_number}`
-                          : "Customer Service")}
+                  <View style={{ alignItems: "flex-end" }}>
+                    <AppText
+                      style={[
+                        styles.activityItemAmount,
+                        {
+                          color: isDaily
+                            ? isCredit
+                              ? "#059669"
+                              : "#DC2626"
+                            : "#2563EB",
+                        },
+                      ]}
+                    >
+                      {isCredit ? `+PKR ${amtStr}` : `-PKR ${amtStr}`}
                     </AppText>
-                    <AppText style={styles.activityItemSub} numberOfLines={1}>
-                      {formatTimeOrDate(item.date)} ·{" "}
+                    <AppText style={{ fontSize: 9.5, fontWeight: "700", color: "#64748B", marginTop: 1 }}>
                       {isDaily
-                        ? isCredit
-                          ? "Cash Collected On-Site"
-                          : "Commission Cut"
-                        : "100% Reimbursed Claim"}
+                        ? isSettlement
+                          ? "Paid to Co."
+                          : isCredit
+                            ? "Your Share"
+                            : "35% Co. Cut"
+                        : "Monthly Claim"}
                     </AppText>
                   </View>
                 </View>
 
-                <AppText
-                  style={[
-                    styles.activityItemAmount,
-                    {
-                      color: isDaily
-                        ? isCredit
-                          ? "#0F172A"
-                          : "#DC2626"
-                        : "#2563EB",
-                    },
-                  ]}
-                >
-                  {isCredit ? `+PKR ${amtStr}` : `-PKR ${amtStr}`}
-                </AppText>
+                {/* Breakdown Chips for Daily Work Orders (Customer Paid / How Paid / Your 65% / Company 35%) */}
+                {isDaily && isWorkOrder && custPaid > 0 && (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      flexWrap: "wrap",
+                      gap: 6,
+                      paddingTop: 8,
+                      borderTopWidth: 1,
+                      borderTopColor: "#E2E8F0",
+                    }}
+                  >
+                    <View
+                      style={{
+                        backgroundColor: "#FFFFFF",
+                        borderWidth: 1,
+                        borderColor: "#E2E8F0",
+                        borderRadius: 8,
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                      }}
+                    >
+                      <AppText style={{ fontSize: 10, fontWeight: "700", color: "#334155" }}>
+                        Customer Paid: PKR {custPaid.toLocaleString()} ({item.payment_method_label || "Cash"})
+                      </AppText>
+                    </View>
+
+                    {vendorShare > 0 && (
+                      <View
+                        style={{
+                          backgroundColor: "#ECFDF5",
+                          borderRadius: 8,
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
+                        }}
+                      >
+                        <AppText style={{ fontSize: 10, fontWeight: "800", color: "#059669" }}>
+                          Your 65%: +PKR {vendorShare.toLocaleString()}
+                        </AppText>
+                      </View>
+                    )}
+
+                    {companyShare > 0 && (
+                      <View
+                        style={{
+                          backgroundColor: "#FEF2F2",
+                          borderRadius: 8,
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
+                        }}
+                      >
+                        <AppText style={{ fontSize: 10, fontWeight: "800", color: "#DC2626" }}>
+                          Co. 35%: -PKR {companyShare.toLocaleString()}
+                        </AppText>
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
             );
           })

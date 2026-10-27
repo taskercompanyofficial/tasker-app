@@ -116,7 +116,7 @@ export default function VendorSettings() {
         try {
           const d = new Date(userData.created_at);
           joinedDate = d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
-        } catch {}
+        } catch { }
       }
 
       const categoryName =
@@ -186,7 +186,7 @@ export default function VendorSettings() {
       } else {
         await myAxios.post(VENDOR_SIGN_OUT_URL);
       }
-    } catch {}
+    } catch { }
     await signOutMode(isStaff ? "vendor_staff" : "vendor");
     localizedToast({ type: "success", text1: "Successfully signed out" });
 
@@ -204,14 +204,14 @@ export default function VendorSettings() {
         title: "Join Tasker Company as Partner",
         message: `Join Tasker Company as a service partner! Register using my invite code ${referralCode} and get authorized to earn: https://taskercompany.com/partner/join?ref=${referralCode}`,
       });
-    } catch {}
+    } catch { }
   };
 
   const handleCopyCode = async () => {
     try {
       await Clipboard.setStringAsync(referralCode);
       localizedToast({ type: "success", text1: "Invite code copied to clipboard" });
-    } catch {}
+    } catch { }
   };
 
   const handleOpenBadge = () => {
@@ -347,24 +347,6 @@ export default function VendorSettings() {
             </View>
           </View>
 
-          {/* Action Pill to Change Replaceable Daily Photo */}
-          <TouchableOpacity
-            style={styles.changeDailyPhotoBtn}
-            activeOpacity={0.8}
-            onPress={() => {
-              setDailyAvatarError(false);
-              setShowDailySelfieModal(true);
-            }}
-          >
-            <Ionicons name="camera-outline" size={15} color="#059669" />
-            <AppText style={styles.changeDailyPhotoBtnText}>
-              Change Daily Photo
-            </AppText>
-            <View style={styles.fixedNotePill}>
-              <Ionicons name="lock-closed" size={10} color="#64748B" />
-              <AppText style={styles.fixedNotePillText}>ID Photo Fixed</AppText>
-            </View>
-          </TouchableOpacity>
         </View>
 
         {/* 1. FROSTED MINIMAL SEGMENTED SWITCHER (Option 3 - At First!) */}
@@ -434,30 +416,11 @@ export default function VendorSettings() {
             <View style={styles.menuIcon}>
               <Ionicons name="person" size={20} color="#1F2937" />
             </View>
-            <AppText style={styles.menuLabel}>Employee ID & Profile (Fixed Photo)</AppText>
+            <AppText style={styles.menuLabel}>My ID Card</AppText>
             <View style={styles.dynamicCodeChip}>
               <AppText style={styles.dynamicCodeChipText}>{dynamicVendorCode}</AppText>
             </View>
           </TouchableOpacity>
-
-          {/* Change Daily Verification Photo */}
-          <TouchableOpacity
-            style={styles.menuRow}
-            activeOpacity={0.65}
-            onPress={() => {
-              setDailyAvatarError(false);
-              setShowDailySelfieModal(true);
-            }}
-          >
-            <View style={styles.menuIcon}>
-              <Ionicons name="camera" size={20} color="#059669" />
-            </View>
-            <AppText style={styles.menuLabel}>Change Daily Photo (24h Selfie)</AppText>
-            <View style={[styles.dynamicCodeChip, { backgroundColor: "#EFF6FF", borderColor: "#BFDBFE" }]}>
-              <AppText style={[styles.dynamicCodeChipText, { color: "#2563EB" }]}>REPLACEABLE</AppText>
-            </View>
-          </TouchableOpacity>
-
           {/* Service Rate Ledger */}
           <TouchableOpacity
             style={styles.menuRow}
@@ -723,7 +686,7 @@ export default function VendorSettings() {
                     await Share.share({
                       message: `Tasker Official Partner ID: ${dynamicVendorCode}\nName: ${vendorName}\nCategory: ${liveStats.categoryName}\nRating: ⭐ ${liveStats.rating} (${liveStats.completed} Completed Jobs)`,
                     });
-                  } catch {}
+                  } catch { }
                 }}
               >
                 <Ionicons name="share-social-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
@@ -843,7 +806,7 @@ export default function VendorSettings() {
           }
           try {
             await refetchUser(isStaff ? "vendor_staff" : "vendor");
-          } catch {}
+          } catch { }
           fetchLiveStats();
         }}
       />
