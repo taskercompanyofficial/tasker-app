@@ -92,6 +92,7 @@ export default function VendorDashboard() {
   const [secondsToMidnight, setSecondsToMidnight] = useState(0);
   const [financialGraceUntil, setFinancialGraceUntil] = useState<string | null>(null);
   const [financialGraceWarning, setFinancialGraceWarning] = useState<string | null>(null);
+  const [secondsToGraceExpiry, setSecondsToGraceExpiry] = useState<number>(0);
 
   // Online status
   const [isOnline, setIsOnline] = useState(false);
@@ -162,6 +163,27 @@ export default function VendorDashboard() {
     return () => clearInterval(interval);
   }, [secondsToMidnight]);
 
+  // Live 1-second countdown for active grace period; auto-locks & refreshes when timer hits 0
+  useEffect(() => {
+    if (!financialGraceUntil || secondsToGraceExpiry <= 0) return;
+    const interval = setInterval(() => {
+      setSecondsToGraceExpiry((prev) => {
+        if (prev <= 1) {
+          // Grace deadline reached -> immediately lock UI & trigger server check/notification
+          setIsFinancialBlocked(true);
+          setFinancialGraceUntil(null);
+          setTimeout(() => {
+            fetchOnlineStatus();
+            fetchData();
+          }, 500);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [financialGraceUntil, secondsToGraceExpiry > 0]);
+
   const openBreakdown = (breakdownMode: "daily" | "monthly") => {
     try {
       Haptics.selectionAsync();
@@ -179,6 +201,15 @@ export default function VendorDashboard() {
         if (d.overdue_payables !== undefined) setOverduePayable(Number(d.overdue_payables));
         if (d.financial_grace_until !== undefined) setFinancialGraceUntil(d.financial_grace_until);
         if (d.financial_grace_warning !== undefined) setFinancialGraceWarning(d.financial_grace_warning);
+        if (d.seconds_to_grace_expiry !== undefined) {
+          setSecondsToGraceExpiry(Number(d.seconds_to_grace_expiry ?? 0));
+        } else if (d.financial_grace_until) {
+          setSecondsToGraceExpiry(
+            Math.max(0, Math.floor((new Date(d.financial_grace_until).getTime() - Date.now()) / 1000))
+          );
+        } else {
+          setSecondsToGraceExpiry(0);
+        }
         setIsOnline(Boolean(d.is_online));
         setSecondsRemaining(Number(d.seconds_remaining ?? 0));
         if (d.due_today_payables !== undefined) setDueTodayPayable(Number(d.due_today_payables));
@@ -316,6 +347,9 @@ export default function VendorDashboard() {
           if (earningsData.summary.financial_grace_warning !== undefined) {
             setFinancialGraceWarning(earningsData.summary.financial_grace_warning);
           }
+          if (earningsData.summary.seconds_to_grace_expiry !== undefined) {
+            setSecondsToGraceExpiry(Number(earningsData.summary.seconds_to_grace_expiry ?? 0));
+          }
           if (earningsData.summary.daily_cash_collected !== undefined) {
             setDailyCashCollected(Number(earningsData.summary.daily_cash_collected));
           }
@@ -427,10 +461,14 @@ export default function VendorDashboard() {
   const totalLifetimeJobs = stats?.completed ?? 0;
 
   const hasActiveGrace = Boolean(
-    financialGraceUntil && new Date(financialGraceUntil).getTime() > Date.now()
+    financialGraceUntil && secondsToGraceExpiry > 0
   );
   const isLocked = (overduePayable > 0 && !hasActiveGrace) || isFinancialBlocked;
-  const overdueAmount = isLocked ? overduePayable : 0;
+  const overdueAmount = isLocked
+    ? overduePayable > 0
+      ? overduePayable
+      : dueTodayPayable
+    : 0;
   const effectiveIsOnline = isOnline && !isLocked;
   const effectiveIsOnlineRef = useRef(effectiveIsOnline);
   effectiveIsOnlineRef.current = effectiveIsOnline;
@@ -520,6 +558,7 @@ export default function VendorDashboard() {
               overdueAmount={overdueAmount}
               financialGraceUntil={financialGraceUntil}
               financialGraceWarning={financialGraceWarning}
+              secondsToGraceExpiry={secondsToGraceExpiry}
               onNavigate={(route) => router.push(route as any)}
               isOnline={effectiveIsOnline}
             />

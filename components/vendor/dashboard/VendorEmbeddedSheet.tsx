@@ -26,6 +26,7 @@ interface VendorEmbeddedSheetProps {
   overdueAmount?: number;
   financialGraceUntil?: string | null;
   financialGraceWarning?: string | null;
+  secondsToGraceExpiry?: number;
   onNavigate: (route: string) => void;
   isOnline?: boolean;
 }
@@ -42,14 +43,30 @@ export default function VendorEmbeddedSheet({
   overdueAmount = 0,
   financialGraceUntil = null,
   financialGraceWarning = null,
+  secondsToGraceExpiry = 0,
   onNavigate,
   isOnline = false,
 }: VendorEmbeddedSheetProps) {
   const isDaily = activeTabIndex === 0;
   const isDue = isDaily && (dueTodayPayable > 0 || isLocked);
-  const hasActiveGrace = Boolean(
-    financialGraceUntil && new Date(financialGraceUntil).getTime() > Date.now()
-  );
+  const [graceDismissed, setGraceDismissed] = React.useState(false);
+
+  const effectiveGraceSeconds =
+    secondsToGraceExpiry > 0
+      ? secondsToGraceExpiry
+      : financialGraceUntil
+        ? Math.max(0, Math.floor((new Date(financialGraceUntil).getTime() - Date.now()) / 1000))
+        : 0;
+
+  const hasActiveGrace = Boolean(financialGraceUntil && effectiveGraceSeconds > 0);
+  const isGraceLastHour = hasActiveGrace && effectiveGraceSeconds <= 3600;
+  const showGraceBanner = hasActiveGrace && !isLocked && (isGraceLastHour || !graceDismissed);
+
+  const formatCountdownMMSS = (totalSec: number) => {
+    const mins = Math.floor(totalSec / 60);
+    const secs = totalSec % 60;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  };
 
   // Filter transactions based on active tab
   const todayDateStr = new Date().toISOString().split("T")[0];
@@ -82,54 +99,120 @@ export default function VendorEmbeddedSheet({
         { paddingBottom: isOnline ? 80 : 130 },
       ]}
     >
-      {/* ─── 0. GRACE DEADLINE WARNING BANNER (When unlocked without clearing dues) ─── */}
-      {hasActiveGrace && !isLocked && (
+      {/* ─── 0. GRACE DEADLINE WARNING BANNER (Non-closable + Live Countdown in Last 1 Hour) ─── */}
+      {showGraceBanner && (
         <View
           style={{
-            backgroundColor: "#FFFBEB",
-            borderColor: "#F59E0B",
-            borderWidth: 1,
+            backgroundColor: isGraceLastHour ? "#FEF2F2" : "#FFFBEB",
+            borderColor: isGraceLastHour ? "#EF4444" : "#F59E0B",
+            borderWidth: 1.5,
             borderRadius: 14,
             padding: 12,
             marginBottom: 12,
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 10,
+            position: "relative",
           }}
         >
-          <View style={{ flex: 1, gap: 3 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Ionicons name="time" size={16} color="#D97706" />
-              <AppText style={{ fontSize: 12, fontWeight: "800", color: "#92400E" }}>
-                Clear Dues Before{" "}
-                {new Date(financialGraceUntil!).toLocaleString([], {
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+          {/* Close button ONLY when more than 1 hour remains */}
+          {!isGraceLastHour && (
+            <TouchableOpacity
+              style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                padding: 4,
+                zIndex: 2,
+              }}
+              onPress={() => setGraceDismissed(true)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close" size={16} color="#92400E" />
+            </TouchableOpacity>
+          )}
+
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
+              paddingRight: !isGraceLastHour ? 18 : 0,
+            }}
+          >
+            <View style={{ flex: 1, gap: 4 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+                <Ionicons
+                  name={isGraceLastHour ? "alarm" : "time"}
+                  size={16}
+                  color={isGraceLastHour ? "#DC2626" : "#D97706"}
+                />
+                <AppText
+                  style={{
+                    fontSize: 12,
+                    fontWeight: "800",
+                    color: isGraceLastHour ? "#991B1B" : "#92400E",
+                  }}
+                >
+                  {isGraceLastHour
+                    ? "Auto-Locking Soon!"
+                    : `Clear Dues Before ${new Date(financialGraceUntil!).toLocaleString([], {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}`}
+                </AppText>
+
+                {isGraceLastHour && (
+                  <View
+                    style={{
+                      backgroundColor: "#DC2626",
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                      borderRadius: 6,
+                    }}
+                  >
+                    <AppText
+                      style={{
+                        fontSize: 11,
+                        fontWeight: "900",
+                        color: "#FFFFFF",
+                        fontVariant: ["tabular-nums"],
+                      }}
+                    >
+                      ⏳ {formatCountdownMMSS(effectiveGraceSeconds)} left
+                    </AppText>
+                  </View>
+                )}
+              </View>
+
+              <AppText
+                style={{
+                  fontSize: 11,
+                  color: isGraceLastHour ? "#B91C1C" : "#B45309",
+                  lineHeight: 15,
+                }}
+              >
+                {financialGraceWarning ||
+                  "Your account is temporarily unlocked. If pending dues are not cleared by the deadline, your account will automatically lock again."}
               </AppText>
             </View>
-            <AppText style={{ fontSize: 11, color: "#B45309", lineHeight: 15 }}>
-              {financialGraceWarning ||
-                "Your account is temporarily unlocked. If pending dues are not cleared by the deadline, your account will automatically lock again."}
-            </AppText>
+
+            <TouchableOpacity
+              style={{
+                backgroundColor: isGraceLastHour ? "#DC2626" : "#D97706",
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: 10,
+              }}
+              onPress={() => onNavigate("/vendor/quick-pay")}
+              activeOpacity={0.85}
+            >
+              <AppText style={{ fontSize: 11, fontWeight: "800", color: "#FFFFFF" }}>
+                Pay Now
+              </AppText>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={{
-              backgroundColor: "#D97706",
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              borderRadius: 10,
-            }}
-            onPress={() => onNavigate("/vendor/quick-pay")}
-            activeOpacity={0.85}
-          >
-            <AppText style={{ fontSize: 11, fontWeight: "800", color: "#FFFFFF" }}>
-              Pay Now
-            </AppText>
-          </TouchableOpacity>
         </View>
       )}
 
