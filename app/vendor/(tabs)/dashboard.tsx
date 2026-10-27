@@ -434,6 +434,7 @@ export default function VendorDashboard() {
         userName={userName}
         avatarUrl={resolvedAvatar}
         isOnline={effectiveIsOnline}
+        onPressProfile={() => router.push("/vendor/(tabs)/settings" as any)}
         onPressNotifications={() => router.push("/vendor/notifications" as any)}
         onPressQuickPay={() => router.push("/vendor/quick-pay" as any)}
         onPressRateCard={() => router.push("/vendor/ledger" as any)}

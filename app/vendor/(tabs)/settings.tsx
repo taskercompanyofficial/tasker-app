@@ -274,7 +274,16 @@ export default function VendorSettings() {
             </View>
           </TouchableOpacity>
           <AppText style={styles.profileName}>{vendorName}</AppText>
-          <AppText style={styles.profileHandle}>{vendorEmail}</AppText>
+          <View style={styles.profileMetaRow}>
+            <AppText style={styles.profileHandle}>{vendorPhone}</AppText>
+            <View style={styles.profileDotDivider} />
+            <View style={styles.profileRatingChip}>
+              <Ionicons name="star" size={12} color="#F59E0B" />
+              <AppText style={styles.profileRatingText}>
+                {liveStats.rating.toFixed(1)}
+              </AppText>
+            </View>
+          </View>
         </View>
 
         {/* 1. FROSTED MINIMAL SEGMENTED SWITCHER (Option 3 - At First!) */}
@@ -829,11 +838,39 @@ const styles = StyleSheet.create({
     color: "#1F2937",
     letterSpacing: -0.3,
   },
+  profileMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 4,
+  },
   profileHandle: {
-    fontSize: 12.5,
+    fontSize: 13,
     color: "#6B7280",
-    marginTop: 2,
-    fontWeight: "400",
+    fontWeight: "500",
+  },
+  profileDotDivider: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#CBD5E1",
+  },
+  profileRatingChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#FEF3C7",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  profileRatingText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#92400E",
   },
 
   /* Option 3: Frosted Minimal Segmented Switcher */

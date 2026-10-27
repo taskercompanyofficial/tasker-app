@@ -15,6 +15,7 @@ interface VendorDashboardHeaderProps {
   togglingOnline?: boolean;
   isLocked?: boolean;
   onToggleOnline?: (targetValue: boolean) => void;
+  onPressProfile?: () => void;
   onPressNotifications: () => void;
   onPressQuickPay?: () => void;
   onPressRateCard?: () => void;
@@ -28,6 +29,7 @@ export default function VendorDashboardHeader({
   userName,
   avatarUrl,
   isOnline = false,
+  onPressProfile,
   onPressNotifications,
   onPressQuickPay,
   onPressRateCard,
@@ -41,38 +43,44 @@ export default function VendorDashboardHeader({
   return (
     <View style={styles.topBar}>
       {/* Profile Section */}
-      <View ref={profileRef} collapsable={false} style={styles.profileSection}>
-        <View style={styles.avatarWrap}>
-          {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
-          ) : (
-            <View style={styles.avatarFallback}>
-              <AppText style={styles.avatarText}>{avatarInitial}</AppText>
-            </View>
-          )}
-          <View
-            style={[
-              styles.avatarStatusDot,
-              {
-                backgroundColor: isOnline ? "#10B981" : "#94A3B8",
-              },
-            ]}
-          />
-        </View>
-        <View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <AppText style={styles.partnerRole}>Verified Partner</AppText>
-            {isOnline && (
-              <View style={styles.liveBadgeSmall}>
-                <View style={styles.liveDotSmall} />
-                <AppText style={styles.liveBadgeSmallText}>LIVE</AppText>
+      <View ref={profileRef} collapsable={false}>
+        <TouchableOpacity
+          style={styles.profileSection}
+          activeOpacity={0.75}
+          onPress={onPressProfile}
+        >
+          <View style={styles.avatarWrap}>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <AppText style={styles.avatarText}>{avatarInitial}</AppText>
               </View>
             )}
+            <View
+              style={[
+                styles.avatarStatusDot,
+                {
+                  backgroundColor: isOnline ? "#10B981" : "#94A3B8",
+                },
+              ]}
+            />
           </View>
-          <AppText style={styles.partnerName} numberOfLines={1}>
-            {userName}
-          </AppText>
-        </View>
+          <View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <AppText style={styles.partnerRole}>Verified Partner</AppText>
+              {isOnline && (
+                <View style={styles.liveBadgeSmall}>
+                  <View style={styles.liveDotSmall} />
+                  <AppText style={styles.liveBadgeSmallText}>LIVE</AppText>
+                </View>
+              )}
+            </View>
+            <AppText style={styles.partnerName} numberOfLines={1}>
+              {userName}
+            </AppText>
+          </View>
+        </TouchableOpacity>
       </View>
 
       {/* Top Bar Actions: Rate Card + Pay/QR Button + Notifications Bell */}

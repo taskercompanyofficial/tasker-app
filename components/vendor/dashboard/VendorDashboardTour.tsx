@@ -67,7 +67,7 @@ export const VENDOR_DASHBOARD_TOUR_STEPS: VendorTourStep[] = [
     badge: "Live Status",
     icon: "shield-checkmark-outline",
     description:
-      "Shows your Verified Partner identity and active connection dot. When you are online, a green 'LIVE' badge appears here so you know dispatches are active.",
+      "Shows your Verified Partner identity and active connection dot. Tap your profile anytime to open Settings & Employee ID Card.",
     tabIndex: 0,
     scrollY: 0,
     borderRadius: 16,
@@ -129,11 +129,11 @@ export const VENDOR_DASHBOARD_TOUR_STEPS: VendorTourStep[] = [
   {
     id: "daily-price-card",
     targetKey: "priceCardDaily",
-    title: "Daily Net Balance & 65/35 Split",
+    title: "Daily Earnings & 65/35 Split",
     badge: "Daily Cash Jobs",
     icon: "wallet-outline",
     description:
-      "Shows your net 65% take-home profit today, along with 100% Cash Collected from customers, the 35% Company Share, and Due Tonight. Tap the (i) icon next to the amount for a full formula breakdown.",
+      "Shows your net 65% Daily Earnings today, along with 100% Cash Collected from customers, the 35% Company Share, and Due Tonight. Tap the (i) icon next to the amount for a full formula breakdown.",
     tip: "You can also swipe this area left or right to switch tabs.",
     tabIndex: 0,
     scrollY: 0,
@@ -339,7 +339,7 @@ export default function VendorDashboardTour({
       transparent
       animationType="fade"
       statusBarTranslucent
-      onRequestClose={handleSkip}
+      onRequestClose={() => {}}
     >
       <View style={styles.root}>
         {/* SVG Dark Backdrop with Spotlight Cutout */}
@@ -399,7 +399,7 @@ export default function VendorDashboardTour({
             },
           ]}
         >
-          {/* Top Row: Badge + Step Counter + Skip */}
+          {/* Top Row: Badge + Step Counter */}
           <View style={styles.cardHeader}>
             <View style={styles.badgePill}>
               <Ionicons name={currentStep.icon} size={13} color="#059669" />
@@ -408,15 +408,8 @@ export default function VendorDashboardTour({
 
             <View style={styles.headerRight}>
               <AppText style={styles.stepCounterText}>
-                {stepIndex + 1} / {totalSteps}
+                Step {stepIndex + 1} of {totalSteps}
               </AppText>
-              <TouchableOpacity
-                onPress={handleSkip}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                style={styles.skipBtn}
-              >
-                <AppText style={styles.skipText}>Skip</AppText>
-              </TouchableOpacity>
             </View>
           </View>
 

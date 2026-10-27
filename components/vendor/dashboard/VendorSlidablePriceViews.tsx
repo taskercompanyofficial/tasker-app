@@ -155,7 +155,7 @@ export default function VendorSlidablePriceViews({
         <View style={[styles.slidePage, { width: containerWidth }]}>
           {/* Title Row with Info Button */}
           <View style={styles.titleWithInfoRow}>
-            <AppText style={styles.balanceSubtitle}>Daily Net Balance</AppText>
+            <AppText style={styles.balanceSubtitle}>Daily Earnings</AppText>
             <TouchableOpacity
               style={styles.infoBtn}
               onPress={() => onOpenBreakdown("daily")}
