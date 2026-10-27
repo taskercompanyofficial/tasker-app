@@ -169,7 +169,7 @@ export default function FinancialLockScreen() {
   };
 
   const handleContactSupport = () => {
-    Linking.openURL("https://wa.me/923000000000?text=Hello,%20my%20vendor%20account%20is%20financially%20locked.%20I%20have%20sent%20the%20payment.");
+    Linking.openURL("https://wa.me/923041112717?text=Hello,%20my%20vendor%20account%20is%20financially%20locked.%20I%20have%20sent%20the%20payment.");
   };
 
   if (loading) {

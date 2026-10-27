@@ -219,7 +219,7 @@ export default function VendorSignIn() {
           />
 
           <TouchableOpacity
-            onPress={() => openUrl("tel:+923000000000")}
+            onPress={() => openUrl("tel:+923041112717")}
             style={styles.circleIconButton}
             activeOpacity={0.7}
           >

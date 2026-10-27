@@ -289,7 +289,12 @@ export default function VendorDashboard() {
           .filter((t: any) => t.type === "credit" && t.date?.startsWith(today))
           .reduce((acc: number, t: any) => acc + Math.abs(Number(t.amount)), 0);
         setTodayEarnings(todayCredits);
-        setCompanyShare(todayCredits * 0.35);
+        const dailyDue = earningsData?.summary?.due_today_payable !== undefined
+          ? Number(earningsData.summary.due_today_payable)
+          : txns
+              .filter((t: any) => (t.ledger_bucket === "daily_payable" || t.category === "profit_share_adjustment") && t.type === "debit" && t.date?.startsWith(today))
+              .reduce((acc: number, t: any) => acc + Math.abs(Number(t.amount)), 0);
+        setCompanyShare(dailyDue);
       }
     } catch (e) {
       console.error("Dashboard fetchData error:", e);

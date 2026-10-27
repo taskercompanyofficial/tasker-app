@@ -63,8 +63,14 @@ export default function VendorQuickPayScreen() {
   const [activeTab, setActiveTab] = useState<0 | 1 | 2>(0);
 
   // Financial Dues State
-  const [pendingDues, setPendingDues] = useState<number>(4250);
-  const [inputAmount, setInputAmount] = useState<string>("4250");
+  const initialDues =
+    params.dues && !isNaN(Number(params.dues))
+      ? Math.max(0, Math.round(Number(params.dues)))
+      : 0;
+  const [pendingDues, setPendingDues] = useState<number>(initialDues);
+  const [inputAmount, setInputAmount] = useState<string>(
+    initialDues > 0 ? String(initialDues) : ""
+  );
   const [payingOnline, setPayingOnline] = useState(false);
 
   // Parse entered amount safely (users can pay partial or full as much as they want)
@@ -75,9 +81,9 @@ export default function VendorQuickPayScreen() {
   // Fetch actual pending dues on mount
   useEffect(() => {
     if (params.dues && !isNaN(Number(params.dues))) {
-      const d = Math.round(Number(params.dues));
+      const d = Math.max(0, Math.round(Number(params.dues)));
       setPendingDues(d);
-      setInputAmount(String(d));
+      setInputAmount(d > 0 ? String(d) : "");
       return;
     }
 
@@ -86,12 +92,17 @@ export default function VendorQuickPayScreen() {
       .then((res) => {
         const d = res.data?.data;
         if (d) {
-          const totalUnsettled = Math.round(
-            (Number(d.overdue_payables) || 0) + (Number(d.due_today_payables) || 0)
+          const totalUnsettled = Math.max(
+            0,
+            Math.round(
+              (Number(d.overdue_payables) || 0) + (Number(d.due_today_payables) || 0)
+            )
           );
+          setPendingDues(totalUnsettled);
           if (totalUnsettled > 0) {
-            setPendingDues(totalUnsettled);
             setInputAmount(String(totalUnsettled));
+          } else {
+            setInputAmount("");
           }
         }
       })

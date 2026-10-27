@@ -104,7 +104,9 @@ export default function VendorEarnings() {
   // Selection Dropdown Modals
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedDailyFilter, setSelectedDailyFilter] = useState<string>("Today");
-  const [selectedMonthlyFilter, setSelectedMonthlyFilter] = useState<string>("October 2026");
+  const [selectedMonthlyFilter, setSelectedMonthlyFilter] = useState<string>(() =>
+    new Date().toLocaleDateString("en-PK", { month: "long", year: "numeric" })
+  );
 
   // Custom date picker
   const [showDatePicker, setShowDatePicker] = useState(false);
