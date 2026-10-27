@@ -46,15 +46,47 @@ export default function VendorOnlineSlider({
   const isOnlineRef = useRef(isOnline);
   isOnlineRef.current = isOnline;
 
+  const togglingOnlineRef = useRef(togglingOnline);
+  togglingOnlineRef.current = togglingOnline;
+
   useEffect(() => {
     maxDistanceRef.current = Math.max(120, trackWidth - knobWidth - 10);
   }, [trackWidth]);
 
+  // Reset knob to 0 whenever online status changes or loading completes
+  useEffect(() => {
+    slideKnobAnim.stopAnimation(() => {
+      slideKnobAnim.setValue(0);
+    });
+  }, [isOnline, togglingOnline, slideKnobAnim]);
+
+  const triggerSlideAction = () => {
+    if (isLockedRef.current || togglingOnlineRef.current) return;
+    try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (_) {}
+    Animated.timing(slideKnobAnim, {
+      toValue: maxDistanceRef.current,
+      duration: 120,
+      useNativeDriver: false,
+    }).start(() => {
+      slideKnobAnim.setValue(0);
+      onSlideCompleteRef.current?.();
+    });
+  };
+
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => !isLockedRef.current,
-      onMoveShouldSetPanResponder: (_, g) => !isLockedRef.current && Math.abs(g.dx) > 3,
+      onStartShouldSetPanResponder: () =>
+        !isLockedRef.current && !togglingOnlineRef.current,
+      onStartShouldSetPanResponderCapture: () =>
+        !isLockedRef.current && !togglingOnlineRef.current,
+      onMoveShouldSetPanResponder: (_, g) =>
+        !isLockedRef.current && !togglingOnlineRef.current && Math.abs(g.dx) > 2,
+      onMoveShouldSetPanResponderCapture: (_, g) =>
+        !isLockedRef.current && !togglingOnlineRef.current && Math.abs(g.dx) > 2,
       onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
       onPanResponderGrant: () => {
         try {
           Haptics.selectionAsync();
@@ -65,18 +97,10 @@ export default function VendorOnlineSlider({
         slideKnobAnim.setValue(val);
       },
       onPanResponderRelease: (_, g) => {
-        if (g.dx >= maxDistanceRef.current * 0.45) {
-          try {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          } catch (_) {}
-          Animated.timing(slideKnobAnim, {
-            toValue: maxDistanceRef.current,
-            duration: 120,
-            useNativeDriver: false,
-          }).start(() => {
-            slideKnobAnim.setValue(0);
-            onSlideCompleteRef.current?.();
-          });
+        const passedDistance = g.dx >= maxDistanceRef.current * 0.3;
+        const passedVelocity = g.vx > 0.35 && g.dx > 20;
+        if (passedDistance || passedVelocity) {
+          triggerSlideAction();
         } else {
           Animated.spring(slideKnobAnim, {
             toValue: 0,
@@ -142,9 +166,11 @@ export default function VendorOnlineSlider({
       <View
         style={styles.sliderTrack}
         onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
+        {...panResponder.panHandlers}
       >
         {/* Animated fill */}
         <Animated.View
+          pointerEvents="none"
           style={[
             styles.sliderTrackFill,
             isOnline && styles.sliderTrackFillRed,
@@ -159,9 +185,15 @@ export default function VendorOnlineSlider({
         />
 
         {/* Center label */}
-        <View style={styles.sliderCenterLabel}>
+        <View style={styles.sliderCenterLabel} pointerEvents="none">
           <AppText style={styles.sliderTrackText}>
-            {isOnline ? "Slide to Go Offline" : "Slide to Go Online"}
+            {togglingOnline
+              ? isOnline
+                ? "Going Offline..."
+                : "Going Online..."
+              : isOnline
+              ? "Slide to Go Offline"
+              : "Slide to Go Online"}
           </AppText>
           <DirectionalIcon
             name="chevron-forward"
@@ -173,7 +205,6 @@ export default function VendorOnlineSlider({
 
         {/* Draggable Knob */}
         <Animated.View
-          {...panResponder.panHandlers}
           style={[
             styles.sliderKnob,
             isOnline && styles.sliderKnobRed,

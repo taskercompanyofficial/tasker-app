@@ -72,25 +72,10 @@ export default function SelfieCaptureModal({
       });
 
       if (photo?.uri) {
-        const photoWidth = photo.width || SCREEN_WIDTH * 2;
-        const photoHeight = photo.height || SCREEN_HEIGHT * 2;
-
-        const size = Math.min(photoWidth, photoHeight);
-        const originX = Math.round((photoWidth - size) / 2);
-        const originY = Math.round((photoHeight - size) / 2);
-
+        // Keep full uncropped camera frame so face/portrait is never zoomed in or clipped
         const manipulated = await ImageManipulator.manipulateAsync(
           photo.uri,
-          [
-            {
-              crop: {
-                originX: Math.max(0, originX),
-                originY: Math.max(0, originY),
-                width: Math.min(size, photoWidth),
-                height: Math.min(size, photoHeight),
-              },
-            },
-          ],
+          [],
           { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
         );
 

@@ -430,7 +430,7 @@ export default function VendorEarnings() {
         type: `image/${fileType}`,
       } as any);
 
-      formData.append("amount", dailyMetrics.companyCut.toString());
+      formData.append("amount", (dailyMetrics.duePayable > 0 ? dailyMetrics.duePayable : dailyMetrics.companyCut).toString());
 
       await myAxios.post(VENDOR_PAYOUT_SUBMIT_URL, formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -648,10 +648,17 @@ export default function VendorEarnings() {
           </AppText>
         </View>
 
-        {ledgerMode === "daily" && (dailyMetrics.duePayable > 0 || dailyMetrics.companyCut > 0) && (
+        {ledgerMode === "daily" && dailyMetrics.duePayable > 0 && (
           <View style={[styles.heroStatusChip, styles.chipDailyDue]}>
             <AppText style={[styles.heroChipText, styles.chipDailyDueText]}>
-              ● ₨ {(dailyMetrics.duePayable || dailyMetrics.companyCut).toLocaleString()} Share Due Today (12 AM)
+              ● ₨ {dailyMetrics.duePayable.toLocaleString("en-PK")} Share Due Today (12 AM)
+            </AppText>
+          </View>
+        )}
+        {ledgerMode === "daily" && dailyMetrics.duePayable <= 0 && dailyMetrics.companyCut > 0 && (
+          <View style={[styles.heroStatusChip, { backgroundColor: "#ECFDF5", borderColor: "#A7F3D0" }]}>
+            <AppText style={[styles.heroChipText, { color: "#059669" }]}>
+              ● ₨ {dailyMetrics.companyCut.toLocaleString("en-PK")} Company Share Settled ✅
             </AppText>
           </View>
         )}
