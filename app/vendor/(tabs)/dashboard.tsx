@@ -41,6 +41,10 @@ import VendorSlidablePriceViews from "@/components/vendor/dashboard/VendorSlidab
 import VendorEmbeddedSheet from "@/components/vendor/dashboard/VendorEmbeddedSheet";
 import VendorOnlineSlider from "@/components/vendor/dashboard/VendorOnlineSlider";
 import VendorBreakdownModal from "@/components/vendor/dashboard/VendorBreakdownModal";
+import VendorDashboardTour from "@/components/vendor/dashboard/VendorDashboardTour";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const VENDOR_TOUR_STORAGE_KEY = "tasker_vendor_dashboard_tour_seen_v1";
 
 interface WorkOrderStats {
   total: number;
@@ -98,6 +102,18 @@ export default function VendorDashboard() {
   const [showSummarySheet, setShowSummarySheet] = useState(false);
   const [summarySheetMode, setSummarySheetMode] = useState<"daily" | "monthly">("daily");
 
+  // Guided Tour state & target refs
+  const [showTour, setShowTour] = useState(false);
+  const scrollRef = useRef<ScrollView | null>(null);
+  const profileRef = useRef<View | null>(null);
+  const rateCardBtnRef = useRef<View | null>(null);
+  const quickPayBtnRef = useRef<View | null>(null);
+  const notifBtnRef = useRef<View | null>(null);
+  const paymentTabsRef = useRef<View | null>(null);
+  const priceCardRef = useRef<View | null>(null);
+  const activitySheetRef = useRef<View | null>(null);
+  const onlineSliderRef = useRef<View | null>(null);
+
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(15)).current;
@@ -107,7 +123,30 @@ export default function VendorDashboard() {
       Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 350, useNativeDriver: true }),
     ]).start();
+
+    // Auto-start guided tour once for first-time vendor users
+    let mounted = true;
+    (async () => {
+      try {
+        const seen = await AsyncStorage.getItem(VENDOR_TOUR_STORAGE_KEY);
+        if (!seen && mounted) {
+          setTimeout(() => {
+            if (mounted) setShowTour(true);
+          }, 900);
+        }
+      } catch (_) {}
+    })();
+    return () => {
+      mounted = false;
+    };
   }, []);
+
+  const handleCloseTour = async () => {
+    setShowTour(false);
+    try {
+      await AsyncStorage.setItem(VENDOR_TOUR_STORAGE_KEY, "true");
+    } catch (_) {}
+  };
 
   useEffect(() => {
     if (secondsRemaining <= 0 || !isOnline) return;
@@ -398,16 +437,29 @@ export default function VendorDashboard() {
         onPressNotifications={() => router.push("/vendor/notifications" as any)}
         onPressQuickPay={() => router.push("/vendor/quick-pay" as any)}
         onPressRateCard={() => router.push("/vendor/ledger" as any)}
+        onPressTour={() => {
+          try {
+            Haptics.selectionAsync();
+          } catch (_) {}
+          setShowTour(true);
+        }}
+        profileRef={profileRef}
+        rateCardBtnRef={rateCardBtnRef}
+        quickPayBtnRef={quickPayBtnRef}
+        notifBtnRef={notifBtnRef}
       />
 
       {/* ─── 2. FULL-WIDTH TABS WITH REANIMATED UNDERLINE ─── */}
-      <VendorPaymentTabs
-        activeTabIndex={activeTabIndex}
-        onTabChange={(index) => setActiveTabIndex(index)}
-      />
+      <View ref={paymentTabsRef} collapsable={false}>
+        <VendorPaymentTabs
+          activeTabIndex={activeTabIndex}
+          onTabChange={(index) => setActiveTabIndex(index)}
+        />
+      </View>
 
       {/* ─── 3. SCROLLABLE CONTENT ─── */}
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -427,59 +479,85 @@ export default function VendorDashboard() {
           }}
         >
           {/* ─── 4. REANIMATED SLIDABLE PRICE VIEWS (Swipeable Left / Right) ─── */}
-          <VendorSlidablePriceViews
-            activeTabIndex={activeTabIndex}
-            onTabChange={(index) => setActiveTabIndex(index)}
-            dailyAmount={dailyAmount}
-            monthlyAmount={monthlyAmount}
-            totalJobsDoneDaily={totalJobsDoneDaily}
-            totalJobsDoneMonthly={totalJobsDoneMonthly}
-            totalLifetimeJobs={totalLifetimeJobs}
-            todayEarnings={todayEarnings}
-            dailyCashCollected={dailyCashCollected}
-            companyShare={companyShare}
-            dueTodayPayable={dueTodayPayable}
-            isLocked={isLocked}
-            overdueAmount={overdueAmount}
-            onOpenBreakdown={openBreakdown}
-          />
+          <View ref={priceCardRef} collapsable={false}>
+            <VendorSlidablePriceViews
+              activeTabIndex={activeTabIndex}
+              onTabChange={(index) => setActiveTabIndex(index)}
+              dailyAmount={dailyAmount}
+              monthlyAmount={monthlyAmount}
+              totalJobsDoneDaily={totalJobsDoneDaily}
+              totalJobsDoneMonthly={totalJobsDoneMonthly}
+              totalLifetimeJobs={totalLifetimeJobs}
+              todayEarnings={todayEarnings}
+              dailyCashCollected={dailyCashCollected}
+              companyShare={companyShare}
+              dueTodayPayable={dueTodayPayable}
+              isLocked={isLocked}
+              overdueAmount={overdueAmount}
+              onOpenBreakdown={openBreakdown}
+            />
+          </View>
 
           {/* ─── 5. PURE WHITE EMBEDDED SHEET (OPTION B: STATUS + ACTIVITY FEED) ─── */}
-          <VendorEmbeddedSheet
-            activeTabIndex={activeTabIndex}
-            showNoticeBanner={showNoticeBanner}
-            onCloseNoticeBanner={() => setShowNoticeBanner(false)}
-            dueTodayPayable={dueTodayPayable}
-            transactions={transactions}
-            todayEarnings={todayEarnings}
-            monthlyAccrued={monthlyAccrued}
-            isLocked={isLocked}
-            overdueAmount={overdueAmount}
-            onNavigate={(route) => router.push(route as any)}
-            isOnline={effectiveIsOnline}
-          />
+          <View ref={activitySheetRef} collapsable={false}>
+            <VendorEmbeddedSheet
+              activeTabIndex={activeTabIndex}
+              showNoticeBanner={showNoticeBanner}
+              onCloseNoticeBanner={() => setShowNoticeBanner(false)}
+              dueTodayPayable={dueTodayPayable}
+              transactions={transactions}
+              todayEarnings={todayEarnings}
+              monthlyAccrued={monthlyAccrued}
+              isLocked={isLocked}
+              overdueAmount={overdueAmount}
+              onNavigate={(route) => router.push(route as any)}
+              isOnline={effectiveIsOnline}
+            />
+          </View>
         </Animated.View>
       </ScrollView>
 
       {/* ─── 6. BOTTOM DOCKED ONLINE / OFFLINE SLIDER (Same place for online and offline) ─── */}
-      <VendorOnlineSlider
-        isOnline={effectiveIsOnline}
-        togglingOnline={togglingOnline}
-        isLocked={isLocked}
-        onSlideComplete={() => {
-          if (effectiveIsOnlineRef.current) {
-            handleToggleOnline(false);
-          } else {
-            handleToggleOnline(true);
-          }
+      <View ref={onlineSliderRef} collapsable={false}>
+        <VendorOnlineSlider
+          isOnline={effectiveIsOnline}
+          togglingOnline={togglingOnline}
+          isLocked={isLocked}
+          onSlideComplete={() => {
+            if (effectiveIsOnlineRef.current) {
+              handleToggleOnline(false);
+            } else {
+              handleToggleOnline(true);
+            }
+          }}
+          onLockedPress={() => {
+            localizedToast({
+              type: "error",
+              text1: "Account Locked",
+              text2: `Please pay pending share of PKR ${overdueAmount.toLocaleString()} to unlock bookings.`,
+            });
+            router.push("/vendor/quick-pay" as any);
+          }}
+        />
+      </View>
+
+      {/* ─── 6B. INTERACTIVE SPOTLIGHT TOUR MODAL ─── */}
+      <VendorDashboardTour
+        visible={showTour}
+        onClose={handleCloseTour}
+        targetRefs={{
+          onlineSlider: onlineSliderRef,
+          profile: profileRef,
+          rateCardBtn: rateCardBtnRef,
+          quickPayBtn: quickPayBtnRef,
+          notifBtn: notifBtnRef,
+          paymentTabs: paymentTabsRef,
+          priceCard: priceCardRef,
+          activitySheet: activitySheetRef,
         }}
-        onLockedPress={() => {
-          localizedToast({
-            type: "error",
-            text1: "Account Locked",
-            text2: `Please pay pending share of PKR ${overdueAmount.toLocaleString()} to unlock bookings.`,
-          });
-          router.push("/vendor/quick-pay" as any);
+        onSwitchTab={(idx) => setActiveTabIndex(idx)}
+        onScrollTo={(y) => {
+          scrollRef.current?.scrollTo({ y, animated: true });
         }}
       />
 

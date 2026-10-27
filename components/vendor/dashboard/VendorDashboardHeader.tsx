@@ -18,6 +18,11 @@ interface VendorDashboardHeaderProps {
   onPressNotifications: () => void;
   onPressQuickPay?: () => void;
   onPressRateCard?: () => void;
+  onPressTour?: () => void;
+  profileRef?: React.RefObject<View | null>;
+  rateCardBtnRef?: React.RefObject<View | null>;
+  quickPayBtnRef?: React.RefObject<View | null>;
+  notifBtnRef?: React.RefObject<View | null>;
 }
 
 export default function VendorDashboardHeader({
@@ -27,13 +32,18 @@ export default function VendorDashboardHeader({
   onPressNotifications,
   onPressQuickPay,
   onPressRateCard,
+  onPressTour,
+  profileRef,
+  rateCardBtnRef,
+  quickPayBtnRef,
+  notifBtnRef,
 }: VendorDashboardHeaderProps) {
   const avatarInitial = (userName?.charAt(0) || "P").toUpperCase();
 
   return (
     <View style={styles.topBar}>
       {/* Profile Section */}
-      <View style={styles.profileSection}>
+      <View ref={profileRef} collapsable={false} style={styles.profileSection}>
         <View style={styles.avatarWrap}>
           {avatarUrl ? (
             <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
@@ -67,31 +77,48 @@ export default function VendorDashboardHeader({
         </View>
       </View>
 
-      {/* Top Bar Actions: Rate Card + Pay/QR Button + Notifications Bell */}
+      {/* Top Bar Actions: Tour Guide + Rate Card + Pay/QR Button + Notifications Bell */}
       <View style={styles.topBarActions}>
-        <TouchableOpacity
-          style={styles.iconCircle}
-          activeOpacity={0.75}
-          onPress={onPressRateCard}
-        >
-          <Ionicons name="receipt-outline" size={18} color="#059669" />
-        </TouchableOpacity>
+        {onPressTour && (
+          <TouchableOpacity
+            style={styles.tourChip}
+            activeOpacity={0.75}
+            onPress={onPressTour}
+          >
+            <Ionicons name="help-circle-outline" size={16} color="#047857" />
+            <AppText style={styles.tourChipText}>Guide</AppText>
+          </TouchableOpacity>
+        )}
 
-        <TouchableOpacity
-          style={styles.iconCircle}
-          activeOpacity={0.75}
-          onPress={onPressQuickPay}
-        >
-          <Ionicons name="qr-code-outline" size={19} color="#0F172A" />
-        </TouchableOpacity>
+        <View ref={rateCardBtnRef} collapsable={false}>
+          <TouchableOpacity
+            style={styles.iconCircle}
+            activeOpacity={0.75}
+            onPress={onPressRateCard}
+          >
+            <Ionicons name="receipt-outline" size={18} color="#059669" />
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity
-          style={styles.iconCircle}
-          activeOpacity={0.75}
-          onPress={onPressNotifications}
-        >
-          <Ionicons name="notifications-outline" size={19} color="#334155" />
-        </TouchableOpacity>
+        <View ref={quickPayBtnRef} collapsable={false}>
+          <TouchableOpacity
+            style={styles.iconCircle}
+            activeOpacity={0.75}
+            onPress={onPressQuickPay}
+          >
+            <Ionicons name="qr-code-outline" size={19} color="#0F172A" />
+          </TouchableOpacity>
+        </View>
+
+        <View ref={notifBtnRef} collapsable={false}>
+          <TouchableOpacity
+            style={styles.iconCircle}
+            activeOpacity={0.75}
+            onPress={onPressNotifications}
+          >
+            <Ionicons name="notifications-outline" size={19} color="#334155" />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -186,7 +213,23 @@ const styles = StyleSheet.create({
   topBarActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
+  },
+  tourChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    height: 34,
+    paddingHorizontal: 10,
+    borderRadius: 17,
+    backgroundColor: "#ECFDF5",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+  },
+  tourChipText: {
+    fontSize: 11.5,
+    fontWeight: "800",
+    color: "#047857",
   },
   iconCircle: {
     width: 38,
