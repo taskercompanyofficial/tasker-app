@@ -20,36 +20,40 @@ export default function VendorTabsLayout() {
     session.appMode === "vendor_staff" ||
     (session.user as any)?.user_type === "vendor_staff";
 
+  // Tasker emerald green smooth color branding
+  const primaryEmerald = "#059669";
+  const defaultInactive = "#94A3B8";
+
   // 20% transparent (80% opacity) on Android for translucent glass effect
   const tabBgColor =
     Platform.OS === "android"
-      ? "rgba(255, 255, 255, 0.80)"
+      ? "rgba(255, 255, 255, 0.95)"
       : Colors.neutral.white;
 
   return (
     <NativeTabs
       backgroundColor={tabBgColor}
-      tintColor={Colors.themes.provider.primary}
+      tintColor={primaryEmerald}
       indicatorColor={
-        Platform.OS === "android" ? "rgba(30, 58, 138, 0.12)" : undefined
+        Platform.OS === "android" ? "rgba(5, 150, 105, 0.12)" : undefined
       }
       rippleColor={
-        Platform.OS === "android" ? "rgba(30, 58, 138, 0.15)" : undefined
+        Platform.OS === "android" ? "rgba(5, 150, 105, 0.15)" : undefined
       }
       iconColor={{
-        default: Colors.neutral.gray[500],
-        selected: Colors.themes.provider.primary,
+        default: defaultInactive,
+        selected: primaryEmerald,
       }}
       labelStyle={{
         default: {
           fontSize: 11,
           fontWeight: "600",
-          color: Colors.neutral.gray[500],
+          color: defaultInactive,
         },
         selected: {
           fontSize: 11,
           fontWeight: "800",
-          color: Colors.themes.provider.primary,
+          color: primaryEmerald,
         },
       }}
       labelVisibilityMode={Platform.OS === "android" ? "labeled" : undefined}
@@ -57,31 +61,21 @@ export default function VendorTabsLayout() {
     >
       <NativeTabs.Trigger name="dashboard">
         <NativeTabs.Trigger.Label>{t.vendor.tabs.dashboard}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
+        <NativeTabs.Trigger.Icon sf="square.grid.2x2.fill" md="dashboard" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="jobs">
         <NativeTabs.Trigger.Label>{t.vendor.tabs.jobs}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="briefcase.fill" md="work" />
+        <NativeTabs.Trigger.Icon sf="bolt.horizontal.fill" md="assignment" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="chat">
-        <NativeTabs.Trigger.Label>{t.vendor.tabs.chat}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="bubble.left.and.bubble.right.fill" md="forum" />
-      </NativeTabs.Trigger>
-      {!isStaff && (
-        <NativeTabs.Trigger name="ledger">
-          <NativeTabs.Trigger.Label>{t.vendor.tabs.ledger}</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf="list.bullet.circle.fill" md="format_list_bulleted" />
-        </NativeTabs.Trigger>
-      )}
       {!isStaff && (
         <NativeTabs.Trigger name="earnings">
           <NativeTabs.Trigger.Label>{t.vendor.tabs.earnings}</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf="creditcard.fill" md="account_balance_wallet" />
+          <NativeTabs.Trigger.Icon sf="wallet.pass.fill" md="payments" />
         </NativeTabs.Trigger>
       )}
       <NativeTabs.Trigger name="settings">
         <NativeTabs.Trigger.Label>{t.vendor.tabs.settings}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="gearshape.fill" md="settings" />
+        <NativeTabs.Trigger.Icon sf="person.crop.circle.fill" md="tune" />
       </NativeTabs.Trigger>
     </NativeTabs>
   );

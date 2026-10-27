@@ -70,6 +70,10 @@ export const VENDOR_QUICK_LOGIN_REGISTER_URL = `${API_URL}/vendor/auth/quick-log
 export const VENDOR_QUICK_LOGIN_REVOKE_URL = `${API_URL}/vendor/auth/quick-login/revoke`;
 export const VENDOR_EARNINGS_URL = `${API_URL}/vendor/earnings`;
 export const VENDOR_PAYOUT_SUBMIT_URL = `${VENDOR_EARNINGS_URL}/payout`;
+export const VENDOR_ONLINE_PAYMENT_INITIATE_URL = (mode: string = "vendor") =>
+  `${API_URL}/${mode === "vendor" ? "vendor" : "vendor-staff"}/payments/online/initiate`;
+export const VENDOR_ONLINE_PAYMENT_STATUS_URL = (mode: string = "vendor") =>
+  `${API_URL}/${mode === "vendor" ? "vendor" : "vendor-staff"}/payments/online/status`;
 export const VENDOR_NOTIFICATIONS_URL = `${API_URL}/vendor/notifications`;
 export const VENDOR_NOTIFICATIONS_UNREAD_COUNT_URL = `${VENDOR_NOTIFICATIONS_URL}/unread-count`;
 export const VENDOR_NOTIFICATIONS_MARK_READ_URL = (id: number | string) =>

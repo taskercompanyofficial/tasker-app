@@ -5,7 +5,6 @@ import { usePushNotifications } from "@/hooks/use-push-notifications";
 import axios from "@/lib/axios.config";
 import { API_URL } from "@/lib/api-endpoints";
 import { View } from "react-native";
-import { PermanentFloatingChatBubble } from "@/components/Chat/PermanentFloatingChatBubble";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -42,30 +41,19 @@ export default function VendorLayout() {
           }
 
           // If vendor is active and approved by admin, bypass onboarding check
-          // Financial Lock Barrier: If vendor has unsettled daily payables past 12:00 AM
-          if (user?.is_financial_blocked) {
-            if (!pathname.includes("/financial-lock")) {
-              router.replace("/vendor/financial-lock" as any);
-            }
-            return;
-          }
-
-          if (!user?.is_financial_blocked && pathname.includes("/financial-lock")) {
-            router.replace("/vendor/(tabs)" as any);
-            return;
-          }
-
           const isApproved = user?.status === "active";
           if (isApproved) {
             const permissionsDone = await AsyncStorage.getItem(
               "@vendor_permissions_completed"
             );
-            if (!permissionsDone && !pathname.includes("/permissions")) {
-              router.replace("/vendor/permissions" as any);
+            if (!permissionsDone) {
+              if (!pathname.includes("/permissions")) {
+                router.replace("/vendor/permissions" as any);
+              }
               return;
             }
 
-            // Approved and permissions done: redirect away from onboarding/pending to dashboard
+            // Approved and permissions done: redirect away from onboarding/pending/permissions to dashboard
             if (
               pathname.includes("/pending-approval") ||
               pathname.includes("/complete-profile") ||
@@ -202,12 +190,11 @@ export default function VendorLayout() {
           }
         >
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="quick-pay" options={{ animation: "slide_from_bottom" }} />
           <Stack.Screen name="permissions" />
           <Stack.Screen name="work-order-details/[id]" />
           <Stack.Screen name="work-order-edit/[id]" />
-          <Stack.Screen name="staff/index" />
-          <Stack.Screen name="staff/add" />
-          <Stack.Screen name="staff/[id]" />
+          <Stack.Screen name="staff" />
           <Stack.Screen name="work-order-chat/[id]" />
         </Stack.Protected>
 
@@ -219,7 +206,6 @@ export default function VendorLayout() {
           options={{ animation: "slide_from_bottom" }}
         />
       </Stack>
-      <PermanentFloatingChatBubble />
     </View>
   );
 }

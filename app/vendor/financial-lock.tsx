@@ -229,7 +229,7 @@ export default function FinancialLockScreen() {
           </View>
         </View>
 
-        {/* Company Bank Details Card */}
+        {/* Company Bank Details Card (Updated to Real Tasker Credentials) */}
         <View style={styles.bankCard}>
           <View style={styles.bankHeader}>
             <Ionicons name="business-outline" size={18} color="#1E3A8A" />
@@ -238,20 +238,46 @@ export default function FinancialLockScreen() {
 
           <View style={styles.bankRow}>
             <AppText style={styles.bankField}>Bank:</AppText>
-            <AppText style={styles.bankVal}>Meezan Bank Ltd.</AppText>
+            <AppText style={styles.bankVal}>UBL Ameen Bank</AppText>
           </View>
           <View style={styles.bankRow}>
             <AppText style={styles.bankField}>Account Title:</AppText>
-            <AppText style={styles.bankVal}>Tasker Company (Pvt) Ltd.</AppText>
+            <AppText style={styles.bankVal}>Tasker Company</AppText>
           </View>
           <View style={styles.bankRow}>
             <AppText style={styles.bankField}>Account Number:</AppText>
-            <AppText style={styles.bankValBold}>01020304050607</AppText>
+            <AppText style={styles.bankValBold}>1236320940369</AppText>
           </View>
           <View style={styles.bankRow}>
-            <AppText style={styles.bankField}>JazzCash / Raast:</AppText>
-            <AppText style={styles.bankValBold}>0300-1234567</AppText>
+            <AppText style={styles.bankField}>IBAN:</AppText>
+            <AppText style={styles.bankValBold}>PK46UNIL0109000320940369</AppText>
           </View>
+          <View style={styles.bankRow}>
+            <AppText style={styles.bankField}>JazzCash Till ID:</AppText>
+            <AppText style={styles.bankValBold}>984638528 (*786*10#)</AppText>
+          </View>
+
+          <TouchableOpacity
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              backgroundColor: "#F1F5F9",
+              borderWidth: 1,
+              borderColor: "#CBD5E1",
+              paddingVertical: 10,
+              borderRadius: 10,
+              marginTop: 10,
+            }}
+            activeOpacity={0.8}
+            onPress={() => router.push("/vendor/quick-pay" as any)}
+          >
+            <Ionicons name="flash-outline" size={16} color="#059669" />
+            <AppText style={{ fontSize: 12.5, fontWeight: "800", color: "#0F172A" }}>
+              Pay Online & Auto Unlock (Cards / Wallets / QR)
+            </AppText>
+          </TouchableOpacity>
         </View>
 
         {/* Proof Submission Section */}
