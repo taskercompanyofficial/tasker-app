@@ -60,7 +60,7 @@ export default function VendorQuickPayScreen() {
   const params = useLocalSearchParams<{ dues?: string; amount?: string }>();
 
   // Tab State: 0 = Instant Online, 1 = JazzCash & Raast QR, 2 = UBL Ameen Bank Transfer
-  const [activeTab, setActiveTab] = useState<0 | 1 | 2>(0);
+  const [activeTab, setActiveTab] = useState<0 | 1 | 2>(1);
 
   // Financial Dues State
   const initialDues =
@@ -526,6 +526,9 @@ export default function VendorQuickPayScreen() {
             >
               Instant Online
             </AppText>
+            <View style={styles.tabSoonBadge}>
+              <AppText style={styles.tabSoonBadgeText}>Soon</AppText>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -569,97 +572,61 @@ export default function VendorQuickPayScreen() {
           </TouchableOpacity>
         </ScrollView>
 
-        {/* ─── TAB 0: INSTANT ONLINE PAYMENT (Minimal, Direct, Dynamic Amount) ─── */}
+        {/* ─── TAB 0: INSTANT ONLINE PAYMENT (COMING SOON) ─── */}
         {activeTab === 0 && (
           <View style={styles.paymentCard}>
-            {/* 1. Pending Amount Display */}
-            <View style={styles.pendingAmountCard}>
-              <AppText style={styles.pendingAmountLabel}>Pending Dues</AppText>
-              <AppText style={styles.pendingAmountValue}>
-                PKR {pendingDues.toLocaleString()}
+            <View style={styles.comingSoonCard}>
+              <View style={styles.comingSoonIconCircle}>
+                <Ionicons name="card-outline" size={32} color="#D97706" />
+              </View>
+
+              <View style={styles.comingSoonPill}>
+                <AppText style={styles.comingSoonPillText}>COMING SOON</AppText>
+              </View>
+
+              <AppText style={styles.comingSoonTitle}>
+                Online Gateway Checkout
               </AppText>
-            </View>
 
-            {/* 2. Amount Input Field */}
-            <View style={styles.amountInputContainer}>
-              <AppText style={styles.amountInputLabel}>Amount to Pay</AppText>
-              <View style={styles.amountInputWrap}>
-                <AppText style={styles.amountPrefix}>PKR</AppText>
-                <TextInput
-                  style={styles.amountTextInput}
-                  value={inputAmount}
-                  onChangeText={(val) => {
-                    const cleaned = val.replace(/[^0-9]/g, "");
-                    setInputAmount(cleaned);
-                  }}
-                  placeholder="0"
-                  placeholderTextColor="#94A3B8"
-                  keyboardType="numeric"
-                />
-                {numericAmount !== pendingDues && pendingDues > 0 && (
-                  <TouchableOpacity
-                    style={styles.payFullChip}
-                    activeOpacity={0.7}
-                    onPress={() => setInputAmount(String(pendingDues))}
-                  >
-                    <AppText style={styles.payFullChipText}>Pay Full</AppText>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-
-            {/* 3. Fee Note */}
-            <View style={styles.feeNoteBox}>
-              <Ionicons name="information-circle-outline" size={15} color="#64748B" />
-              <AppText style={styles.feeNoteText}>
-                A payment fee of 2.5% will be applied to the entered amount. You can pay as much as you can.
+              <AppText style={styles.comingSoonDesc}>
+                Direct debit/credit card and digital wallet gateway checkout is currently being configured and will be enabled in an upcoming release.
               </AppText>
+
+              <View style={styles.comingSoonNoticeBox}>
+                <Ionicons name="information-circle-outline" size={16} color="#64748B" />
+                <AppText style={styles.comingSoonNoticeText}>
+                  Please settle your daily dues seamlessly using JazzCash & Raast QR or UBL Ameen Bank Transfer with zero fee.
+                </AppText>
+              </View>
+
+              <TouchableOpacity
+                style={styles.comingSoonSwitchBtn}
+                activeOpacity={0.85}
+                onPress={() => {
+                  setActiveTab(1);
+                  Haptics.selectionAsync().catch(() => {});
+                }}
+              >
+                <Ionicons name="qr-code" size={16} color="#FFFFFF" />
+                <AppText style={styles.comingSoonSwitchBtnText}>
+                  Pay via JazzCash & Raast QR
+                </AppText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.comingSoonSecBtn}
+                activeOpacity={0.85}
+                onPress={() => {
+                  setActiveTab(2);
+                  Haptics.selectionAsync().catch(() => {});
+                }}
+              >
+                <Ionicons name="business-outline" size={16} color="#0F172A" />
+                <AppText style={styles.comingSoonSecBtnText}>
+                  Bank Transfer (UBL Ameen)
+                </AppText>
+              </TouchableOpacity>
             </View>
-
-            {/* 4. Minimal Calculation Breakdown */}
-            <View style={styles.calcCard}>
-              <View style={styles.calcRow}>
-                <AppText style={styles.calcLabel}>Entered Amount</AppText>
-                <AppText style={styles.calcVal}>
-                  PKR {numericAmount.toLocaleString()}
-                </AppText>
-              </View>
-
-              <View style={styles.calcRow}>
-                <AppText style={styles.calcLabel}>Fee (+2.5%)</AppText>
-                <AppText style={styles.calcValMuted}>
-                  PKR {gatewayTaxAmount.toLocaleString()}
-                </AppText>
-              </View>
-
-              <View style={styles.calcDivider} />
-
-              <View style={styles.calcRow}>
-                <AppText style={styles.calcTotalLabel}>Total Payable</AppText>
-                <AppText style={styles.calcTotalVal}>
-                  PKR {totalPayableAmount.toLocaleString()}
-                </AppText>
-              </View>
-            </View>
-
-            {/* 5. Clean Action Button */}
-            <TouchableOpacity
-              style={[
-                styles.payOnlineBtn,
-                numericAmount <= 0 && styles.payOnlineBtnDisabled,
-              ]}
-              activeOpacity={0.88}
-              onPress={handlePayOnline}
-              disabled={payingOnline || numericAmount <= 0}
-            >
-              {payingOnline ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <AppText style={styles.payOnlineBtnText}>
-                  Pay PKR {totalPayableAmount.toLocaleString()}
-                </AppText>
-              )}
-            </TouchableOpacity>
           </View>
         )}
 
@@ -1042,6 +1009,111 @@ const styles = StyleSheet.create({
   tabButtonTextActive: {
     color: "#0F172A",
     fontWeight: "800",
+  },
+  tabSoonBadge: {
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+    marginLeft: 3,
+  },
+  tabSoonBadgeText: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: "#B45309",
+    textTransform: "uppercase",
+  },
+  comingSoonCard: {
+    alignItems: "center",
+    paddingVertical: 20,
+    paddingHorizontal: 12,
+  },
+  comingSoonIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#FEF3C7",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  comingSoonPill: {
+    backgroundColor: "#FEF3C7",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  comingSoonPillText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#B45309",
+    letterSpacing: 0.5,
+  },
+  comingSoonTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  comingSoonDesc: {
+    fontSize: 12.5,
+    color: "#64748B",
+    textAlign: "center",
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  comingSoonNoticeBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 18,
+    width: "100%",
+  },
+  comingSoonNoticeText: {
+    fontSize: 11.5,
+    color: "#475569",
+    flex: 1,
+    lineHeight: 16,
+  },
+  comingSoonSwitchBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#059669",
+    borderRadius: 12,
+    paddingVertical: 13,
+    width: "100%",
+    marginBottom: 10,
+  },
+  comingSoonSwitchBtnText: {
+    fontSize: 13.5,
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  comingSoonSecBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 12,
+    paddingVertical: 12,
+    width: "100%",
+  },
+  comingSoonSecBtnText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0F172A",
   },
 
   // ─── ACCURATE PAYMENT CARD (Structured, Zero Shadows) ───

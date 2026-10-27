@@ -1,6 +1,7 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
   RefreshControl,
   ScrollView,
@@ -69,6 +70,49 @@ export default function VendorLedgerRates() {
   const [rateMode, setRateMode] = useState<RateMode>("customer");
   const [customerCategory, setCustomerCategory] = useState<CustomerCategoryFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pulseAnim = useRef(new Animated.Value(0.35)).current;
+
+  // Pulsing animation loop for skeletons
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 0.85,
+          duration: 550,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.35,
+          duration: 550,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [pulseAnim]);
+
+  const handleSearchText = (text: string) => {
+    setSearchInput(text);
+    setIsSearching(true);
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+    }
+    searchTimerRef.current = setTimeout(() => {
+      setSearchQuery(text);
+      setIsSearching(false);
+    }, 220);
+  };
+
+  const clearSearch = () => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    setSearchInput("");
+    setSearchQuery("");
+    setIsSearching(false);
+  };
 
   // Free services data
   const [services, setServices] = useState<RateItem[]>([]);
@@ -474,7 +518,11 @@ export default function VendorLedgerRates() {
       {/* ─── 3. FAST SEARCH INPUT ─── */}
       <View style={styles.searchBarWrap}>
         <View style={styles.searchInputBox}>
-          <Ionicons name="search-outline" size={16} color="#94A3B8" />
+          {isSearching ? (
+            <ActivityIndicator size="small" color="#059669" style={{ marginRight: 2 }} />
+          ) : (
+            <Ionicons name="search-outline" size={16} color="#94A3B8" />
+          )}
           <TextInput
             style={styles.searchInput}
             placeholder={
@@ -483,12 +531,12 @@ export default function VendorLedgerRates() {
                 : "Search service name..."
             }
             placeholderTextColor="#94A3B8"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
+            value={searchInput}
+            onChangeText={handleSearchText}
             clearButtonMode="while-editing"
           />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
+          {searchInput.length > 0 && (
+            <TouchableOpacity onPress={clearSearch}>
               <Ionicons name="close-circle" size={16} color="#94A3B8" />
             </TouchableOpacity>
           )}
@@ -568,6 +616,18 @@ export default function VendorLedgerRates() {
           <AppText style={{ fontSize: 12, color: "#64748B", marginTop: 8 }}>
             Loading rates...
           </AppText>
+        </View>
+      ) : isSearching ? (
+        <View style={styles.skeletonContainer}>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Animated.View key={i} style={[styles.skeletonRow, { opacity: pulseAnim }]}>
+              <View style={{ flex: 1, gap: 7 }}>
+                <View style={styles.skeletonBarPill} />
+                <View style={styles.skeletonBarTitle} />
+              </View>
+              <View style={styles.skeletonBarPrice} />
+            </Animated.View>
+          ))}
         </View>
       ) : rateMode === "free" ? (
         <FlatList
@@ -1005,5 +1065,39 @@ const styles = StyleSheet.create({
     color: "#64748B",
     textAlign: "center",
     lineHeight: 18,
+  },
+  skeletonContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    gap: 8,
+  },
+  skeletonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  skeletonBarPill: {
+    width: 65,
+    height: 12,
+    borderRadius: 4,
+    backgroundColor: "#CBD5E1",
+  },
+  skeletonBarTitle: {
+    width: "70%",
+    height: 14,
+    borderRadius: 4,
+    backgroundColor: "#E2E8F0",
+  },
+  skeletonBarPrice: {
+    width: 65,
+    height: 20,
+    borderRadius: 6,
+    backgroundColor: "#CBD5E1",
   },
 });
