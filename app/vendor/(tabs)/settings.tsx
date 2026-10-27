@@ -363,19 +363,6 @@ export default function VendorSettings() {
             <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
           </TouchableOpacity>
 
-          {/* Customer Ledger & Rate Card */}
-          <TouchableOpacity
-            style={styles.menuRow}
-            activeOpacity={0.65}
-            onPress={() => router.push("/vendor/rate-card" as any)}
-          >
-            <View style={styles.menuIcon}>
-              <Ionicons name="pricetags" size={20} color="#059669" />
-            </View>
-            <AppText style={styles.menuLabel}>Customer Ledger & Rate Card</AppText>
-            <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
-          </TouchableOpacity>
-
           {/* Staff Management (Vendor Only) */}
           {!isStaff && (
             <TouchableOpacity

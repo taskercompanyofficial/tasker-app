@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
+  ScrollView,
   StatusBar,
   StyleSheet,
   TextInput,
@@ -14,10 +15,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 
 import AppText from "@/components/common/AppText";
-import { Shadows, Spacing, Typography } from "@/constants/DesignSystem";
-import { VENDOR_RATES_URL } from "@/lib/api-endpoints";
+import { VENDOR_RATES_URL, VENDOR_CUSTOMER_LEDGER_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
 import { useLanguage } from "@/context/language-context";
+import { useSession } from "@/context/ctx";
 
 type RateItem = {
   id: number;
@@ -30,24 +31,69 @@ type RateItem = {
   type?: "customer" | "free" | string;
 };
 
+type CustomerItem = {
+  id: number;
+  category: string;
+  item_type: "part" | "additional_labor" | "service";
+  description: string;
+  unit: string | null;
+  rate_1_ton: string | number | null;
+  rate_1_5_ton: string | number | null;
+  rate_2_ton_wm: string | number | null;
+  rate_2_ton_cabinet: string | number | null;
+  rate_4_ton_cabinet: string | number | null;
+  standard_rate: string | number | null;
+  notes: string | null;
+};
+
+type ParentServiceItem = {
+  id: number;
+  name: string;
+  slug: string;
+  price: number;
+  discount: number | null;
+  discount_type: string | null;
+  notes: string | null;
+};
+
 type RateMode = "customer" | "free";
+type CustomerCategoryFilter = "all" | "ac" | "wm" | "geyser" | "services";
 
 export default function VendorLedgerRates() {
   const insets = useSafeAreaInsets();
+  const { session } = useSession();
   const { t } = useLanguage();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [services, setServices] = useState<RateItem[]>([]);
-  const [rateMode, setRateMode] = useState<RateMode>("free");
+  const [rateMode, setRateMode] = useState<RateMode>("customer");
+  const [customerCategory, setCustomerCategory] = useState<CustomerCategoryFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Free services data
+  const [services, setServices] = useState<RateItem[]>([]);
+
+  // Customer rates data
+  const [customerItems, setCustomerItems] = useState<CustomerItem[]>([]);
+  const [parentServices, setParentServices] = useState<ParentServiceItem[]>([]);
 
   const fetchRates = useCallback(async () => {
     try {
-      const res = await myAxios.get(VENDOR_RATES_URL);
-      const data = res.data?.data;
-      if (data?.services && Array.isArray(data.services)) {
-        setServices(data.services);
+      const mode = session.appMode === "vendor_staff" ? "vendor-staff" : "vendor";
+
+      // Fetch both Free Payouts and Customer Rates in parallel
+      const [freeRes, customerRes] = await Promise.allSettled([
+        myAxios.get(VENDOR_RATES_URL),
+        myAxios.get(VENDOR_CUSTOMER_LEDGER_URL(mode)),
+      ]);
+
+      if (freeRes.status === "fulfilled" && freeRes.value.data?.data?.services) {
+        setServices(freeRes.value.data.data.services);
+      }
+
+      if (customerRes.status === "fulfilled" && customerRes.value.data?.data) {
+        setCustomerItems(customerRes.value.data.data.items || []);
+        setParentServices(customerRes.value.data.data.parent_services || []);
       }
     } catch (e) {
       console.log("Rates fetch error:", e);
@@ -55,7 +101,7 @@ export default function VendorLedgerRates() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [session.appMode]);
 
   useFocusEffect(
     useCallback(() => {
@@ -68,39 +114,129 @@ export default function VendorLedgerRates() {
     fetchRates();
   };
 
-  const formatPKR = (val?: number) => {
-    if (val == null || isNaN(val)) return "—";
+  const formatPKR = (val?: number | string | null) => {
+    if (val == null || val === "") return "—";
+    const num = typeof val === "string" ? parseFloat(val) : val;
+    if (isNaN(num)) return "—";
     return (
       "₨ " +
-      Math.round(val).toLocaleString("en-PK", {
+      Math.round(num).toLocaleString("en-PK", {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       })
     );
   };
 
-  // Filtered list based on active tab and search input
-  const filteredServices = useMemo(() => {
-    // For now, customer rates are not added yet, so return empty list
-    if (rateMode === "customer") {
-      return [];
-    }
-
+  // Filtered Free Services
+  const filteredFreeServices = useMemo(() => {
+    if (rateMode !== "free") return [];
     let list = services;
-
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter((s) => s.name.toLowerCase().includes(q));
     }
-
     return list;
   }, [services, rateMode, searchQuery]);
 
-  const renderRateRow = ({ item }: { item: RateItem }) => {
-    const isFreeMode = rateMode === "free";
-    const displayPrice = isFreeMode
-      ? item.assigned_rate ?? item.base_rate ?? 0
-      : item.base_rate ?? item.assigned_rate ?? 0;
+  // Filtered Customer Ledger Items
+  const filteredCustomerItems = useMemo(() => {
+    if (rateMode !== "customer") return [];
+
+    let list = customerItems;
+
+    // Filter by Category Pill
+    if (customerCategory === "ac") {
+      list = list.filter(
+        (i) =>
+          i.category.toLowerCase().includes("air conditioner") ||
+          i.category.toLowerCase() === "ac"
+      );
+    } else if (customerCategory === "wm") {
+      list = list.filter((i) => i.category.toLowerCase().includes("washing machine"));
+    } else if (customerCategory === "geyser") {
+      list = list.filter((i) => i.category.toLowerCase().includes("geyser"));
+    } else if (customerCategory === "services") {
+      // Show only parent services (handled below in unified list)
+      list = [];
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (i) =>
+          i.description.toLowerCase().includes(q) ||
+          i.category.toLowerCase().includes(q) ||
+          (i.notes && i.notes.toLowerCase().includes(q))
+      );
+    }
+
+    return list;
+  }, [customerItems, rateMode, customerCategory, searchQuery]);
+
+  // Filtered Parent Services (for "Customer Rates" view)
+  const filteredParentServices = useMemo(() => {
+    if (rateMode !== "customer") return [];
+    if (customerCategory !== "all" && customerCategory !== "services") return [];
+
+    let list = parentServices;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (s) =>
+          s.name.toLowerCase().includes(q) ||
+          s.slug.toLowerCase().includes(q) ||
+          (s.notes && s.notes.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [parentServices, rateMode, customerCategory, searchQuery]);
+
+  // Combined Customer List for FlatList
+  type CombinedCustomerRow =
+    | { type: "customer_item"; item: CustomerItem }
+    | { type: "parent_service"; item: ParentServiceItem }
+    | { type: "spot_policy"; title: string; desc: string; category: string };
+
+  const customerCombinedData = useMemo<CombinedCustomerRow[]>(() => {
+    if (rateMode !== "customer") return [];
+
+    const result: CombinedCustomerRow[] = [];
+
+    // Add spot policy notice banners if relevant
+    if (customerCategory === "all" || customerCategory === "wm") {
+      result.push({
+        type: "spot_policy",
+        category: "Washing Machine",
+        title: "Washing Machine Spot Policy",
+        desc: "All plumbing and electrical charges will be decided at the spot based on tap fitting and drain pipe distance.",
+      });
+    }
+
+    if (customerCategory === "all" || customerCategory === "geyser") {
+      result.push({
+        type: "spot_policy",
+        category: "Geyser",
+        title: "Geyser Spot Policy",
+        desc: "All plumbing and electrical charges will be decided at the spot depending on gas piping, hot/cold lines, and chimney.",
+      });
+    }
+
+    // Add customer ledger items
+    filteredCustomerItems.forEach((item) => {
+      result.push({ type: "customer_item", item });
+    });
+
+    // Add parent services
+    filteredParentServices.forEach((item) => {
+      result.push({ type: "parent_service", item });
+    });
+
+    return result;
+  }, [rateMode, customerCategory, filteredCustomerItems, filteredParentServices]);
+
+  // Free Payout Row
+  const renderFreeRateRow = ({ item }: { item: RateItem }) => {
+    const displayPrice = item.assigned_rate ?? item.base_rate ?? 0;
 
     return (
       <View style={styles.compactRow}>
@@ -111,12 +247,168 @@ export default function VendorLedgerRates() {
         </View>
 
         <View style={styles.rowRight}>
-          <AppText style={[styles.rowPrice, isFreeMode && styles.rowPriceFree]}>
+          <AppText style={[styles.rowPrice, styles.rowPriceFree]}>
             {formatPKR(displayPrice)}
           </AppText>
-          <AppText style={styles.rowSubLabel}>
-            {isFreeMode ? "Company Payout" : "Customer Price"}
-          </AppText>
+          <AppText style={styles.rowSubLabel}>Company Payout</AppText>
+        </View>
+      </View>
+    );
+  };
+
+  // Customer Rate Row
+  const renderCustomerRateRow = ({ item }: { item: CombinedCustomerRow }) => {
+    if (item.type === "spot_policy") {
+      return (
+        <View style={styles.spotPolicyBanner}>
+          <Ionicons name="information-circle" size={18} color="#D97706" />
+          <View style={{ flex: 1 }}>
+            <AppText style={styles.spotPolicyTitle}>{item.title}</AppText>
+            <AppText style={styles.spotPolicyDesc}>{item.desc}</AppText>
+          </View>
+        </View>
+      );
+    }
+
+    if (item.type === "parent_service") {
+      const s = item.item;
+      const basePrice = s.price || 0;
+      let finalPrice = basePrice;
+      if (s.discount && s.discount > 0) {
+        if (s.discount_type === "percentage") {
+          finalPrice = basePrice - (basePrice * s.discount) / 100;
+        } else {
+          finalPrice = Math.max(0, basePrice - s.discount);
+        }
+      }
+
+      return (
+        <View style={styles.compactRow}>
+          <View style={styles.rowLeft}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+              <View style={[styles.badge, { backgroundColor: "#F3E8FF" }]}>
+                <AppText style={[styles.badgeText, { color: "#9333EA" }]}>Service Labor</AppText>
+              </View>
+            </View>
+            <AppText style={styles.rowTitle} numberOfLines={2}>
+              {s.name}
+            </AppText>
+            <AppText style={styles.rowSlug}>{s.slug}</AppText>
+          </View>
+
+          <View style={styles.rowRight}>
+            <AppText style={styles.rowPrice}>{formatPKR(finalPrice)}</AppText>
+            {s.discount && s.discount > 0 ? (
+              <AppText style={styles.discountTag}>
+                {s.discount_type === "percentage" ? `${s.discount}% OFF` : `-₨${s.discount}`}
+              </AppText>
+            ) : (
+              <AppText style={styles.rowSubLabel}>Customer Price</AppText>
+            )}
+          </View>
+        </View>
+      );
+    }
+
+    // Customer Item
+    const c = item.item;
+    const isACItem =
+      c.rate_1_ton != null ||
+      c.rate_1_5_ton != null ||
+      c.rate_2_ton_wm != null ||
+      c.rate_2_ton_cabinet != null ||
+      c.rate_4_ton_cabinet != null;
+
+    if (isACItem) {
+      return (
+        <View style={styles.acCard}>
+          <View style={styles.acCardTop}>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                <View
+                  style={[
+                    styles.badge,
+                    c.item_type === "part" ? styles.partBadge : styles.laborBadge,
+                  ]}
+                >
+                  <AppText
+                    style={[
+                      styles.badgeText,
+                      c.item_type === "part" ? styles.partBadgeText : styles.laborBadgeText,
+                    ]}
+                  >
+                    {c.item_type === "part" ? "Part" : "Labor"}
+                  </AppText>
+                </View>
+                {c.unit && (
+                  <View style={[styles.badge, { backgroundColor: "#F1F5F9" }]}>
+                    <AppText style={[styles.badgeText, { color: "#64748B" }]}>{c.unit}</AppText>
+                  </View>
+                )}
+              </View>
+              <AppText style={styles.acCardTitle}>{c.description}</AppText>
+            </View>
+          </View>
+
+          {/* Tonnage Pricing Row */}
+          <View style={styles.tonnageGrid}>
+            <View style={styles.tonnageCol}>
+              <AppText style={styles.tonnageLabel}>1 Ton</AppText>
+              <AppText style={styles.tonnagePrice}>{formatPKR(c.rate_1_ton)}</AppText>
+            </View>
+            <View style={styles.tonnageDivider} />
+            <View style={styles.tonnageCol}>
+              <AppText style={styles.tonnageLabel}>1.5 Ton</AppText>
+              <AppText style={styles.tonnagePrice}>{formatPKR(c.rate_1_5_ton)}</AppText>
+            </View>
+            <View style={styles.tonnageDivider} />
+            <View style={styles.tonnageCol}>
+              <AppText style={styles.tonnageLabel}>2T W.M</AppText>
+              <AppText style={styles.tonnagePrice}>{formatPKR(c.rate_2_ton_wm)}</AppText>
+            </View>
+            <View style={styles.tonnageDivider} />
+            <View style={styles.tonnageCol}>
+              <AppText style={styles.tonnageLabel}>2T Cab.</AppText>
+              <AppText style={styles.tonnagePrice}>{formatPKR(c.rate_2_ton_cabinet)}</AppText>
+            </View>
+            <View style={styles.tonnageDivider} />
+            <View style={styles.tonnageCol}>
+              <AppText style={styles.tonnageLabel}>4T Cab.</AppText>
+              <AppText style={styles.tonnagePrice}>{formatPKR(c.rate_4_ton_cabinet)}</AppText>
+            </View>
+          </View>
+
+          {c.notes ? (
+            <View style={styles.acCardFooter}>
+              <Ionicons name="information-circle-outline" size={13} color="#64748B" />
+              <AppText style={styles.acCardNotes}>{c.notes}</AppText>
+            </View>
+          ) : null}
+        </View>
+      );
+    }
+
+    // Standard Flat Rate Customer Item (Washing Machine / Geyser parts, etc.)
+    return (
+      <View style={styles.compactRow}>
+        <View style={styles.rowLeft}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 3 }}>
+            <View style={[styles.badge, styles.partBadge]}>
+              <AppText style={[styles.badgeText, styles.partBadgeText]}>{c.category}</AppText>
+            </View>
+            {c.unit && (
+              <View style={[styles.badge, { backgroundColor: "#F1F5F9" }]}>
+                <AppText style={[styles.badgeText, { color: "#64748B" }]}>{c.unit}</AppText>
+              </View>
+            )}
+          </View>
+          <AppText style={styles.rowTitle}>{c.description}</AppText>
+          {c.notes && <AppText style={styles.rowNotes}>{c.notes}</AppText>}
+        </View>
+
+        <View style={styles.rowRight}>
+          <AppText style={styles.rowPrice}>{formatPKR(c.standard_rate)}</AppText>
+          <AppText style={styles.rowSubLabel}>Customer Price</AppText>
         </View>
       </View>
     );
@@ -138,8 +430,8 @@ export default function VendorLedgerRates() {
         </TouchableOpacity>
 
         <View style={styles.navTitleBox}>
-          <AppText style={styles.navTitle}>Service Rates</AppText>
-          <AppText style={styles.navSubtitle}>Approved Rate Card</AppText>
+          <AppText style={styles.navTitle}>Service Rate Ledger</AppText>
+          <AppText style={styles.navSubtitle}>Approved Rates & Customer Ledger</AppText>
         </View>
 
         <TouchableOpacity
@@ -152,7 +444,7 @@ export default function VendorLedgerRates() {
         </TouchableOpacity>
       </View>
 
-      {/* ─── 2. DUAL-MODE SEGMENTED SWITCHER (Customer vs Free Payouts) ─── */}
+      {/* ─── 2. DUAL-MODE SEGMENTED SWITCHER (Customer Rates vs Free Payouts) ─── */}
       <View style={styles.modeBar}>
         <View style={styles.modePill}>
           <TouchableOpacity
@@ -185,7 +477,11 @@ export default function VendorLedgerRates() {
           <Ionicons name="search-outline" size={16} color="#94A3B8" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search service name..."
+            placeholder={
+              rateMode === "customer"
+                ? "Search materials, parts, services..."
+                : "Search service name..."
+            }
             placeholderTextColor="#94A3B8"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -199,24 +495,85 @@ export default function VendorLedgerRates() {
         </View>
       </View>
 
-      {/* ─── 4. SECTION HEADER (Header Labels) ─── */}
+      {/* ─── 4. CUSTOMER RATES CATEGORY PILLS (Only in Customer Rates mode) ─── */}
+      {rateMode === "customer" && (
+        <View style={styles.categoryPillsBar}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryPillsScroll}>
+            <TouchableOpacity
+              style={[styles.catPill, customerCategory === "all" && styles.catPillActive]}
+              onPress={() => setCustomerCategory("all")}
+            >
+              <AppText style={[styles.catPillText, customerCategory === "all" && styles.catPillTextActive]}>
+                All Categories
+              </AppText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.catPill, customerCategory === "ac" && styles.catPillActive]}
+              onPress={() => setCustomerCategory("ac")}
+            >
+              <Ionicons name="snow" size={13} color={customerCategory === "ac" ? "#FFFFFF" : "#64748B"} />
+              <AppText style={[styles.catPillText, customerCategory === "ac" && styles.catPillTextActive]}>
+                Air Conditioner
+              </AppText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.catPill, customerCategory === "wm" && styles.catPillActive]}
+              onPress={() => setCustomerCategory("wm")}
+            >
+              <Ionicons name="shirt" size={13} color={customerCategory === "wm" ? "#FFFFFF" : "#64748B"} />
+              <AppText style={[styles.catPillText, customerCategory === "wm" && styles.catPillTextActive]}>
+                Washing Machine
+              </AppText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.catPill, customerCategory === "geyser" && styles.catPillActive]}
+              onPress={() => setCustomerCategory("geyser")}
+            >
+              <Ionicons name="flame" size={13} color={customerCategory === "geyser" ? "#FFFFFF" : "#64748B"} />
+              <AppText style={[styles.catPillText, customerCategory === "geyser" && styles.catPillTextActive]}>
+                Geyser
+              </AppText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.catPill, customerCategory === "services" && styles.catPillActive]}
+              onPress={() => setCustomerCategory("services")}
+            >
+              <Ionicons name="layers" size={13} color={customerCategory === "services" ? "#FFFFFF" : "#64748B"} />
+              <AppText style={[styles.catPillText, customerCategory === "services" && styles.catPillTextActive]}>
+                Parent Services ({parentServices.length})
+              </AppText>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      )}
+
+      {/* ─── 5. SECTION HEADER (Header Labels) ─── */}
       <View style={styles.sectionHeaderRow}>
-        <AppText style={styles.sectionHeaderCol}>Service Name</AppText>
+        <AppText style={styles.sectionHeaderCol}>
+          {rateMode === "free" ? "Service Name" : "Item / Material / Service"}
+        </AppText>
         <AppText style={styles.sectionHeaderColRight}>
           {rateMode === "free" ? "Company Payout" : "Customer Price"}
         </AppText>
       </View>
 
-      {/* ─── 5. COMPACT RATES LIST ─── */}
+      {/* ─── 6. RATES LIST ─── */}
       {loading ? (
         <View style={styles.centerLoading}>
           <ActivityIndicator size="large" color="#059669" />
+          <AppText style={{ fontSize: 12, color: "#64748B", marginTop: 8 }}>
+            Loading rates...
+          </AppText>
         </View>
-      ) : (
+      ) : rateMode === "free" ? (
         <FlatList
-          data={filteredServices}
+          data={filteredFreeServices}
           keyExtractor={(item) => String(item.id)}
-          renderItem={renderRateRow}
+          renderItem={renderFreeRateRow}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 20 }]}
           refreshControl={
@@ -226,23 +583,44 @@ export default function VendorLedgerRates() {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconCircle}>
-                <Ionicons
-                  name={rateMode === "customer" ? "time-outline" : "receipt-outline"}
-                  size={32}
-                  color="#059669"
-                />
+                <Ionicons name="receipt-outline" size={32} color="#059669" />
               </View>
-              <AppText style={styles.emptyTitle}>
-                {rateMode === "customer"
-                  ? "Customer Rates Not Added Yet"
-                  : "No Services Found"}
-              </AppText>
+              <AppText style={styles.emptyTitle}>No Services Found</AppText>
               <AppText style={styles.emptySubtitle}>
-                {rateMode === "customer"
-                  ? "Standard customer rates have not been added yet and will appear here once published."
-                  : searchQuery
+                {searchQuery
                   ? "Try searching for a different keyword."
                   : "Assigned service rates will appear here once configured."}
+              </AppText>
+            </View>
+          }
+        />
+      ) : (
+        <FlatList
+          data={customerCombinedData}
+          keyExtractor={(item, index) =>
+            item.type === "spot_policy"
+              ? `policy-${item.category}`
+              : item.type === "parent_service"
+              ? `ps-${item.item.id}`
+              : `ci-${item.item.id}-${index}`
+          }
+          renderItem={renderCustomerRateRow}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 20 }]}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#059669" />
+          }
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconCircle}>
+                <Ionicons name="receipt-outline" size={32} color="#059669" />
+              </View>
+              <AppText style={styles.emptyTitle}>No Customer Rates Found</AppText>
+              <AppText style={styles.emptySubtitle}>
+                {searchQuery
+                  ? "Try searching for a different keyword."
+                  : "Customer rates will appear here once configured."}
               </AppText>
             </View>
           }
@@ -363,6 +741,42 @@ const styles = StyleSheet.create({
     padding: 0,
   },
 
+  /* ─── Category Pills ─── */
+  categoryPillsBar: {
+    paddingVertical: 6,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+  },
+  categoryPillsScroll: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  catPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 16,
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  catPillActive: {
+    backgroundColor: "#059669",
+    borderColor: "#059669",
+  },
+  catPillText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  catPillTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+
   /* ─── Section Header Labels ─── */
   sectionHeaderRow: {
     flexDirection: "row",
@@ -416,6 +830,17 @@ const styles = StyleSheet.create({
     color: "#0F172A",
     lineHeight: 18,
   },
+  rowSlug: {
+    fontSize: 10,
+    color: "#94A3B8",
+    fontFamily: "monospace",
+    marginTop: 2,
+  },
+  rowNotes: {
+    fontSize: 11,
+    color: "#64748B",
+    marginTop: 2,
+  },
   rowRight: {
     alignItems: "flex-end",
     flexShrink: 0,
@@ -433,6 +858,122 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#64748B",
     marginTop: 1,
+  },
+  discountTag: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#DC2626",
+    marginTop: 1,
+  },
+
+  /* ─── AC Card ─── */
+  acCard: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+  },
+  acCardTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  acCardTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0F172A",
+    lineHeight: 17,
+  },
+  tonnageGrid: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#EDF2F7",
+    paddingVertical: 6,
+  },
+  tonnageCol: {
+    flex: 1,
+    alignItems: "center",
+  },
+  tonnageDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: "#E2E8F0",
+  },
+  tonnageLabel: {
+    fontSize: 9.5,
+    color: "#64748B",
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  tonnagePrice: {
+    fontSize: 11.5,
+    fontWeight: "800",
+    color: "#0F172A",
+  },
+  acCardFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+  },
+  acCardNotes: {
+    fontSize: 10.5,
+    color: "#64748B",
+    fontStyle: "italic",
+    flex: 1,
+  },
+
+  /* ─── Badges ─── */
+  badge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 5,
+  },
+  partBadge: {
+    backgroundColor: "#E0F2FE",
+  },
+  laborBadge: {
+    backgroundColor: "#FEF3C7",
+  },
+  badgeText: {
+    fontSize: 9.5,
+    fontWeight: "700",
+  },
+  partBadgeText: {
+    color: "#0369A1",
+  },
+  laborBadgeText: {
+    color: "#B45309",
+  },
+
+  /* ─── Spot Policy Banner ─── */
+  spotPolicyBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: "#FEF3C7",
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  spotPolicyTitle: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: "#92400E",
+  },
+  spotPolicyDesc: {
+    fontSize: 10.5,
+    color: "#B45309",
+    marginTop: 1,
+    lineHeight: 15,
   },
 
   /* ─── Empty State ─── */
