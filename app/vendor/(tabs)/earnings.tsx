@@ -25,6 +25,7 @@ import Colors from "@/constants/Colors";
 import { Shadows, Spacing, Typography } from "@/constants/DesignSystem";
 import { VENDOR_EARNINGS_URL, VENDOR_PAYOUT_SUBMIT_URL } from "@/lib/api-endpoints";
 import myAxios from "@/lib/axios.config";
+import getImageUrl from "@/lib/utils";
 import Modal from "@/components/Modal";
 import Button from "@/components/Button";
 import { useSession } from "@/context/ctx";
@@ -63,12 +64,22 @@ type Summary = {
   monthly_balance?: number;
   due_today_payable?: number;
   overdue_payable?: number;
+  daily_cash_collected?: number;
+  daily_company_share?: number;
+  daily_vendor_earned?: number;
   is_financial_blocked?: boolean;
   financial_blocked_reason?: string | null;
   seconds_to_midnight?: number;
 };
 
 type LedgerMode = "daily" | "monthly";
+
+const formatLocalIsoDate = (d: Date = new Date()): string => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
 
 export default function VendorEarnings() {
   const insets = useSafeAreaInsets();
@@ -103,7 +114,10 @@ export default function VendorEarnings() {
 
   // Selection Dropdown Modals
   const [showDropdown, setShowDropdown] = useState(false);
-  const [selectedDailyFilter, setSelectedDailyFilter] = useState<string>("Today");
+  const [selectedDailyFilter, setSelectedDailyFilter] = useState<string>(() => {
+    const d = new Date();
+    return `Today (${d.toLocaleDateString("en-PK", { day: "numeric", month: "short" })})`;
+  });
   const [selectedMonthlyFilter, setSelectedMonthlyFilter] = useState<string>(() =>
     new Date().toLocaleDateString("en-PK", { month: "long", year: "numeric" })
   );
@@ -166,7 +180,7 @@ export default function VendorEarnings() {
     for (let i = 0; i < 7; i++) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
-      const iso = d.toISOString().split("T")[0];
+      const iso = formatLocalIsoDate(d);
 
       let label = "";
       if (i === 0) {
@@ -210,11 +224,13 @@ export default function VendorEarnings() {
       );
 
       // Find date filter string
-      let targetIso = new Date().toISOString().split("T")[0];
+      let targetIso = formatLocalIsoDate();
       if (customDate) {
         targetIso = customDate;
       } else {
-        const found = dailyOptions.find((o) => o.label === selectedDailyFilter);
+        const found =
+          dailyOptions.find((o) => o.label === selectedDailyFilter) ||
+          (selectedDailyFilter.startsWith("Today") ? dailyOptions[0] : undefined);
         if (found) targetIso = found.dateStr;
       }
 
@@ -250,13 +266,16 @@ export default function VendorEarnings() {
     return result;
   }, [txns, ledgerMode, selectedDailyFilter, selectedMonthlyFilter, customDate, flowFilter, dailyOptions, monthlyOptions]);
 
-  // Dynamic calculations for Daily (Strictly for Cash Collection & Company Cut)
+  // Dynamic calculations for Daily (Strictly for Cash Collection & Company Cut — 100% unified with Dashboard)
   const dailyMetrics = useMemo(() => {
-    let targetIso = new Date().toISOString().split("T")[0];
+    const todayIso = formatLocalIsoDate();
+    let targetIso = todayIso;
     if (customDate) {
       targetIso = customDate;
     } else {
-      const found = dailyOptions.find((o) => o.label === selectedDailyFilter);
+      const found =
+        dailyOptions.find((o) => o.label === selectedDailyFilter) ||
+        (selectedDailyFilter.startsWith("Today") ? dailyOptions[0] : undefined);
       if (found) targetIso = found.dateStr;
     }
 
@@ -280,25 +299,54 @@ export default function VendorEarnings() {
       .filter((t) => t.type === "credit")
       .reduce((acc, t) => acc + Math.abs(t.amount), 0);
 
-    // If company cut is known from debits, partner cash is derived:
-    // Company cut = 35% of cash collected -> Cash collected = companyCut / 0.35
-    const companyCut = dayDebits;
-    const estimatedCashCollected = companyCut > 0 ? Math.round(companyCut / 0.35) : 0;
-    const partnerCash = Math.max(0, estimatedCashCollected - companyCut);
+    const isToday = targetIso === todayIso;
 
-    const isToday = targetIso === new Date().toISOString().split("T")[0];
-    const pendingDue = isToday && summary.due_today_payable !== undefined
-      ? summary.due_today_payable
-      : Math.max(0, companyCut - daySettlements);
+    // For Today: use exact backend summary values so Dashboard and Earnings Daily Ledger match 100%
+    const companyCut =
+      isToday && summary.daily_company_share !== undefined
+        ? Number(summary.daily_company_share)
+        : isToday && summary.due_today_payable !== undefined && dayDebits === 0
+        ? Number(summary.due_today_payable)
+        : dayDebits;
+
+    let estimatedCashCollected =
+      isToday && summary.daily_cash_collected !== undefined && Number(summary.daily_cash_collected) > 0
+        ? Number(summary.daily_cash_collected)
+        : 0;
+    if (estimatedCashCollected === 0 && companyCut > 0) {
+      estimatedCashCollected = Math.round(companyCut / 0.35);
+    }
+
+    let partnerCash =
+      isToday && summary.daily_vendor_earned !== undefined && Number(summary.daily_vendor_earned) > 0
+        ? Number(summary.daily_vendor_earned)
+        : 0;
+    if (partnerCash === 0 && estimatedCashCollected > 0) {
+      partnerCash = Math.max(0, estimatedCashCollected - companyCut);
+    }
+
+    const pendingDue =
+      isToday && summary.due_today_payable !== undefined
+        ? Number(summary.due_today_payable)
+        : Math.max(0, companyCut - daySettlements);
 
     return {
-      collected: estimatedCashCollected,
-      companyCut,
-      settled: daySettlements,
-      partnerCash,
-      duePayable: pendingDue,
+      collected: Math.round(estimatedCashCollected),
+      companyCut: Math.round(companyCut),
+      settled: Math.round(daySettlements),
+      partnerCash: Math.round(partnerCash),
+      duePayable: Math.round(pendingDue),
     };
-  }, [txns, customDate, selectedDailyFilter, dailyOptions, summary.due_today_payable]);
+  }, [
+    txns,
+    customDate,
+    selectedDailyFilter,
+    dailyOptions,
+    summary.due_today_payable,
+    summary.daily_cash_collected,
+    summary.daily_company_share,
+    summary.daily_vendor_earned,
+  ]);
 
   // Dynamic calculations for Monthly (Strictly for Company Side Charges & Monthly Payouts)
   const monthlyMetrics = useMemo(() => {
@@ -400,10 +448,15 @@ export default function VendorEarnings() {
     }
   };
 
-  const resolvedAvatar =
+  const rawResolvedAvatar =
+    session.user?.active_avatar_url ||
+    (session.user as any)?.daily_selfie_url ||
+    (session.user as any)?.profile_image_url ||
+    session.user?.profile_image ||
     session.vendorUser?.active_avatar_url ||
     (session.vendorUser as any)?.profile_image ||
     null;
+  const resolvedAvatar = rawResolvedAvatar ? getImageUrl(rawResolvedAvatar) : null;
 
   // Active filter badge display label
   const activeDropdownLabel =

@@ -37,15 +37,19 @@ import { LinearGradient } from "expo-linear-gradient";
 import QRCode from "react-native-qrcode-svg";
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Path, Stop } from "react-native-svg";
 import * as Clipboard from "expo-clipboard";
+import DailySelfieModal from "@/components/vendor/DailySelfieModal";
 
 export default function VendorSettings() {
-  const { session, setAppMode, signOutMode } = useSession();
+  const { session, setAppMode, signOutMode, refetchUser } = useSession();
   const { language } = useLanguage();
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showSwitchConfirm, setShowSwitchConfirm] = useState(false);
   const [showReferralModal, setShowReferralModal] = useState(false);
   const [showBadgeModal, setShowBadgeModal] = useState(false);
+  const [showDailySelfieModal, setShowDailySelfieModal] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
+  const [dailyAvatarError, setDailyAvatarError] = useState(false);
+  const [liveUserData, setLiveUserData] = useState<any>(null);
 
   const isVendor = useMemo(
     () => session.appMode === "vendor" || session.appMode === "vendor_staff",
@@ -95,6 +99,9 @@ export default function VendorSettings() {
 
       const summaryData = summaryRes?.data?.data || summaryRes?.data;
       const userData = meRes?.data?.user || meRes?.data?.data || session.user;
+      if (userData) {
+        setLiveUserData(userData);
+      }
 
       const completed = Number(summaryData?.completed ?? 0);
       const rating = Number(
@@ -148,13 +155,29 @@ export default function VendorSettings() {
     (session.user as any)?.referral_code ||
     `TC${session.user?.id || "4921"}`;
 
-  const rawVendorAvatar =
-    session.user?.active_avatar_url ||
+  // Fixed permanent profile photo (set during onboarding/admin verification — cannot be changed by vendor)
+  const rawFixedProfileAvatar =
+    liveUserData?.profile_image_url ||
+    liveUserData?.profile_image ||
+    liveUserData?.image ||
+    (session.user as any)?.profile_image_url ||
     session.user?.profile_image ||
-    session.user?.avatar_url ||
     (session.user as any)?.image ||
+    session.user?.avatar_url ||
     null;
-  const vendorAvatarUri = rawVendorAvatar ? getImageUrl(rawVendorAvatar) : "";
+  const fixedProfileAvatarUri = rawFixedProfileAvatar ? getImageUrl(rawFixedProfileAvatar) : "";
+
+  // Replaceable daily selfie photo (24-hour verification image)
+  const rawDailySelfieAvatar =
+    liveUserData?.daily_selfie_url ||
+    liveUserData?.daily_selfie_image ||
+    (session.user as any)?.daily_selfie_url ||
+    (session.user as any)?.daily_selfie_image ||
+    session.user?.active_avatar_url ||
+    null;
+  const dailySelfieAvatarUri = rawDailySelfieAvatar ? getImageUrl(rawDailySelfieAvatar) : "";
+
+  const vendorAvatarUri = fixedProfileAvatarUri || dailySelfieAvatarUri;
 
   const onSignOut = async () => {
     try {
@@ -246,33 +269,72 @@ export default function VendorSettings() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Header (Centered Avatar & Name) */}
+        {/* Profile Header (Centered Fixed Official Profile Avatar & Daily Photo Action) */}
         <View style={styles.profileSection}>
-          <TouchableOpacity
-            style={styles.avatarCircle}
-            activeOpacity={0.85}
-            onPress={handleOpenBadge}
-          >
-            {vendorAvatarUri && !avatarError ? (
-              <Image
-                source={{ uri: vendorAvatarUri }}
-                style={styles.avatarImg}
-                contentFit="cover"
-                transition={200}
-                cachePolicy="disk"
-                onError={() => setAvatarError(true)}
-              />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <AppText style={styles.avatarFallbackText}>
-                  {vendorName.charAt(0).toUpperCase()}
-                </AppText>
+          <View style={styles.avatarRowDual}>
+            {/* Fixed Official Profile Photo */}
+            <TouchableOpacity
+              style={styles.avatarCircle}
+              activeOpacity={0.85}
+              onPress={() => {
+                localizedToast({
+                  type: "info",
+                  text1: "🔒 Fixed Official Profile Photo",
+                  text2: "Your permanent ID photo is verified by admin and cannot be modified. Use 'Change Daily Photo' for your daily selfie.",
+                });
+                handleOpenBadge();
+              }}
+            >
+              {vendorAvatarUri && !avatarError ? (
+                <Image
+                  source={{ uri: vendorAvatarUri }}
+                  style={styles.avatarImg}
+                  contentFit="cover"
+                  transition={200}
+                  cachePolicy="disk"
+                  onError={() => setAvatarError(true)}
+                />
+              ) : (
+                <View style={styles.avatarFallback}>
+                  <AppText style={styles.avatarFallbackText}>
+                    {vendorName.charAt(0).toUpperCase()}
+                  </AppText>
+                </View>
+              )}
+              <View style={styles.verifiedShieldBadge}>
+                <Ionicons name="lock-closed" size={11} color="#FFFFFF" />
               </View>
-            )}
-            <View style={styles.verifiedShieldBadge}>
-              <Ionicons name="checkmark-sharp" size={13} color="#FFFFFF" />
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+
+            {/* Replaceable Daily Selfie Thumbnail */}
+            <TouchableOpacity
+              style={styles.dailySelfieThumbWrap}
+              activeOpacity={0.85}
+              onPress={() => {
+                setDailyAvatarError(false);
+                setShowDailySelfieModal(true);
+              }}
+            >
+              {dailySelfieAvatarUri && !dailyAvatarError ? (
+                <Image
+                  source={{ uri: dailySelfieAvatarUri }}
+                  style={styles.dailySelfieThumbImg}
+                  contentFit="cover"
+                  transition={200}
+                  onError={() => setDailyAvatarError(true)}
+                />
+              ) : (
+                <View style={styles.dailySelfieThumbFallback}>
+                  <Ionicons name="camera" size={20} color="#059669" />
+                </View>
+              )}
+              <View style={styles.dailyCameraBadge}>
+                <Ionicons name="camera" size={10} color="#FFFFFF" />
+              </View>
+              <AppText style={styles.dailyThumbLabel}>Daily</AppText>
+            </TouchableOpacity>
+          </View>
+
           <AppText style={styles.profileName}>{vendorName}</AppText>
           <View style={styles.profileMetaRow}>
             <AppText style={styles.profileHandle}>{vendorPhone}</AppText>
@@ -284,6 +346,25 @@ export default function VendorSettings() {
               </AppText>
             </View>
           </View>
+
+          {/* Action Pill to Change Replaceable Daily Photo */}
+          <TouchableOpacity
+            style={styles.changeDailyPhotoBtn}
+            activeOpacity={0.8}
+            onPress={() => {
+              setDailyAvatarError(false);
+              setShowDailySelfieModal(true);
+            }}
+          >
+            <Ionicons name="camera-outline" size={15} color="#059669" />
+            <AppText style={styles.changeDailyPhotoBtnText}>
+              Change Daily Photo
+            </AppText>
+            <View style={styles.fixedNotePill}>
+              <Ionicons name="lock-closed" size={10} color="#64748B" />
+              <AppText style={styles.fixedNotePillText}>ID Photo Fixed</AppText>
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* 1. FROSTED MINIMAL SEGMENTED SWITCHER (Option 3 - At First!) */}
@@ -353,9 +434,27 @@ export default function VendorSettings() {
             <View style={styles.menuIcon}>
               <Ionicons name="person" size={20} color="#1F2937" />
             </View>
-            <AppText style={styles.menuLabel}>Employee ID & Profile</AppText>
+            <AppText style={styles.menuLabel}>Employee ID & Profile (Fixed Photo)</AppText>
             <View style={styles.dynamicCodeChip}>
               <AppText style={styles.dynamicCodeChipText}>{dynamicVendorCode}</AppText>
+            </View>
+          </TouchableOpacity>
+
+          {/* Change Daily Verification Photo */}
+          <TouchableOpacity
+            style={styles.menuRow}
+            activeOpacity={0.65}
+            onPress={() => {
+              setDailyAvatarError(false);
+              setShowDailySelfieModal(true);
+            }}
+          >
+            <View style={styles.menuIcon}>
+              <Ionicons name="camera" size={20} color="#059669" />
+            </View>
+            <AppText style={styles.menuLabel}>Change Daily Photo (24h Selfie)</AppText>
+            <View style={[styles.dynamicCodeChip, { backgroundColor: "#EFF6FF", borderColor: "#BFDBFE" }]}>
+              <AppText style={[styles.dynamicCodeChipText, { color: "#2563EB" }]}>REPLACEABLE</AppText>
             </View>
           </TouchableOpacity>
 
@@ -732,6 +831,22 @@ export default function VendorSettings() {
         visible={showLanguageModal}
         onClose={() => setShowLanguageModal(false)}
       />
+
+      {/* Replaceable Daily Selfie Capture Modal */}
+      <DailySelfieModal
+        visible={showDailySelfieModal}
+        onClose={() => setShowDailySelfieModal(false)}
+        onSuccess={async (statusData) => {
+          setDailyAvatarError(false);
+          if (statusData?.user) {
+            setLiveUserData(statusData.user);
+          }
+          try {
+            await refetchUser(isStaff ? "vendor_staff" : "vendor");
+          } catch {}
+          fetchLiveStats();
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -786,12 +901,18 @@ const styles = StyleSheet.create({
     paddingTop: 2,
     paddingBottom: 2,
   },
+  avatarRowDual: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "center",
+    gap: 14,
+    marginBottom: 8,
+  },
   avatarCircle: {
     width: 92,
     height: 92,
     borderRadius: 46,
     backgroundColor: "#E5E7EB",
-    marginBottom: 8,
     position: "relative",
     shadowColor: "#059669",
     shadowOffset: { width: 0, height: 3 },
@@ -800,6 +921,94 @@ const styles = StyleSheet.create({
     elevation: 3,
     borderWidth: 3,
     borderColor: "#FFFFFF",
+  },
+  dailySelfieThumbWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#ECFDF5",
+    position: "relative",
+    borderWidth: 2.5,
+    borderColor: "#10B981",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  dailySelfieThumbImg: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 28,
+  },
+  dailySelfieThumbFallback: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 28,
+    backgroundColor: "#ECFDF5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dailyCameraBadge: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#059669",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
+  },
+  dailyThumbLabel: {
+    position: "absolute",
+    top: -16,
+    fontSize: 9.5,
+    fontWeight: "800",
+    color: "#059669",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  changeDailyPhotoBtn: {
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  changeDailyPhotoBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#059669",
+  },
+  fixedNotePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "#F1F5F9",
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+    marginLeft: 2,
+  },
+  fixedNotePillText: {
+    fontSize: 9.5,
+    fontWeight: "700",
+    color: "#64748B",
   },
   avatarImg: {
     width: "100%",

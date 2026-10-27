@@ -387,7 +387,8 @@ export default function VendorDashboard() {
         }
         const txns = earningsData?.transactions || [];
         setTransactions(txns);
-        const today = new Date().toISOString().split("T")[0];
+        const nowLocal = new Date();
+        const today = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, "0")}-${String(nowLocal.getDate()).padStart(2, "0")}`;
         const todayDailyDebits = txns
           .filter((t: any) => (t.ledger_bucket === "daily_payable" || t.category === "profit_share_adjustment") && t.type === "debit" && t.date?.startsWith(today))
           .reduce((acc: number, t: any) => acc + Math.abs(Number(t.amount)), 0);

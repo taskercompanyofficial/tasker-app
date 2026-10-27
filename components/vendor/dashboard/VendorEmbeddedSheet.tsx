@@ -68,18 +68,27 @@ export default function VendorEmbeddedSheet({
     return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
 
-  // Filter transactions based on active tab
-  const todayDateStr = new Date().toISOString().split("T")[0];
+  // Filter transactions based on active tab using local date (matches Earnings tab Today filter)
+  const nowLocal = new Date();
+  const todayDateStr = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, "0")}-${String(nowLocal.getDate()).padStart(2, "0")}`;
 
-  const dailyTransactions = transactions.filter(
-    (t) => t.date && t.date.startsWith(todayDateStr)
-  );
+  const dailyTransactions = transactions.filter((t) => {
+    const isDailyBucket = t.ledger_bucket
+      ? t.ledger_bucket === "daily_payable"
+      : t.category === "settlement" || t.category === "profit_share_adjustment";
+    const tDate = t.date?.split("T")[0] || t.date?.split(" ")[0];
+    return isDailyBucket && tDate === todayDateStr;
+  });
 
   const displayList = isDaily
-    ? dailyTransactions.length > 0
-      ? dailyTransactions
-      : transactions.slice(0, 4) // Fallback to recent transactions if none today
-    : transactions.filter((t) => t.type === "credit" || t.category === "warranty").slice(0, 5);
+    ? dailyTransactions
+    : transactions
+        .filter((t) =>
+          t.ledger_bucket
+            ? t.ledger_bucket === "monthly_accrual"
+            : t.category !== "settlement" && t.category !== "profit_share_adjustment"
+        )
+        .slice(0, 5);
 
   const formatTimeOrDate = (dateStr?: string) => {
     if (!dateStr) return "Today";

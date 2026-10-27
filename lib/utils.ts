@@ -46,6 +46,14 @@ export default function getImageUrl(image?: string | null): string {
   // Clean leading slash for consistency
   const cleanPath = trimmed.startsWith("/") ? trimmed.slice(1) : trimmed;
 
+  // RustFS daily selfies served via public /images/daily-selfies/{date}/{filename} route
+  const dailySelfieMatch = cleanPath.match(
+    /^(?:storage\/)?vendors\/daily-selfies\/([0-9\-]+)\/([^/]+)$/
+  );
+  if (dailySelfieMatch) {
+    return `${BACKEND_URL}/images/daily-selfies/${dailySelfieMatch[1]}/${dailySelfieMatch[2]}`;
+  }
+
   // Already prefixed with storage/
   if (cleanPath.startsWith("storage/")) {
     return `${BACKEND_URL}/${cleanPath}`;
