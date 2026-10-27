@@ -24,6 +24,8 @@ interface VendorEmbeddedSheetProps {
   monthlyAccrued: number;
   isLocked?: boolean;
   overdueAmount?: number;
+  financialGraceUntil?: string | null;
+  financialGraceWarning?: string | null;
   onNavigate: (route: string) => void;
   isOnline?: boolean;
 }
@@ -38,11 +40,16 @@ export default function VendorEmbeddedSheet({
   monthlyAccrued,
   isLocked = false,
   overdueAmount = 0,
+  financialGraceUntil = null,
+  financialGraceWarning = null,
   onNavigate,
   isOnline = false,
 }: VendorEmbeddedSheetProps) {
   const isDaily = activeTabIndex === 0;
   const isDue = isDaily && (dueTodayPayable > 0 || isLocked);
+  const hasActiveGrace = Boolean(
+    financialGraceUntil && new Date(financialGraceUntil).getTime() > Date.now()
+  );
 
   // Filter transactions based on active tab
   const todayDateStr = new Date().toISOString().split("T")[0];
@@ -75,6 +82,57 @@ export default function VendorEmbeddedSheet({
         { paddingBottom: isOnline ? 80 : 130 },
       ]}
     >
+      {/* ─── 0. GRACE DEADLINE WARNING BANNER (When unlocked without clearing dues) ─── */}
+      {hasActiveGrace && !isLocked && (
+        <View
+          style={{
+            backgroundColor: "#FFFBEB",
+            borderColor: "#F59E0B",
+            borderWidth: 1,
+            borderRadius: 14,
+            padding: 12,
+            marginBottom: 12,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
+          <View style={{ flex: 1, gap: 3 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Ionicons name="time" size={16} color="#D97706" />
+              <AppText style={{ fontSize: 12, fontWeight: "800", color: "#92400E" }}>
+                Clear Dues Before{" "}
+                {new Date(financialGraceUntil!).toLocaleString([], {
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </AppText>
+            </View>
+            <AppText style={{ fontSize: 11, color: "#B45309", lineHeight: 15 }}>
+              {financialGraceWarning ||
+                "Your account is temporarily unlocked. If pending dues are not cleared by the deadline, your account will automatically lock again."}
+            </AppText>
+          </View>
+          <TouchableOpacity
+            style={{
+              backgroundColor: "#D97706",
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderRadius: 10,
+            }}
+            onPress={() => onNavigate("/vendor/quick-pay")}
+            activeOpacity={0.85}
+          >
+            <AppText style={{ fontSize: 11, fontWeight: "800", color: "#FFFFFF" }}>
+              Pay Now
+            </AppText>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* ─── 1. STATUS & SETTLEMENT BANNER / COMPACT WARNING ─── */}
       {isLocked ? (
         <View style={styles.compactWarningCard}>

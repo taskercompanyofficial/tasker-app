@@ -90,6 +90,8 @@ export default function VendorDashboard() {
   const [overduePayable, setOverduePayable] = useState(0);
   const [isFinancialBlocked, setIsFinancialBlocked] = useState(false);
   const [secondsToMidnight, setSecondsToMidnight] = useState(0);
+  const [financialGraceUntil, setFinancialGraceUntil] = useState<string | null>(null);
+  const [financialGraceWarning, setFinancialGraceWarning] = useState<string | null>(null);
 
   // Online status
   const [isOnline, setIsOnline] = useState(false);
@@ -173,8 +175,10 @@ export default function VendorDashboard() {
       const res = await axios.get(VENDOR_ONLINE_STATUS_URL(mode));
       if (res.data?.status === "success") {
         const d = res.data.data;
-        if (d.is_financial_blocked) setIsFinancialBlocked(true);
+        setIsFinancialBlocked(Boolean(d.is_financial_blocked));
         if (d.overdue_payables !== undefined) setOverduePayable(Number(d.overdue_payables));
+        if (d.financial_grace_until !== undefined) setFinancialGraceUntil(d.financial_grace_until);
+        if (d.financial_grace_warning !== undefined) setFinancialGraceWarning(d.financial_grace_warning);
         setIsOnline(Boolean(d.is_online));
         setSecondsRemaining(Number(d.seconds_remaining ?? 0));
         if (d.due_today_payables !== undefined) setDueTodayPayable(Number(d.due_today_payables));
@@ -303,8 +307,14 @@ export default function VendorDashboard() {
           if (earningsData.summary.seconds_to_midnight !== undefined) {
             setSecondsToMidnight(Number(earningsData.summary.seconds_to_midnight));
           }
-          if (earningsData.summary.is_financial_blocked) {
-            setIsFinancialBlocked(true);
+          if (earningsData.summary.is_financial_blocked !== undefined) {
+            setIsFinancialBlocked(Boolean(earningsData.summary.is_financial_blocked));
+          }
+          if (earningsData.summary.financial_grace_until !== undefined) {
+            setFinancialGraceUntil(earningsData.summary.financial_grace_until);
+          }
+          if (earningsData.summary.financial_grace_warning !== undefined) {
+            setFinancialGraceWarning(earningsData.summary.financial_grace_warning);
           }
           if (earningsData.summary.daily_cash_collected !== undefined) {
             setDailyCashCollected(Number(earningsData.summary.daily_cash_collected));
@@ -416,7 +426,10 @@ export default function VendorDashboard() {
   const totalJobsDoneMonthly = stats?.completed_monthly_jobs ?? stats?.completed_this_month ?? 0;
   const totalLifetimeJobs = stats?.completed ?? 0;
 
-  const isLocked = overduePayable > 0 || isFinancialBlocked;
+  const hasActiveGrace = Boolean(
+    financialGraceUntil && new Date(financialGraceUntil).getTime() > Date.now()
+  );
+  const isLocked = (overduePayable > 0 && !hasActiveGrace) || isFinancialBlocked;
   const overdueAmount = isLocked ? overduePayable : 0;
   const effectiveIsOnline = isOnline && !isLocked;
   const effectiveIsOnlineRef = useRef(effectiveIsOnline);
@@ -505,6 +518,8 @@ export default function VendorDashboard() {
               monthlyAccrued={monthlyAccrued}
               isLocked={isLocked}
               overdueAmount={overdueAmount}
+              financialGraceUntil={financialGraceUntil}
+              financialGraceWarning={financialGraceWarning}
               onNavigate={(route) => router.push(route as any)}
               isOnline={effectiveIsOnline}
             />

@@ -72,7 +72,7 @@ export default function VendorLedgerRates() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pulseAnim = useRef(new Animated.Value(0.35)).current;
 
   // Pulsing animation loop for skeletons

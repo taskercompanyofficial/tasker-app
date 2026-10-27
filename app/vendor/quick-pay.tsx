@@ -23,12 +23,6 @@ import * as WebBrowser from "expo-web-browser";
 import { captureRef } from "react-native-view-shot";
 import QRCode from "react-native-qrcode-svg";
 import AppText from "@/components/common/AppText";
-
-// Safe dynamic access to MediaLibrary (prevents hanging if native build does not yet have expo-media-library linked)
-let MediaLibrary: any = null;
-try {
-  MediaLibrary = require("expo-media-library");
-} catch (_) {}
 import { localizedToast } from "@/lib/i18n/localized-toast";
 import axios from "@/lib/axios.config";
 import {
@@ -306,7 +300,7 @@ export default function VendorQuickPayScreen() {
     }
   };
 
-  // 3. Save QR Code Image Directly to Device Gallery (with safe fallback if MediaLibrary native module not yet linked in APK)
+  // 3. Save / Share QR Code Image (uses native Sharing without requiring MediaLibrary permissions)
   const handleSaveQrToGallery = async () => {
     try {
       if (!qrCardRef.current || savingGallery) return;
@@ -320,32 +314,10 @@ export default function VendorQuickPayScreen() {
         quality: 1.0,
       });
 
-      // Try MediaLibrary if available in current native build
-      if (MediaLibrary?.requestPermissionsAsync && MediaLibrary?.saveToLibraryAsync) {
-        try {
-          const { status } = await MediaLibrary.requestPermissionsAsync();
-          if (status === "granted") {
-            await MediaLibrary.saveToLibraryAsync(uri);
-            try {
-              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            } catch (_) {}
-            localizedToast({
-              type: "success",
-              text1: "Saved to Gallery",
-              text2: "Tasker QR code stored in your photo library.",
-            });
-            return;
-          }
-        } catch (nativeErr) {
-          console.warn("[QuickPay] MediaLibrary native call failed, falling back to Sharing:", nativeErr);
-        }
-      }
-
-      // Safe fallback using Expo Sharing (available in current dev build)
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, {
           mimeType: "image/png",
-          dialogTitle: "Save Tasker QR Code",
+          dialogTitle: "Save / Share Tasker QR Code",
         });
       } else {
         localizedToast({
@@ -435,9 +407,15 @@ export default function VendorQuickPayScreen() {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       } catch (_) {}
 
+      const submittedAmt =
+        numericAmount > 0 ? numericAmount : pendingDues > 0 ? pendingDues : 1;
       const formData = new FormData();
-      formData.append("amount", "1");
-      formData.append("notes", "Submitted via Quick Pay Screen");
+      formData.append("amount", String(submittedAmt));
+      formData.append(
+        "payment_method",
+        activeTab === 1 ? "jazzcash_raast" : activeTab === 2 ? "ubl_bank" : "online_gateway"
+      );
+      formData.append("notes", `Submitted PKR ${submittedAmt.toLocaleString()} via Quick Pay Screen`);
 
       const uriParts = selectedProof.uri.split(".");
       const fileType = uriParts[uriParts.length - 1] || "jpg";
@@ -868,6 +846,51 @@ export default function VendorQuickPayScreen() {
           <AppText style={styles.receiptSubtitle}>
             Upload your transfer screenshot or bank deposit slip for verification.
           </AppText>
+
+          {/* Amount Paid Input for Receipt Verification */}
+          <View style={{ marginBottom: 12 }}>
+            <AppText
+              style={{
+                fontSize: 11,
+                fontWeight: "700",
+                color: "#475569",
+                marginBottom: 6,
+                letterSpacing: 0.4,
+              }}
+            >
+              AMOUNT PAID (PKR)
+            </AppText>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: "#CBD5E1",
+                borderRadius: 10,
+                backgroundColor: "#F8FAFC",
+                paddingHorizontal: 12,
+                height: 44,
+              }}
+            >
+              <AppText style={{ fontSize: 14, fontWeight: "800", color: "#0F172A", marginRight: 8 }}>
+                PKR
+              </AppText>
+              <TextInput
+                value={inputAmount}
+                onChangeText={(txt) => setInputAmount(txt.replace(/[^0-9]/g, ""))}
+                keyboardType="numeric"
+                placeholder={pendingDues > 0 ? String(pendingDues) : "Enter amount paid"}
+                placeholderTextColor="#94A3B8"
+                style={{
+                  flex: 1,
+                  fontSize: 15,
+                  fontWeight: "800",
+                  color: "#0F172A",
+                  paddingVertical: 0,
+                }}
+              />
+            </View>
+          </View>
 
           {proofUploaded && (
             <View style={styles.successMessageBox}>

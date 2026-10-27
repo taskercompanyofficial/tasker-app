@@ -9,7 +9,7 @@ export function getAppVersion(): string {
   return (
     Application.nativeApplicationVersion ||
     Constants.expoConfig?.version ||
-    "1.0.36"
+    "2.0.0"
   );
 }
 
