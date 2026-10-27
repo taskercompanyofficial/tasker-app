@@ -18,7 +18,6 @@ interface VendorDashboardHeaderProps {
   onPressNotifications: () => void;
   onPressQuickPay?: () => void;
   onPressRateCard?: () => void;
-  onPressTour?: () => void;
   profileRef?: React.RefObject<View | null>;
   rateCardBtnRef?: React.RefObject<View | null>;
   quickPayBtnRef?: React.RefObject<View | null>;
@@ -32,7 +31,6 @@ export default function VendorDashboardHeader({
   onPressNotifications,
   onPressQuickPay,
   onPressRateCard,
-  onPressTour,
   profileRef,
   rateCardBtnRef,
   quickPayBtnRef,
@@ -77,19 +75,8 @@ export default function VendorDashboardHeader({
         </View>
       </View>
 
-      {/* Top Bar Actions: Tour Guide + Rate Card + Pay/QR Button + Notifications Bell */}
+      {/* Top Bar Actions: Rate Card + Pay/QR Button + Notifications Bell */}
       <View style={styles.topBarActions}>
-        {onPressTour && (
-          <TouchableOpacity
-            style={styles.tourChip}
-            activeOpacity={0.75}
-            onPress={onPressTour}
-          >
-            <Ionicons name="help-circle-outline" size={16} color="#047857" />
-            <AppText style={styles.tourChipText}>Guide</AppText>
-          </TouchableOpacity>
-        )}
-
         <View ref={rateCardBtnRef} collapsable={false}>
           <TouchableOpacity
             style={styles.iconCircle}

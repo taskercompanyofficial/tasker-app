@@ -16,7 +16,6 @@ import { EchoProvider } from "@/context/EchoProvider";
 import { useNetwork } from "@/hooks/use-network";
 import { VoiceCallProvider } from "@/context/VoiceCallContext";
 import { LanguageProvider, useLanguage } from "@/context/language-context";
-import VendorActiveTripBubble from "@/components/vendor/VendorActiveTripBubble";
 
 import { addDebugLog, initRemoteLogging } from "@/lib/debug-monitor";
 import { Observe, ObserveRoot, useObserve } from "@/lib/observe";
@@ -156,8 +155,6 @@ function RootLayout() {
               <RootNavigator />
               <Toast />
               <DebugPanel />
-              {/* Floating trip bubble — visible on all screens during an active vendor job */}
-              <VendorActiveTripBubble />
             </VoiceCallProvider>
           </EchoProvider>
         </BottomSheetModalProvider>

@@ -216,16 +216,23 @@ export default function VendorDashboardTour({
     return () => pulseLoop.stop();
   }, [visible, pulseAnim]);
 
+  const targetRefsRef = useRef(targetRefs);
+  targetRefsRef.current = targetRefs;
+  const onSwitchTabRef = useRef(onSwitchTab);
+  onSwitchTabRef.current = onSwitchTab;
+  const onScrollToRef = useRef(onScrollTo);
+  onScrollToRef.current = onScrollTo;
+
   const measureCurrentStep = useCallback(
     (index: number) => {
       const step = VENDOR_DASHBOARD_TOUR_STEPS[index];
       if (!step) return;
 
       if (typeof step.tabIndex === "number") {
-        onSwitchTab(step.tabIndex);
+        onSwitchTabRef.current(step.tabIndex);
       }
-      if (typeof step.scrollY === "number" && onScrollTo) {
-        onScrollTo(step.scrollY);
+      if (typeof step.scrollY === "number" && onScrollToRef.current) {
+        onScrollToRef.current(step.scrollY);
       }
 
       fadeAnim.setValue(0);
@@ -236,7 +243,7 @@ export default function VendorDashboardTour({
           step.targetKey === "priceCardDaily" || step.targetKey === "priceCardMonthly"
             ? "priceCard"
             : step.targetKey;
-        const targetRef = targetRefs[refKey];
+        const targetRef = targetRefsRef.current[refKey];
 
         if (targetRef?.current) {
           targetRef.current.measureInWindow((x, y, width, height) => {
@@ -253,7 +260,7 @@ export default function VendorDashboardTour({
             }
             Animated.timing(fadeAnim, {
               toValue: 1,
-              duration: 220,
+              duration: 180,
               useNativeDriver: true,
             }).start();
           });
@@ -261,20 +268,21 @@ export default function VendorDashboardTour({
           setSpotRect(null);
           Animated.timing(fadeAnim, {
             toValue: 1,
-            duration: 220,
+            duration: 180,
             useNativeDriver: true,
           }).start();
         }
-      }, 220);
+      }, 180);
 
       return () => clearTimeout(timer);
     },
-    [targetRefs, onSwitchTab, onScrollTo, fadeAnim]
+    [fadeAnim]
   );
 
   useEffect(() => {
     if (visible) {
-      measureCurrentStep(stepIndex);
+      const cleanup = measureCurrentStep(stepIndex);
+      return cleanup;
     }
   }, [visible, stepIndex, measureCurrentStep]);
 

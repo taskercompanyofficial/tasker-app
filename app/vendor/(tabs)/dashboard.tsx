@@ -437,12 +437,6 @@ export default function VendorDashboard() {
         onPressNotifications={() => router.push("/vendor/notifications" as any)}
         onPressQuickPay={() => router.push("/vendor/quick-pay" as any)}
         onPressRateCard={() => router.push("/vendor/ledger" as any)}
-        onPressTour={() => {
-          try {
-            Haptics.selectionAsync();
-          } catch (_) {}
-          setShowTour(true);
-        }}
         profileRef={profileRef}
         rateCardBtnRef={rateCardBtnRef}
         quickPayBtnRef={quickPayBtnRef}
