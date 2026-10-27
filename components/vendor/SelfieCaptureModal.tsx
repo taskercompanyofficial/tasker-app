@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as Haptics from "expo-haptics";
+import { captureRef } from "react-native-view-shot";
 import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -19,6 +20,20 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
+type SelfieFilterId = "natural" | "bright" | "warm" | "cool" | "studio";
+
+const SELFIE_FILTERS: {
+  id: SelfieFilterId;
+  label: string;
+  overlayColor: string;
+}[] = [
+  { id: "natural", label: "Natural", overlayColor: "transparent" },
+  { id: "bright", label: "Bright ✨", overlayColor: "rgba(255, 255, 255, 0.14)" },
+  { id: "warm", label: "Warm ☀️", overlayColor: "rgba(251, 191, 36, 0.13)" },
+  { id: "cool", label: "Fresh ❄️", overlayColor: "rgba(56, 189, 248, 0.12)" },
+  { id: "studio", label: "Studio 📸", overlayColor: "rgba(16, 185, 129, 0.10)" },
+];
+
 interface SelfieCaptureModalProps {
   visible: boolean;
   onCaptured: (fileData: { uri: string; name: string; type: string }) => void;
@@ -32,10 +47,15 @@ export default function SelfieCaptureModal({
 }: SelfieCaptureModalProps) {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<any>(null);
+  const previewShotRef = useRef<View>(null);
   const [capturing, setCapturing] = useState(false);
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
+  const [selectedFilter, setSelectedFilter] = useState<SelfieFilterId>("bright");
 
-  // Capture Selfie Photo
+  const activeFilterObj =
+    SELFIE_FILTERS.find((f) => f.id === selectedFilter) || SELFIE_FILTERS[0];
+
+  // Capture Selfie Photo (mirror: true prevents left-to-right flip so photo matches live preview)
   const handleCapture = async () => {
     if (!cameraRef.current || capturing) return;
     try {
@@ -46,8 +66,9 @@ export default function SelfieCaptureModal({
       setCapturing(true);
 
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.9,
+        quality: 0.92,
         skipProcessing: false,
+        mirror: true,
       });
 
       if (photo?.uri) {
@@ -70,7 +91,7 @@ export default function SelfieCaptureModal({
               },
             },
           ],
-          { compress: 0.88, format: ImageManipulator.SaveFormat.JPEG }
+          { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
         );
 
         setCapturedUri(manipulated.uri);
@@ -83,15 +104,26 @@ export default function SelfieCaptureModal({
     }
   };
 
-  // Confirm photo
-  const handleConfirmPhoto = () => {
+  // Confirm photo (bakes selected filter into image if a filter is active)
+  const handleConfirmPhoto = async () => {
     if (!capturedUri) return;
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (_) {}
 
+    let finalUri = capturedUri;
+    if (selectedFilter !== "natural" && previewShotRef.current) {
+      try {
+        const baked = await captureRef(previewShotRef, {
+          format: "jpg",
+          quality: 0.9,
+        });
+        if (baked) finalUri = baked;
+      } catch (_) {}
+    }
+
     onCaptured({
-      uri: capturedUri,
+      uri: finalUri,
       name: `vendor_selfie_${Date.now()}.jpg`,
       type: "image/jpeg",
     });
@@ -180,9 +212,24 @@ export default function SelfieCaptureModal({
             </View>
           </SafeAreaView>
         ) : capturedUri ? (
-          // ─── MINIMAL CLEAN REVIEW SCREEN ───
+          // ─── MINIMAL CLEAN REVIEW SCREEN WITH FILTER PILLS ───
           <View style={styles.previewContainer}>
-            <Image source={{ uri: capturedUri }} style={styles.previewFullImage} />
+            <View
+              ref={previewShotRef}
+              collapsable={false}
+              style={StyleSheet.absoluteFill}
+            >
+              <Image source={{ uri: capturedUri }} style={styles.previewFullImage} />
+              {activeFilterObj.overlayColor !== "transparent" && (
+                <View
+                  pointerEvents="none"
+                  style={[
+                    StyleSheet.absoluteFill,
+                    { backgroundColor: activeFilterObj.overlayColor },
+                  ]}
+                />
+              )}
+            </View>
 
             {/* Floating Top Header with Center Verification Label */}
             <SafeAreaView style={styles.floatingTopBar} edges={["top"]}>
@@ -197,6 +244,38 @@ export default function SelfieCaptureModal({
 
               <View style={{ width: 42 }} />
             </SafeAreaView>
+
+            {/* Filter Selector Bar on Review Screen */}
+            <View style={styles.filterBarWrap}>
+              {SELFIE_FILTERS.map((f) => {
+                const isSelected = f.id === selectedFilter;
+                return (
+                  <TouchableOpacity
+                    key={f.id}
+                    style={[
+                      styles.filterChip,
+                      isSelected && styles.filterChipActive,
+                    ]}
+                    onPress={() => {
+                      try {
+                        Haptics.selectionAsync();
+                      } catch (_) {}
+                      setSelectedFilter(f.id);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <AppText
+                      style={[
+                        styles.filterChipText,
+                        isSelected && styles.filterChipTextActive,
+                      ]}
+                    >
+                      {f.label}
+                    </AppText>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
             {/* Floating Bottom Confirm / Retake Actions */}
             <SafeAreaView style={styles.floatingBottomBar} edges={["bottom"]}>
@@ -220,13 +299,23 @@ export default function SelfieCaptureModal({
             </SafeAreaView>
           </View>
         ) : (
-          // ─── MINIMAL BORDERLESS FULL-BLEED LIVE CAMERA ───
+          // ─── MINIMAL BORDERLESS FULL-BLEED LIVE CAMERA WITH FILTERS ───
           <View style={styles.cameraWrapper}>
             <CameraView
               ref={cameraRef}
               style={StyleSheet.absoluteFill}
               facing="front"
+              mirror={true}
             />
+            {activeFilterObj.overlayColor !== "transparent" && (
+              <View
+                pointerEvents="none"
+                style={[
+                  StyleSheet.absoluteFill,
+                  { backgroundColor: activeFilterObj.overlayColor },
+                ]}
+              />
+            )}
 
             {/* Floating Top Header with Top-Middle Verification Title */}
             <SafeAreaView style={styles.floatingTopBar} edges={["top"]}>
@@ -242,6 +331,38 @@ export default function SelfieCaptureModal({
 
               <View style={{ width: 42 }} />
             </SafeAreaView>
+
+            {/* Live Filter Selector Pills Above Shutter */}
+            <View style={styles.filterBarWrap}>
+              {SELFIE_FILTERS.map((f) => {
+                const isSelected = f.id === selectedFilter;
+                return (
+                  <TouchableOpacity
+                    key={f.id}
+                    style={[
+                      styles.filterChip,
+                      isSelected && styles.filterChipActive,
+                    ]}
+                    onPress={() => {
+                      try {
+                        Haptics.selectionAsync();
+                      } catch (_) {}
+                      setSelectedFilter(f.id);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <AppText
+                      style={[
+                        styles.filterChipText,
+                        isSelected && styles.filterChipTextActive,
+                      ]}
+                    >
+                      {f.label}
+                    </AppText>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
             {/* Clean Shutter Ring on Bottom (Accurate, Minimal, No Dark Borders) */}
             <SafeAreaView style={styles.bottomControls} edges={["bottom"]}>
@@ -311,12 +432,44 @@ const styles = StyleSheet.create({
   },
   bottomControls: {
     position: "absolute",
-    bottom: 32,
+    bottom: 28,
     left: 0,
     right: 0,
     alignItems: "center",
     justifyContent: "center",
     zIndex: 20,
+  },
+  filterBarWrap: {
+    position: "absolute",
+    bottom: 118,
+    left: 16,
+    right: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    zIndex: 25,
+  },
+  filterChip: {
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: "rgba(15, 23, 42, 0.65)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.18)",
+  },
+  filterChipActive: {
+    backgroundColor: "#10B981",
+    borderColor: "#34D399",
+  },
+  filterChipText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "rgba(255, 255, 255, 0.85)",
+  },
+  filterChipTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "800",
   },
   shutterOuterRing: {
     width: 76,

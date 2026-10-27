@@ -254,26 +254,33 @@ export default function VendorDashboard() {
           return;
         }
 
-        // Always ask for the image / face selfie verification when sliding to go online
-        setShowSelfieModal(true);
-        return;
+        // Only require a new selfie if 24-hour verification has expired (or not yet taken)
+        if (secondsRemaining <= 0) {
+          setShowSelfieModal(true);
+          return;
+        }
       }
 
       setTogglingOnline(true);
       const res = await axios.post(VENDOR_TOGGLE_ONLINE_STATUS_URL(mode), {
-        status: "offline",
+        status: targetValue ? "online" : "offline",
       });
       if (res.data?.status === "success") {
         const d = res.data.data;
         setIsOnline(Boolean(d.is_online));
         setSecondsRemaining(Number(d.seconds_remaining ?? 0));
+        if (targetValue) {
+          sendDashboardOnlineLocationPing();
+        }
         try {
           await refetchUser(mode);
         } catch (_) {}
         localizedToast({
           type: "success",
-          text1: "⚪ You are Offline",
-          text2: "Offline mode active.",
+          text1: targetValue ? "🟢 You are Online!" : "⚪ You are Offline",
+          text2: targetValue
+            ? "Ready to receive customer bookings."
+            : "Offline mode active.",
         });
       }
     } catch (err: any) {
