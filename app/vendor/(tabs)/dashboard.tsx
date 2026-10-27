@@ -47,7 +47,9 @@ interface WorkOrderStats {
   pending_acceptance: number;
   active: number;
   completed: number;
+  completed_today?: number;
   completed_this_month: number;
+  completed_monthly_jobs?: number;
 }
 
 export default function VendorDashboard() {
@@ -343,8 +345,9 @@ export default function VendorDashboard() {
     monthlyAccrued > 0 ? monthlyAccrued : thisMonthEarnings
   ).toLocaleString();
 
-  const totalJobsDoneDaily = (stats?.completed ?? 0) > 0 ? stats?.completed ?? 0 : 0;
-  const totalJobsDoneMonthly = stats?.completed_this_month ?? 0;
+  const totalJobsDoneDaily = stats?.completed_today ?? 0;
+  const totalJobsDoneMonthly = stats?.completed_monthly_jobs ?? stats?.completed_this_month ?? 0;
+  const totalLifetimeJobs = stats?.completed ?? 0;
 
   const isLocked = overduePayable > 0 || isFinancialBlocked;
   const overdueAmount = isLocked ? overduePayable : 0;
@@ -402,6 +405,7 @@ export default function VendorDashboard() {
             monthlyAmount={monthlyAmount}
             totalJobsDoneDaily={totalJobsDoneDaily}
             totalJobsDoneMonthly={totalJobsDoneMonthly}
+            totalLifetimeJobs={totalLifetimeJobs}
             todayEarnings={todayEarnings}
             companyShare={companyShare}
             dueTodayPayable={dueTodayPayable}

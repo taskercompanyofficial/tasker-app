@@ -22,6 +22,7 @@ interface VendorSlidablePriceViewsProps {
   monthlyAmount: string;
   totalJobsDoneDaily: number;
   totalJobsDoneMonthly: number;
+  totalLifetimeJobs?: number;
   todayEarnings: number;
   companyShare: number;
   dueTodayPayable: number;
@@ -39,6 +40,7 @@ export default function VendorSlidablePriceViews({
   monthlyAmount,
   totalJobsDoneDaily,
   totalJobsDoneMonthly,
+  totalLifetimeJobs = 0,
   todayEarnings,
   companyShare,
   dueTodayPayable,
@@ -186,7 +188,12 @@ export default function VendorSlidablePriceViews({
 
           {/* Jobs Subtitle */}
           <AppText style={styles.jobsDoneText}>
-            {totalJobsDoneDaily} jobs completed today
+            {totalJobsDoneDaily === 1
+              ? "1 job completed today"
+              : `${totalJobsDoneDaily} jobs completed today`}
+            {totalLifetimeJobs > 0 && totalJobsDoneDaily === 0
+              ? ` (${totalLifetimeJobs} all-time)`
+              : ""}
           </AppText>
 
           {/* 3-Column Cardless Stats */}
@@ -272,7 +279,9 @@ export default function VendorSlidablePriceViews({
 
           {/* Jobs Subtitle */}
           <AppText style={styles.jobsDoneText}>
-            {totalJobsDoneMonthly} warranty & free jobs completed
+            {totalJobsDoneMonthly === 1
+              ? "1 warranty & free job completed"
+              : `${totalJobsDoneMonthly} warranty & free jobs completed`}
           </AppText>
 
           {/* 3-Column Cardless Stats */}
