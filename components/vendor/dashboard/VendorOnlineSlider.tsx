@@ -1,14 +1,22 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Animated,
   Dimensions,
-  PanResponder,
   Platform,
   StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  Extrapolation,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import AppText from "@/components/common/AppText";
@@ -33,90 +41,73 @@ export default function VendorOnlineSlider({
 }: VendorOnlineSliderProps) {
   const [trackWidth, setTrackWidth] = useState(SCREEN_WIDTH - 40);
   const knobWidth = 44;
-  const maxDistanceRef = useRef(Math.max(120, SCREEN_WIDTH - 40 - knobWidth - 10));
-  const slideKnobAnim = useRef(new Animated.Value(0)).current;
+  const maxDistance = Math.max(120, trackWidth - knobWidth - 10);
 
-  // Mutable refs to prevent stale closure inside PanResponder
-  const onSlideCompleteRef = useRef(onSlideComplete);
-  onSlideCompleteRef.current = onSlideComplete;
-
-  const isLockedRef = useRef(isLocked);
-  isLockedRef.current = isLocked;
-
-  const isOnlineRef = useRef(isOnline);
-  isOnlineRef.current = isOnline;
-
-  const togglingOnlineRef = useRef(togglingOnline);
-  togglingOnlineRef.current = togglingOnline;
+  const translateX = useSharedValue(0);
+  const maxDistShared = useSharedValue(maxDistance);
 
   useEffect(() => {
-    maxDistanceRef.current = Math.max(120, trackWidth - knobWidth - 10);
-  }, [trackWidth]);
+    maxDistShared.value = Math.max(120, trackWidth - knobWidth - 10);
+  }, [trackWidth, maxDistShared]);
 
-  // Reset knob to 0 whenever online status changes or loading completes
+  // Reset knob to 0 smoothly only after online state changes or toggle finishes
   useEffect(() => {
-    slideKnobAnim.stopAnimation(() => {
-      slideKnobAnim.setValue(0);
-    });
-  }, [isOnline, togglingOnline, slideKnobAnim]);
+    if (!togglingOnline) {
+      translateX.value = withSpring(0, { damping: 20, stiffness: 180 });
+    }
+  }, [isOnline, togglingOnline, translateX]);
 
-  const triggerSlideAction = () => {
-    if (isLockedRef.current || togglingOnlineRef.current) return;
+  const fireGrantHaptic = () => {
+    try {
+      Haptics.selectionAsync();
+    } catch (_) {}
+  };
+
+  const fireCompleteAction = () => {
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (_) {}
-    Animated.timing(slideKnobAnim, {
-      toValue: maxDistanceRef.current,
-      duration: 120,
-      useNativeDriver: false,
-    }).start(() => {
-      slideKnobAnim.setValue(0);
-      onSlideCompleteRef.current?.();
-    });
+    onSlideComplete();
   };
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () =>
-        !isLockedRef.current && !togglingOnlineRef.current,
-      onStartShouldSetPanResponderCapture: () =>
-        !isLockedRef.current && !togglingOnlineRef.current,
-      onMoveShouldSetPanResponder: (_, g) =>
-        !isLockedRef.current && !togglingOnlineRef.current && Math.abs(g.dx) > 2,
-      onMoveShouldSetPanResponderCapture: (_, g) =>
-        !isLockedRef.current && !togglingOnlineRef.current && Math.abs(g.dx) > 2,
-      onPanResponderTerminationRequest: () => false,
-      onShouldBlockNativeResponder: () => true,
-      onPanResponderGrant: () => {
-        try {
-          Haptics.selectionAsync();
-        } catch (_) {}
-      },
-      onPanResponderMove: (_, g) => {
-        const val = Math.max(0, Math.min(g.dx, maxDistanceRef.current));
-        slideKnobAnim.setValue(val);
-      },
-      onPanResponderRelease: (_, g) => {
-        const passedDistance = g.dx >= maxDistanceRef.current * 0.3;
-        const passedVelocity = g.vx > 0.35 && g.dx > 20;
-        if (passedDistance || passedVelocity) {
-          triggerSlideAction();
-        } else {
-          Animated.spring(slideKnobAnim, {
-            toValue: 0,
-            useNativeDriver: false,
-            bounciness: 6,
-          }).start();
-        }
-      },
-      onPanResponderTerminate: () => {
-        Animated.spring(slideKnobAnim, {
-          toValue: 0,
-          useNativeDriver: false,
-        }).start();
-      },
+  const panGesture = Gesture.Pan()
+    .enabled(!isLocked && !togglingOnline)
+    .activeOffsetX([-5, 5])
+    .onBegin(() => {
+      runOnJS(fireGrantHaptic)();
     })
-  ).current;
+    .onUpdate((e) => {
+      const clamped = Math.max(0, Math.min(e.translationX, maxDistShared.value));
+      translateX.value = clamped;
+    })
+    .onEnd((e) => {
+      const maxD = maxDistShared.value;
+      const passedDistance = e.translationX >= maxD * 0.45;
+      const passedVelocity = e.velocityX > 450 && e.translationX >= maxD * 0.2;
+
+      if (passedDistance || passedVelocity) {
+        translateX.value = withTiming(maxD, { duration: 130 }, (finished) => {
+          if (finished) {
+            runOnJS(fireCompleteAction)();
+          }
+        });
+      } else {
+        translateX.value = withSpring(0, { damping: 18, stiffness: 180 });
+      }
+    });
+
+  const knobAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  const fillAnimatedStyle = useAnimatedStyle(() => ({
+    width: interpolate(
+      translateX.value,
+      [0, Math.max(1, maxDistShared.value)],
+      [knobWidth + 10, maxDistShared.value + knobWidth + 10],
+      Extrapolation.CLAMP
+    ),
+  }));
 
   // ─── 1. LOCKED STATE ───
   if (isLocked) {
@@ -163,65 +154,58 @@ export default function VendorOnlineSlider({
         </AppText>
       </View>
 
-      <View
-        style={styles.sliderTrack}
-        onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
-        {...panResponder.panHandlers}
-      >
-        {/* Animated fill */}
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.sliderTrackFill,
-            isOnline && styles.sliderTrackFillRed,
-            {
-              width: slideKnobAnim.interpolate({
-                inputRange: [0, Math.max(1, maxDistanceRef.current)],
-                outputRange: [knobWidth + 10, trackWidth],
-                extrapolate: "clamp",
-              }),
-            },
-          ]}
-        />
-
-        {/* Center label */}
-        <View style={styles.sliderCenterLabel} pointerEvents="none">
-          <AppText style={styles.sliderTrackText}>
-            {togglingOnline
-              ? isOnline
-                ? "Going Offline..."
-                : "Going Online..."
-              : isOnline
-              ? "Slide to Go Offline"
-              : "Slide to Go Online"}
-          </AppText>
-          <DirectionalIcon
-            name="chevron-forward"
-            size={18}
-            color={isOnline ? "#FECACA" : "#A7F3D0"}
-            style={styles.sliderChevron}
-          />
-        </View>
-
-        {/* Draggable Knob */}
-        <Animated.View
-          style={[
-            styles.sliderKnob,
-            isOnline && styles.sliderKnobRed,
-            {
-              transform: [{ translateX: slideKnobAnim }],
-            },
-          ]}
+      <GestureDetector gesture={panGesture}>
+        <View
+          style={styles.sliderTrack}
+          onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
         >
-          {togglingOnline ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : isOnline ? (
-            <Ionicons name="power" size={20} color="#FFFFFF" />
-          ) : (
-            <Ionicons name="flash" size={20} color="#FFFFFF" />
-          )}
-        </Animated.View>
-      </View>
+          {/* Animated fill */}
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.sliderTrackFill,
+              isOnline && styles.sliderTrackFillRed,
+              fillAnimatedStyle,
+            ]}
+          />
+
+          {/* Center label */}
+          <View style={styles.sliderCenterLabel} pointerEvents="none">
+            <AppText style={styles.sliderTrackText}>
+              {togglingOnline
+                ? isOnline
+                  ? "Going Offline..."
+                  : "Going Online..."
+                : isOnline
+                ? "Slide to Go Offline"
+                : "Slide to Go Online"}
+            </AppText>
+            <DirectionalIcon
+              name="chevron-forward"
+              size={18}
+              color={isOnline ? "#FECACA" : "#A7F3D0"}
+              style={styles.sliderChevron}
+            />
+          </View>
+
+          {/* Draggable Knob */}
+          <Animated.View
+            style={[
+              styles.sliderKnob,
+              isOnline && styles.sliderKnobRed,
+              knobAnimatedStyle,
+            ]}
+          >
+            {togglingOnline ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : isOnline ? (
+              <Ionicons name="power" size={20} color="#FFFFFF" />
+            ) : (
+              <Ionicons name="flash" size={20} color="#FFFFFF" />
+            )}
+          </Animated.View>
+        </View>
+      </GestureDetector>
     </View>
   );
 }
