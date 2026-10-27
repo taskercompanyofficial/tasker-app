@@ -287,7 +287,7 @@ export default function VendorLedgerRates() {
           <View style={styles.rowLeft}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
               <View style={[styles.badge, { backgroundColor: "#F3E8FF" }]}>
-                <AppText style={[styles.badgeText, { color: "#9333EA" }]}>Service Labor</AppText>
+                <AppText style={[styles.badgeText, { color: "#9333EA" }]}>Service Charges</AppText>
               </View>
             </View>
             <AppText style={styles.rowTitle} numberOfLines={2}>
@@ -544,7 +544,7 @@ export default function VendorLedgerRates() {
             >
               <Ionicons name="layers" size={13} color={customerCategory === "services" ? "#FFFFFF" : "#64748B"} />
               <AppText style={[styles.catPillText, customerCategory === "services" && styles.catPillTextActive]}>
-                Parent Services ({parentServices.length})
+                Service Charges ({parentServices.length})
               </AppText>
             </TouchableOpacity>
           </ScrollView>
