@@ -68,6 +68,8 @@ export default function VendorDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [balance, setBalance] = useState(0);
   const [todayEarnings, setTodayEarnings] = useState(0);
+  const [dailyCashCollected, setDailyCashCollected] = useState(0);
+  const [dailyVendorEarned, setDailyVendorEarned] = useState(0);
   const [thisMonthEarnings, setThisMonthEarnings] = useState(0);
   const [companyShare, setCompanyShare] = useState(0);
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -265,6 +267,15 @@ export default function VendorDashboard() {
           if (earningsData.summary.is_financial_blocked) {
             setIsFinancialBlocked(true);
           }
+          if (earningsData.summary.daily_cash_collected !== undefined) {
+            setDailyCashCollected(Number(earningsData.summary.daily_cash_collected));
+          }
+          if (earningsData.summary.daily_vendor_earned !== undefined) {
+            setDailyVendorEarned(Number(earningsData.summary.daily_vendor_earned));
+          }
+          if (earningsData.summary.daily_company_share !== undefined) {
+            setCompanyShare(Number(earningsData.summary.daily_company_share));
+          }
         } else {
           const txns = Array.isArray(earningsData?.transactions)
             ? earningsData.transactions
@@ -287,16 +298,33 @@ export default function VendorDashboard() {
         const txns = earningsData?.transactions || [];
         setTransactions(txns);
         const today = new Date().toISOString().split("T")[0];
-        const todayCredits = txns
-          .filter((t: any) => t.type === "credit" && t.date?.startsWith(today))
+        const todayDailyDebits = txns
+          .filter((t: any) => (t.ledger_bucket === "daily_payable" || t.category === "profit_share_adjustment") && t.type === "debit" && t.date?.startsWith(today))
           .reduce((acc: number, t: any) => acc + Math.abs(Number(t.amount)), 0);
-        setTodayEarnings(todayCredits);
-        const dailyDue = earningsData?.summary?.due_today_payable !== undefined
+
+        const currentCompanyShare = earningsData?.summary?.daily_company_share !== undefined
+          ? Number(earningsData.summary.daily_company_share)
+          : earningsData?.summary?.due_today_payable !== undefined
           ? Number(earningsData.summary.due_today_payable)
-          : txns
-              .filter((t: any) => (t.ledger_bucket === "daily_payable" || t.category === "profit_share_adjustment") && t.type === "debit" && t.date?.startsWith(today))
-              .reduce((acc: number, t: any) => acc + Math.abs(Number(t.amount)), 0);
-        setCompanyShare(dailyDue);
+          : todayDailyDebits;
+        setCompanyShare(currentCompanyShare);
+
+        let cashCol = earningsData?.summary?.daily_cash_collected !== undefined
+          ? Number(earningsData.summary.daily_cash_collected)
+          : 0;
+        if (cashCol === 0 && currentCompanyShare > 0) {
+          cashCol = Math.round(currentCompanyShare / 0.35);
+        }
+        setDailyCashCollected(cashCol);
+
+        let vEarned = earningsData?.summary?.daily_vendor_earned !== undefined
+          ? Number(earningsData.summary.daily_vendor_earned)
+          : 0;
+        if (vEarned === 0 && cashCol > 0) {
+          vEarned = Math.max(0, cashCol - currentCompanyShare);
+        }
+        setDailyVendorEarned(vEarned);
+        setTodayEarnings(vEarned);
       }
     } catch (e) {
       console.error("Dashboard fetchData error:", e);
@@ -339,9 +367,9 @@ export default function VendorDashboard() {
     vendorUser?.active_avatar_url || vendorUser?.profile_image || vendorUser?.image || null;
 
   const dailyAmount = Math.abs(
-    todayEarnings > 0 ? todayEarnings * 0.65 : balance
+    dailyVendorEarned > 0 ? dailyVendorEarned : todayEarnings > 0 ? todayEarnings : 0
   ).toLocaleString();
-  const monthlyAmount = (
+  const monthlyAmount = Math.abs(
     monthlyAccrued > 0 ? monthlyAccrued : thisMonthEarnings
   ).toLocaleString();
 
@@ -408,6 +436,7 @@ export default function VendorDashboard() {
             totalJobsDoneMonthly={totalJobsDoneMonthly}
             totalLifetimeJobs={totalLifetimeJobs}
             todayEarnings={todayEarnings}
+            dailyCashCollected={dailyCashCollected}
             companyShare={companyShare}
             dueTodayPayable={dueTodayPayable}
             isLocked={isLocked}
@@ -460,6 +489,7 @@ export default function VendorDashboard() {
         mode={summarySheetMode}
         onClose={() => setShowSummarySheet(false)}
         todayEarnings={todayEarnings}
+        dailyCashCollected={dailyCashCollected}
         companyShare={companyShare}
         dueTodayPayable={dueTodayPayable}
         dailyAmount={dailyAmount}

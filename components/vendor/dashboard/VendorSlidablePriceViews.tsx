@@ -24,6 +24,7 @@ interface VendorSlidablePriceViewsProps {
   totalJobsDoneMonthly: number;
   totalLifetimeJobs?: number;
   todayEarnings: number;
+  dailyCashCollected?: number;
   companyShare: number;
   dueTodayPayable: number;
   isLocked?: boolean;
@@ -42,6 +43,7 @@ export default function VendorSlidablePriceViews({
   totalJobsDoneMonthly,
   totalLifetimeJobs = 0,
   todayEarnings,
+  dailyCashCollected = 0,
   companyShare,
   dueTodayPayable,
   isLocked = false,
@@ -204,7 +206,7 @@ export default function VendorSlidablePriceViews({
                 numberOfLines={1}
                 adjustsFontSizeToFit
               >
-                PKR {(todayEarnings + companyShare).toLocaleString()}
+                PKR {(dailyCashCollected > 0 ? dailyCashCollected : (todayEarnings + companyShare)).toLocaleString()}
               </AppText>
               <AppText
                 style={styles.statLabel}

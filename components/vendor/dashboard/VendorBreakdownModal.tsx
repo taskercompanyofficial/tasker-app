@@ -14,6 +14,7 @@ interface VendorBreakdownModalProps {
   mode: "daily" | "monthly";
   onClose: () => void;
   todayEarnings: number;
+  dailyCashCollected?: number;
   companyShare: number;
   dueTodayPayable: number;
   dailyAmount: string;
@@ -26,6 +27,7 @@ export default function VendorBreakdownModal({
   mode,
   onClose,
   todayEarnings,
+  dailyCashCollected = 0,
   companyShare,
   dueTodayPayable,
   dailyAmount,
@@ -77,7 +79,7 @@ export default function VendorBreakdownModal({
                 <View style={styles.sheetRow}>
                   <AppText style={styles.sheetRowLabel}>Customer Cash Collected On-Site</AppText>
                   <AppText style={styles.sheetRowValue}>
-                    PKR {(todayEarnings + companyShare).toLocaleString()}
+                    PKR {(dailyCashCollected > 0 ? dailyCashCollected : (todayEarnings + companyShare)).toLocaleString()}
                   </AppText>
                 </View>
                 <View style={styles.sheetRow}>
@@ -107,15 +109,15 @@ export default function VendorBreakdownModal({
             ) : (
               <>
                 <View style={styles.sheetRow}>
-                  <AppText style={styles.sheetRowLabel}>Free Installation Orders (100% Paid)</AppText>
+                  <AppText style={styles.sheetRowLabel}>Total Accrued Balance</AppText>
                   <AppText style={styles.sheetRowValue}>
-                    PKR {Math.round(Number(monthlyAccrued) * 0.6).toLocaleString()}
+                    PKR {monthlyAmount}
                   </AppText>
                 </View>
                 <View style={styles.sheetRow}>
-                  <AppText style={styles.sheetRowLabel}>Warranty Claims Service (100% Paid)</AppText>
+                  <AppText style={styles.sheetRowLabel}>Free Installation & Warranty Claims</AppText>
                   <AppText style={styles.sheetRowValue}>
-                    PKR {Math.round(Number(monthlyAccrued) * 0.4).toLocaleString()}
+                    PKR {Number(monthlyAccrued).toLocaleString()}
                   </AppText>
                 </View>
                 <View style={styles.sheetRow}>
