@@ -80,6 +80,8 @@ export const VENDOR_NOTIFICATIONS_MARK_READ_URL = (id: number | string) =>
   `${VENDOR_NOTIFICATIONS_URL}/${id}/read`;
 export const VENDOR_NOTIFICATIONS_MARK_ALL_READ_URL = `${VENDOR_NOTIFICATIONS_URL}/mark-all-read`;
 export const VENDOR_RATES_URL = `${API_URL}/vendor/rates`;
+export const VENDOR_CUSTOMER_LEDGER_URL = (mode: string = "vendor") =>
+  `${API_URL}/${mode === "vendor" ? "vendor" : "vendor-staff"}/customer-ledger`;
 export const VENDOR_STAFF_URL = `${API_URL}/vendor/staff`;
 export const VENDOR_STAFF_DETAILS_URL = (id: number) =>
   `${VENDOR_STAFF_URL}/${id}`;

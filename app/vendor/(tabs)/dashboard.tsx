@@ -369,6 +369,7 @@ export default function VendorDashboard() {
         isOnline={effectiveIsOnline}
         onPressNotifications={() => router.push("/vendor/notifications" as any)}
         onPressQuickPay={() => router.push("/vendor/quick-pay" as any)}
+        onPressRateCard={() => router.push("/vendor/rate-card" as any)}
       />
 
       {/* ─── 2. FULL-WIDTH TABS WITH REANIMATED UNDERLINE ─── */}

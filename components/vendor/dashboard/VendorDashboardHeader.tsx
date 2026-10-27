@@ -17,6 +17,7 @@ interface VendorDashboardHeaderProps {
   onToggleOnline?: (targetValue: boolean) => void;
   onPressNotifications: () => void;
   onPressQuickPay?: () => void;
+  onPressRateCard?: () => void;
 }
 
 export default function VendorDashboardHeader({
@@ -25,6 +26,7 @@ export default function VendorDashboardHeader({
   isOnline = false,
   onPressNotifications,
   onPressQuickPay,
+  onPressRateCard,
 }: VendorDashboardHeaderProps) {
   const avatarInitial = (userName?.charAt(0) || "P").toUpperCase();
 
@@ -65,8 +67,16 @@ export default function VendorDashboardHeader({
         </View>
       </View>
 
-      {/* Top Bar Actions: Pay/QR Button + Notifications Bell (Flat, Zero Shadows) */}
+      {/* Top Bar Actions: Rate Card + Pay/QR Button + Notifications Bell */}
       <View style={styles.topBarActions}>
+        <TouchableOpacity
+          style={styles.iconCircle}
+          activeOpacity={0.75}
+          onPress={onPressRateCard}
+        >
+          <Ionicons name="receipt-outline" size={18} color="#059669" />
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.iconCircle}
           activeOpacity={0.75}
