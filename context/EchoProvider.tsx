@@ -14,6 +14,13 @@
  *  customer     → private-App.Models.User.{id}
  *  public       → work-orders
  */
+import IncomingJobPoolModal, {
+  JobPoolOpportunity,
+} from "@/components/vendor/IncomingJobPoolModal";
+import axios from "@/lib/axios.config";
+import { VENDOR_CLAIM_JOB_POOL_URL } from "@/lib/api-endpoints";
+import { setVendorActiveWorkOrderTracking } from "@/lib/vendorBackgroundLocation";
+import { reopenAppFromBubble } from "@/lib/floatingBubble";
 import { useAuthStore } from "@/context/auth-store";
 import { createEcho } from "@/lib/echo";
 import { router } from "expo-router";
@@ -164,6 +171,66 @@ export function EchoProvider({ children }: PropsWithChildren) {
   const [connectionState, setConnectionState] =
     useState<ConnectionState>("initialized");
   const [realtimeUnreadCount, setRealtimeUnreadCount] = useState(0);
+  const [jobPoolOpportunity, setJobPoolOpportunity] =
+    useState<JobPoolOpportunity | null>(null);
+  const activeOpportunityWoIdRef = useRef<number | null>(null);
+
+  const triggerJobPoolOpportunity = useCallback(
+    (opportunity: JobPoolOpportunity) => {
+      if (activeOpportunityWoIdRef.current === opportunity.work_order_id) {
+        return; // Prevent duplicate ringer / modal triggers for the same opportunity
+      }
+      activeOpportunityWoIdRef.current = opportunity.work_order_id;
+      void reopenAppFromBubble();
+      setJobPoolOpportunity(opportunity);
+    },
+    []
+  );
+
+  const handleDismissOpportunity = useCallback(() => {
+    activeOpportunityWoIdRef.current = null;
+    setJobPoolOpportunity(null);
+  }, []);
+
+  const handleClaimOpportunity = useCallback(
+    async (workOrderId: number) => {
+      try {
+        const isStaff = appMode === "vendor_staff";
+        const claimUrl = VENDOR_CLAIM_JOB_POOL_URL(
+          workOrderId,
+          isStaff ? "vendor-staff" : "vendor"
+        );
+        await axios.post(claimUrl);
+        await setVendorActiveWorkOrderTracking(
+          workOrderId,
+          jobPoolOpportunity?.work_order_number || String(workOrderId),
+          "Customer"
+        );
+        activeOpportunityWoIdRef.current = null;
+        setJobPoolOpportunity(null);
+        Toast.show({
+          type: "success",
+          text1: "🎉 Job Claimed Successfully!",
+          text2: "This work order has moved to your active jobs.",
+        });
+        router.push({
+          pathname: "/vendor/work-order-details/[id]",
+          params: { id: workOrderId.toString() },
+        } as any);
+      } catch (err: any) {
+        const msg =
+          err?.response?.data?.message ||
+          "This job may have already been claimed or capacity limit reached.";
+        Toast.show({
+          type: "error",
+          text1: "Claim Failed",
+          text2: msg,
+        });
+        setJobPoolOpportunity(null);
+      }
+    },
+    [appMode, jobPoolOpportunity]
+  );
 
   const echoRef = useRef<Echo<"reverb"> | null>(null);
   const lastConnectionStateRef = useRef<ConnectionState>("initialized");
@@ -290,6 +357,93 @@ export function EchoProvider({ children }: PropsWithChildren) {
 
 
   // ── Echo lifecycle ────────────────────────────────────────────────────────
+  // Push notification interactions for Job Pool Opportunities
+  useEffect(() => {
+    if (Platform.OS === "web" || !Notifications) return;
+
+    // Cold start notification tap handling
+    Notifications.getLastNotificationResponseAsync?.().then((response: any) => {
+      const data = response?.notification?.request?.content?.data || {};
+      if (
+        data.type === "job_pool_opportunity" &&
+        data.work_order_id &&
+        (appMode === "vendor" || appMode === "vendor_staff")
+      ) {
+        if (response?.actionIdentifier === "CLAIM_JOB") {
+          handleClaimOpportunity(Number(data.work_order_id));
+        } else {
+          triggerJobPoolOpportunity({
+            work_order_id: Number(data.work_order_id),
+            work_order_number: data.work_order_number,
+            service_name: data.service_name,
+            area: data.area,
+            distance_km: data.distance_km,
+            payout: data.payout,
+            latitude: data.latitude != null ? Number(data.latitude) : null,
+            longitude: data.longitude != null ? Number(data.longitude) : null,
+            customer_name: data.customer_name ?? null,
+            address: data.address ?? null,
+          });
+        }
+      }
+    });
+
+    const responseSub = Notifications.addNotificationResponseReceivedListener?.(
+      (response: any) => {
+        const data = response?.notification?.request?.content?.data || {};
+        if (
+          data.type === "job_pool_opportunity" &&
+          data.work_order_id &&
+          (appMode === "vendor" || appMode === "vendor_staff")
+        ) {
+          if (response?.actionIdentifier === "CLAIM_JOB") {
+            handleClaimOpportunity(Number(data.work_order_id));
+          } else {
+            triggerJobPoolOpportunity({
+              work_order_id: Number(data.work_order_id),
+              work_order_number: data.work_order_number,
+              service_name: data.service_name,
+              area: data.area,
+              distance_km: data.distance_km,
+              payout: data.payout,
+              latitude: data.latitude != null ? Number(data.latitude) : null,
+              longitude: data.longitude != null ? Number(data.longitude) : null,
+              customer_name: data.customer_name ?? null,
+              address: data.address ?? null,
+            });
+          }
+        }
+      }
+    );
+
+    const receivedSub = Notifications.addNotificationReceivedListener?.(
+      (notification: any) => {
+        const data = notification?.request?.content?.data || {};
+        if (
+          data.type === "job_pool_opportunity" &&
+          (appMode === "vendor" || appMode === "vendor_staff")
+        ) {
+          triggerJobPoolOpportunity({
+            work_order_id: Number(data.work_order_id),
+            work_order_number: data.work_order_number,
+            service_name: data.service_name,
+            area: data.area,
+            distance_km: data.distance_km,
+            payout: data.payout,
+            latitude: data.latitude != null ? Number(data.latitude) : null,
+            longitude: data.longitude != null ? Number(data.longitude) : null,
+            customer_name: data.customer_name ?? null,
+            address: data.address ?? null,
+          });
+        }
+      }
+    );
+
+    return () => {
+      responseSub?.remove?.();
+      receivedSub?.remove?.();
+    };
+  }, [appMode, handleClaimOpportunity, triggerJobPoolOpportunity]);
   useEffect(() => {
     if (!isRealtimeEnabled) {
       if (pendingOfflineTimerRef.current) {
@@ -367,9 +521,30 @@ export function EchoProvider({ children }: PropsWithChildren) {
         console.log(`[Echo] 🔔 Notification: ${event.notification?.title}`);
 
         // Increment UI badge
+        const notifData = event.notification?.data || {};
+        const notifType = event.notification?.type || notifData?.type;
+
+        if (
+          notifType === "job_pool_opportunity" &&
+          (appMode === "vendor" || appMode === "vendor_staff")
+        ) {
+          triggerJobPoolOpportunity({
+            work_order_id: Number(notifData.work_order_id),
+            work_order_number: notifData.work_order_number,
+            service_name: notifData.service_name,
+            area: notifData.area,
+            distance_km: notifData.distance_km,
+            payout: notifData.payout,
+            latitude: notifData.latitude != null ? Number(notifData.latitude) : null,
+            longitude: notifData.longitude != null ? Number(notifData.longitude) : null,
+            customer_name: notifData.customer_name ?? null,
+            address: notifData.address ?? null,
+          });
+        }
         setRealtimeUnreadCount((c) => c + 1);
 
         // Show local notification (OS Popup) - Safe check for Expo Go
+        if (notifType !== "job_pool_opportunity") {
         try {
           if (Platform.OS !== "web" && Notifications?.scheduleNotificationAsync) {
             Notifications.scheduleNotificationAsync({
@@ -383,6 +558,8 @@ export function EchoProvider({ children }: PropsWithChildren) {
           }
         } catch (err) {
           console.warn("[Echo] OS Notification scheduling skipped:", err);
+        }
+
         }
 
         // Show In-App Toast
@@ -521,6 +698,53 @@ export function EchoProvider({ children }: PropsWithChildren) {
           text2: `Work Order ${woNum} has been updated.`,
         });
 
+        const wo = event.workOrder;
+        const isJobPoolOrder =
+          wo.status_id === 1 &&
+          (wo.sub_status_id === 56 ||
+            (wo as any).sub_status_slug === "in-job-pool" ||
+            (wo as any).sub_status?.slug === "in-job-pool");
+
+        if (
+          isJobPoolOrder &&
+          (appMode === "vendor" || appMode === "vendor_staff")
+        ) {
+          triggerJobPoolOpportunity({
+            work_order_id: Number(wo.id),
+            work_order_number: wo.work_order_number,
+            service_name:
+              (wo as any).service_name ||
+              (wo as any).service?.name ||
+              "New Service Booking",
+            area: (wo as any).area || (wo as any).address?.area || "Your Area",
+            distance_km: (wo as any).distance_km,
+            payout: (wo as any).payout || (wo as any).total_amount,
+            latitude:
+              (wo as any).latitude != null
+                ? Number((wo as any).latitude)
+                : (wo as any).address?.latitude != null
+                  ? Number((wo as any).address.latitude)
+                  : (wo as any).address?.main_service_area?.latitude != null
+                    ? Number((wo as any).address.main_service_area.latitude)
+                    : (wo as any).city?.latitude != null
+                      ? Number((wo as any).city.latitude)
+                      : null,
+            longitude:
+              (wo as any).longitude != null
+                ? Number((wo as any).longitude)
+                : (wo as any).address?.longitude != null
+                  ? Number((wo as any).address.longitude)
+                  : (wo as any).address?.main_service_area?.longitude != null
+                    ? Number((wo as any).address.main_service_area.longitude)
+                    : (wo as any).city?.longitude != null
+                      ? Number((wo as any).city.longitude)
+                      : null,
+            customer_name:
+              (wo as any).customer_name || (wo as any).customer?.name || null,
+            address: (wo as any).address?.address || null,
+          });
+        }
+
         workOrderCallbacksRef.current.forEach((cb) => cb(event));
       });
 
@@ -568,6 +792,12 @@ export function EchoProvider({ children }: PropsWithChildren) {
   return (
     <EchoContext.Provider value={contextValue}>
       {children}
+      <IncomingJobPoolModal
+        visible={Boolean(jobPoolOpportunity)}
+        opportunity={jobPoolOpportunity}
+        onClaim={handleClaimOpportunity}
+        onDismiss={handleDismissOpportunity}
+      />
     </EchoContext.Provider>
   );
 }
