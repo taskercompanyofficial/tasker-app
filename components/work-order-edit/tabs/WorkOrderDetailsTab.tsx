@@ -153,22 +153,57 @@ export default function WorkOrderDetailsTab({
 
       setIsTranscribing(true);
 
-      const formDataPayload = new FormData();
-      formDataPayload.append("audio", {
-        uri: Platform.OS === "android" ? uri : uri.replace("file://", ""),
-        name: `remarks_voice_${Date.now()}.m4a`,
-        type: "audio/m4a",
-      } as any);
+      // Convert recorded audio file to base64 directly on client (No backend server required)
+      const audioResponse = await fetch(uri);
+      const audioBlob = await audioResponse.blob();
+      const base64Audio = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const res = reader.result as string;
+          const cleanBase64 = res.includes(",") ? res.split(",")[1] : res;
+          resolve(cleanBase64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(audioBlob);
+      });
 
-      const response = await axios.post(
-        VENDOR_VOICE_TO_TEXT_URL,
-        formDataPayload,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
+      const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY || "";
+      if (!apiKey) {
+        throw new Error("Voice typing key is not configured. Please set EXPO_PUBLIC_GEMINI_API_KEY in .env");
+      }
 
-      const transcribedText = response.data?.text;
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+      const speechResponse = await fetch(geminiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: "You are an audio transcriber for appliance repair and technical service orders. Listen to this spoken technician voice note and transcribe it accurately into text. Accurately capture technical appliance terms (gas, capacitor, compressor, leak, pipe, wiring, PCB, error code, outdoor unit, indoor unit) in English or Urdu/Roman Urdu. Return ONLY the transcribed text verbatim, without any preamble, explanation, or quotes.",
+                },
+                {
+                  inlineData: {
+                    mimeType: "audio/m4a",
+                    data: base64Audio,
+                  },
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.1,
+          },
+        }),
+      });
+
+      const json = await speechResponse.json();
+      const transcribedText =
+        json.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+
       if (transcribedText) {
         try {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -178,12 +213,14 @@ export default function WorkOrderDetailsTab({
           ? `${existing.trim()}\n${transcribedText.trim()}`
           : transcribedText.trim();
         setFormData("technician_remarks", updated);
+      } else {
+        throw new Error(json?.error?.message || "Could not transcribe spoken voice");
       }
     } catch (err: any) {
-      console.warn("Voice transcription failed:", err);
+      console.warn("Client voice transcription failed:", err);
       Alert.alert(
         "Voice Note",
-        err?.response?.data?.message || "Could not transcribe audio. You can also type directly in the box."
+        err?.message || "Could not transcribe audio. You can also type directly in the box."
       );
     } finally {
       setIsTranscribing(false);
@@ -442,7 +479,7 @@ export default function WorkOrderDetailsTab({
           </Text>
         </View>
 
-        {/* Call & WhatsApp Quick Buttons */}
+        {/* Call & WhatsApp Quick Buttons (2 Equal Columns in Row) */}
         <View style={styles.quickActionRow}>
           <TouchableOpacity
             style={styles.actionBtnCall}
@@ -461,127 +498,25 @@ export default function WorkOrderDetailsTab({
             <Ionicons name="logo-whatsapp" size={15} color="#059669" />
             <Text style={styles.actionBtnWhatsAppText}>WhatsApp</Text>
           </TouchableOpacity>
-
-          {Boolean(extraPhone) && (
-            <TouchableOpacity
-              style={styles.actionBtnAltCall}
-              onPress={() => handlePhoneCall(extraPhone)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="call-outline" size={13} color="#475569" />
-              <Text style={styles.actionBtnAltCallText}>Alt Call</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      {/* ─── 2. JOB SCOPE CARD (MINIMAL, ZERO SHADOW) ─── */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View style={styles.cardHeaderLeft}>
-            <Ionicons name="construct-outline" size={16} color="#0F172A" />
-            <Text style={styles.cardTitle}>Job Scope</Text>
-          </View>
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryBadgeText}>
-              {workOrder.category?.name || "Service"}
-            </Text>
-          </View>
         </View>
 
-        {/* Booked Service Name */}
-        <Text style={styles.serviceName}>
-          {workOrder.parent_service?.name ||
-            workOrder.service?.name ||
-            "Booked Service Order"}
-        </Text>
-
-        {/* Customer Reported Problem */}
-        {Boolean(workOrder.customer_description) && (
-          <View style={styles.complaintBox}>
-            <View style={styles.complaintHeader}>
-              <Ionicons name="alert-circle-outline" size={14} color="#D97706" />
-              <Text style={styles.complaintTitle}>Customer Problem Report</Text>
-            </View>
-            <Text style={styles.complaintText}>
-              {workOrder.customer_description}
-            </Text>
-          </View>
-        )}
-
-        {/* ─── Service Charges to Claim from Customer ─── */}
-        <View
-          style={[
-            styles.claimBox,
-            customerClaim.isWarranty ? styles.claimBoxWarranty : styles.claimBoxPaid,
-          ]}
-        >
-          <View style={styles.claimHeader}>
-            <View style={styles.claimLabelRow}>
-              <Ionicons
-                name={customerClaim.isWarranty ? "shield-checkmark" : "cash-outline"}
-                size={14}
-                color={customerClaim.isWarranty ? "#15803D" : "#0F172A"}
-              />
-              <Text
-                style={[
-                  styles.claimLabel,
-                  customerClaim.isWarranty && styles.claimLabelWarranty,
-                ]}
-              >
-                Service Charges to Claim
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.claimBadge,
-                customerClaim.isWarranty && styles.claimBadgeWarranty,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.claimBadgeText,
-                  customerClaim.isWarranty && styles.claimBadgeTextWarranty,
-                ]}
-              >
-                {customerClaim.label}
-              </Text>
-            </View>
-          </View>
-
-          <Text
-            style={[
-              styles.claimAmount,
-              customerClaim.isWarranty && styles.claimAmountWarranty,
-            ]}
+        {Boolean(extraPhone) && (
+          <TouchableOpacity
+            style={styles.actionBtnAltCallFull}
+            onPress={() => handlePhoneCall(extraPhone)}
+            activeOpacity={0.8}
           >
-            {customerClaim.formattedText}
-          </Text>
-
-          <Text style={styles.claimNote}>{customerClaim.note}</Text>
-
-          {customerClaim.items.length > 0 && (
-            <View style={styles.claimBreakdown}>
-              {customerClaim.items.map((it, idx) => (
-                <View key={idx} style={styles.claimBreakdownRow}>
-                  <Text style={styles.claimBreakdownTitle}>
-                    {it.name || it.description || `Charge Item #${idx + 1}`}
-                  </Text>
-                  <Text style={styles.claimBreakdownPrice}>
-                    ₨ {Number(it.amount || 0).toLocaleString()}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
+            <Ionicons name="call-outline" size={13} color="#475569" />
+            <Text style={styles.actionBtnAltCallText}>Alt Call: {extraPhone}</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* ─── 3. BRAND & EQUIPMENT DETAILS CARD (MINIMAL, ZERO SHADOW) ─── */}
+      {/* ─── 2. BRAND & EQUIPMENT DETAILS CARD (MINIMAL, ZERO SHADOW) ─── */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderLeft}>
-            <Ionicons name="hardware-chip-outline" size={16} color="#0F172A" />
+            <Ionicons name="hardware-chip-outline" size={15} color="#0F172A" />
             <Text style={styles.cardTitle}>Brand & Equipment Details</Text>
           </View>
           {Boolean(brandName) && (
@@ -655,11 +590,113 @@ export default function WorkOrderDetailsTab({
         </View>
       </View>
 
-      {/* ─── 3. SERIAL NUMBERS & BARCODE SCAN (3 SCAN FIELDS) ─── */}
+      {/* ─── 3. JOB SCOPE CARD (AFTER BRAND & EQUIPMENT) ─── */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderLeft}>
-            <Ionicons name="barcode-outline" size={16} color="#0F172A" />
+            <Ionicons name="construct-outline" size={15} color="#0F172A" />
+            <Text style={styles.cardTitle}>Job Scope</Text>
+          </View>
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryBadgeText}>
+              {workOrder.category?.name || "Service"}
+            </Text>
+          </View>
+        </View>
+
+        {/* Booked Service Name */}
+        <Text style={styles.serviceName}>
+          {workOrder.parent_service?.name ||
+            workOrder.service?.name ||
+            "Booked Service Order"}
+        </Text>
+
+        {/* Customer Reported Problem */}
+        {Boolean(workOrder.customer_description) && (
+          <View style={styles.complaintBox}>
+            <View style={styles.complaintHeader}>
+              <Ionicons name="alert-circle-outline" size={13} color="#D97706" />
+              <Text style={styles.complaintTitle}>Customer Problem Report</Text>
+            </View>
+            <Text style={styles.complaintText}>
+              {workOrder.customer_description}
+            </Text>
+          </View>
+        )}
+
+        {/* ─── Service Charges to Claim from Customer ─── */}
+        <View
+          style={[
+            styles.claimBox,
+            customerClaim.isWarranty ? styles.claimBoxWarranty : styles.claimBoxPaid,
+          ]}
+        >
+          <View style={styles.claimHeader}>
+            <View style={styles.claimLabelRow}>
+              <Ionicons
+                name={customerClaim.isWarranty ? "shield-checkmark" : "cash-outline"}
+                size={13}
+                color={customerClaim.isWarranty ? "#15803D" : "#0F172A"}
+              />
+              <Text
+                style={[
+                  styles.claimLabel,
+                  customerClaim.isWarranty && styles.claimLabelWarranty,
+                ]}
+              >
+                Service Charges to Claim
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.claimBadge,
+                customerClaim.isWarranty && styles.claimBadgeWarranty,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.claimBadgeText,
+                  customerClaim.isWarranty && styles.claimBadgeTextWarranty,
+                ]}
+              >
+                {customerClaim.label}
+              </Text>
+            </View>
+          </View>
+
+          <Text
+            style={[
+              styles.claimAmount,
+              customerClaim.isWarranty && styles.claimAmountWarranty,
+            ]}
+          >
+            {customerClaim.formattedText}
+          </Text>
+
+          <Text style={styles.claimNote}>{customerClaim.note}</Text>
+
+          {customerClaim.items.length > 0 && (
+            <View style={styles.claimBreakdown}>
+              {customerClaim.items.map((it, idx) => (
+                <View key={idx} style={styles.claimBreakdownRow}>
+                  <Text style={styles.claimBreakdownTitle}>
+                    {it.name || it.description || `Charge Item #${idx + 1}`}
+                  </Text>
+                  <Text style={styles.claimBreakdownPrice}>
+                    ₨ {Number(it.amount || 0).toLocaleString()}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* ─── 4. SERIAL NUMBERS & BARCODE SCAN (3 SCAN FIELDS) ─── */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardHeaderLeft}>
+            <Ionicons name="barcode-outline" size={15} color="#0F172A" />
             <Text style={styles.cardTitle}>Serial Verification & Scan</Text>
           </View>
           {isWarrantyCase && (
@@ -691,7 +728,7 @@ export default function WorkOrderDetailsTab({
             >
               {selectedWarrantyLabel}
             </Text>
-            <Ionicons name="chevron-down" size={16} color="#64748B" />
+            <Ionicons name="chevron-down" size={15} color="#64748B" />
           </TouchableOpacity>
         </View>
 
@@ -706,7 +743,7 @@ export default function WorkOrderDetailsTab({
               onPress={onScanIndoor}
               activeOpacity={0.8}
             >
-              <Ionicons name="camera" size={13} color="#0F172A" />
+              <Ionicons name="camera" size={12} color="#0F172A" />
               <Text style={styles.scanBtnText}>Scan & Attach Photo</Text>
             </TouchableOpacity>
           </View>
@@ -734,7 +771,7 @@ export default function WorkOrderDetailsTab({
                 onPress={onScanOutdoor}
                 activeOpacity={0.8}
               >
-                <Ionicons name="camera" size={13} color="#0F172A" />
+                <Ionicons name="camera" size={12} color="#0F172A" />
                 <Text style={styles.scanBtnText}>Scan & Attach Photo</Text>
               </TouchableOpacity>
             </View>
@@ -751,7 +788,7 @@ export default function WorkOrderDetailsTab({
           </View>
         )}
 
-        {/* 3. Warranty Card / Invoice Serial Number */}
+        {/* 3. Warranty Card / MO Serial Number Field */}
         <View style={styles.inputGroup}>
           <View style={styles.labelRow}>
             <Text style={styles.inputLabel}>
@@ -762,17 +799,19 @@ export default function WorkOrderDetailsTab({
               onPress={onScanWarranty}
               activeOpacity={0.8}
             >
-              <Ionicons name="camera" size={13} color="#0F172A" />
+              <Ionicons name="camera" size={12} color="#0F172A" />
               <Text style={styles.scanBtnText}>Scan & Attach Photo</Text>
             </TouchableOpacity>
           </View>
           <TextInput
             style={styles.textInput}
-            value={formData.warranty_serial_number || ""}
-            onChangeText={(text) =>
-              setFormData("warranty_serial_number", text.toUpperCase())
-            }
-            placeholder="e.g. WC-9921448"
+            value={formData.warranty_serial_number || (formData as any).warranty_card_serial || ""}
+            onChangeText={(text) => {
+              const val = text.toUpperCase();
+              setFormData("warranty_serial_number", val);
+              setFormData("warranty_card_serial", val);
+            }}
+            placeholder="e.g. WC-9921448 or MO Number"
             placeholderTextColor="#94A3B8"
             autoCapitalize="characters"
           />
@@ -782,6 +821,21 @@ export default function WorkOrderDetailsTab({
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Purchase Date</Text>
           <TouchableOpacity
+            style={styles.selector}
+            onPress={() => setShowDatePicker(true)}
+            activeOpacity={0.8}
+          >
+            <Text
+              style={[
+                styles.selectorText,
+                !formData.purchase_date && styles.selectorPlaceholder,
+              ]}
+            >
+              {formData.purchase_date || "YYYY-MM-DD"}
+            </Text>
+            <Ionicons name="calendar-outline" size={15} color="#64748B" />
+          </TouchableOpacity>
+        </View>
             style={styles.selector}
             onPress={() => setShowDatePicker(true)}
             activeOpacity={0.8}
@@ -954,35 +1008,35 @@ export default function WorkOrderDetailsTab({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 40,
-    gap: 12,
+    paddingHorizontal: 10,
+    paddingTop: 8,
+    paddingBottom: 36,
+    gap: 8,
   },
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    padding: 14,
+    padding: 10,
     elevation: 0,
     shadowColor: "transparent",
   },
   cardSubtitle: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: "#64748B",
-    marginBottom: 8,
-    lineHeight: 15,
+    marginBottom: 6,
+    lineHeight: 14,
   },
   customerHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
   },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
@@ -990,127 +1044,132 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   avatarText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
     color: "#334155",
   },
   customerTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
     flexWrap: "wrap",
   },
   customerName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
     color: "#0F172A",
   },
   customerPhone: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#475569",
-    marginTop: 2,
+    marginTop: 1,
   },
   customerExtraPhone: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#64748B",
     marginTop: 1,
   },
   areaPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
+    gap: 2,
     backgroundColor: "#E0F2FE",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 5,
   },
   areaPillText: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: "600",
     color: "#0284C7",
   },
   addressBox: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
     backgroundColor: "#F8FAFC",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginTop: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginTop: 8,
   },
   addressText: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: "#475569",
     flex: 1,
+    lineHeight: 15,
   },
   quickActionRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginTop: 12,
+    width: "100%",
+    marginTop: 8,
   },
   actionBtnCall: {
+    flex: 1,
+    height: 36,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 5,
-    paddingVertical: 7,
-    paddingHorizontal: 14,
-    borderRadius: 8,
+    borderRadius: 7,
     backgroundColor: "#F1F5F9",
     borderWidth: 1,
     borderColor: "#CBD5E1",
   },
   actionBtnCallText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#0F172A",
   },
   actionBtnWhatsApp: {
+    flex: 1,
+    height: 36,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 5,
-    paddingVertical: 7,
-    paddingHorizontal: 14,
-    borderRadius: 8,
+    borderRadius: 7,
     backgroundColor: "#ECFDF5",
     borderWidth: 1,
     borderColor: "#A7F3D0",
   },
   actionBtnWhatsAppText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#059669",
   },
-  actionBtnAltCall: {
+  actionBtnAltCallFull: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    justifyContent: "center",
+    gap: 5,
+    marginTop: 6,
+    paddingVertical: 5,
+    borderRadius: 6,
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
   actionBtnAltCallText: {
     fontSize: 11,
-    fontWeight: "500",
-    color: "#64748B",
+    fontWeight: "600",
+    color: "#475569",
   },
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   cardHeaderLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
   },
   cardTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "700",
     color: "#0F172A",
     textTransform: "uppercase",
@@ -1118,60 +1177,60 @@ const styles = StyleSheet.create({
   },
   categoryBadge: {
     backgroundColor: "#F1F5F9",
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 5,
   },
   categoryBadgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "600",
     color: "#475569",
   },
   serviceName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
     color: "#0F172A",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   complaintBox: {
     backgroundColor: "#FFFBEB",
     borderWidth: 1,
     borderColor: "#FDE68A",
-    borderRadius: 8,
-    padding: 10,
+    borderRadius: 7,
+    padding: 8,
     marginBottom: 4,
   },
   complaintHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   complaintTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
     color: "#B45309",
     textTransform: "uppercase",
   },
   complaintText: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: "#92400E",
-    lineHeight: 17,
+    lineHeight: 16,
   },
   inputGroup: {
-    marginTop: 10,
+    marginTop: 7,
   },
   labelRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 5,
+    marginBottom: 4,
   },
   inputLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     color: "#475569",
-    marginBottom: 5,
+    marginBottom: 3,
   },
   requiredStar: {
     color: "#DC2626",
@@ -1181,41 +1240,41 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
     backgroundColor: "#F1F5F9",
-    borderRadius: 6,
+    borderRadius: 5,
     borderWidth: 1,
     borderColor: "#CBD5E1",
   },
   scanBtnText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "600",
     color: "#0F172A",
   },
   textInput: {
-    height: 42,
+    height: 38,
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 13,
+    borderRadius: 7,
+    paddingHorizontal: 10,
+    fontSize: 12.5,
     color: "#0F172A",
     backgroundColor: "#FFFFFF",
   },
   selector: {
-    height: 42,
+    height: 38,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderRadius: 7,
+    paddingHorizontal: 10,
     backgroundColor: "#FFFFFF",
   },
   selectorText: {
-    fontSize: 13,
+    fontSize: 12.5,
     color: "#0F172A",
   },
   selectorPlaceholder: {
@@ -1224,47 +1283,47 @@ const styles = StyleSheet.create({
   warrantyCaseBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 3,
     backgroundColor: "#D1FAE5",
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 5,
   },
   warrantyCaseBadgeText: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: "700",
     color: "#059669",
   },
   textAreaInput: {
-    minHeight: 80,
+    minHeight: 68,
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13,
+    borderRadius: 7,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 12.5,
     color: "#0F172A",
     backgroundColor: "#FFFFFF",
   },
   saveBtnRow: {
-    marginTop: 12,
+    marginTop: 10,
     flexDirection: "row",
     justifyContent: "flex-end",
   },
   saveBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
     backgroundColor: "#0F172A",
-    paddingVertical: 9,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 13,
+    borderRadius: 7,
   },
   saveBtnSaved: {
     backgroundColor: "#059669",
   },
   saveBtnText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
     color: "#FFFFFF",
   },
@@ -1275,26 +1334,26 @@ const styles = StyleSheet.create({
     backgroundColor: "#F0F9FF",
     borderWidth: 1,
     borderColor: "#BAE6FD",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 5,
   },
   voiceTypeBtnText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "600",
     color: "#0284C7",
   },
   transcribingBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 4,
     backgroundColor: "#F0F9FF",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 5,
   },
   transcribingText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "600",
     color: "#0284C7",
   },
@@ -1305,56 +1364,56 @@ const styles = StyleSheet.create({
     backgroundColor: "#FEF2F2",
     borderWidth: 1,
     borderColor: "#FECACA",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginBottom: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 7,
+    marginBottom: 8,
   },
   recordingLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
     flex: 1,
   },
   recordingRedDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
     backgroundColor: "#DC2626",
   },
   recordingTime: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     color: "#DC2626",
   },
   recordingActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
   },
   cancelRecBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
+    gap: 2,
+    paddingHorizontal: 5,
+    paddingVertical: 3,
   },
   cancelRecText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "600",
     color: "#EF4444",
   },
   doneRecBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 3,
     backgroundColor: "#0F172A",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 5,
   },
   doneRecText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "600",
     color: "#FFFFFF",
   },
@@ -1362,7 +1421,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 12,
+    marginTop: 10,
   },
   autoSaveStatusBox: {
     flex: 1,
@@ -1371,30 +1430,30 @@ const styles = StyleSheet.create({
   autoSaveStatusRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 4,
   },
   autoSaveStatusText: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: "#64748B",
     fontWeight: "500",
   },
   autoSavedText: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: "#10B981",
     fontWeight: "600",
   },
   autoSaveUnsavedText: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: "#94A3B8",
     fontStyle: "italic",
   },
 
   // ─── Service Charges to Claim Box (Strictly Zero Shadow) ───
   claimBox: {
-    marginTop: 14,
-    borderRadius: 10,
+    marginTop: 8,
+    borderRadius: 8,
     borderWidth: 1,
-    padding: 12,
+    padding: 10,
     elevation: 0,
     shadowColor: "transparent",
   },
@@ -1410,34 +1469,34 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   claimLabelRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 4,
   },
   claimLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
     color: "#334155",
   },
   claimLabelWarranty: {
     color: "#15803D",
   },
   claimBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2.5,
-    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
     backgroundColor: "#E2E8F0",
   },
   claimBadgeWarranty: {
     backgroundColor: "#DCFCE7",
   },
   claimBadgeText: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: "700",
     color: "#334155",
   },
@@ -1445,25 +1504,25 @@ const styles = StyleSheet.create({
     color: "#15803D",
   },
   claimAmount: {
-    fontSize: 22,
+    fontSize: 19,
     fontWeight: "800",
     color: "#0F172A",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   claimAmountWarranty: {
     color: "#15803D",
   },
   claimNote: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: "#64748B",
-    lineHeight: 15,
+    lineHeight: 14,
   },
   claimBreakdown: {
-    marginTop: 8,
-    paddingTop: 8,
+    marginTop: 6,
+    paddingTop: 6,
     borderTopWidth: 1,
     borderTopColor: "#E2E8F0",
-    gap: 4,
+    gap: 3,
   },
   claimBreakdownRow: {
     flexDirection: "row",
@@ -1471,11 +1530,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   claimBreakdownTitle: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: "#475569",
   },
   claimBreakdownPrice: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "700",
     color: "#0F172A",
   },
@@ -1484,45 +1543,45 @@ const styles = StyleSheet.create({
   brandPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 3,
     backgroundColor: "#EFF6FF",
     borderWidth: 1,
     borderColor: "#BFDBFE",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 5,
   },
   brandPillText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "700",
     color: "#1D4ED8",
   },
   equipmentGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    marginTop: 6,
+    gap: 6,
+    marginTop: 4,
   },
   equipmentItem: {
     flexGrow: 1,
     flexBasis: "47%",
     backgroundColor: "#F8FAFC",
-    borderRadius: 8,
+    borderRadius: 7,
     borderWidth: 1,
     borderColor: "#F1F5F9",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
   },
   equipmentLabel: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: "600",
     textTransform: "uppercase",
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
     color: "#64748B",
     marginBottom: 2,
   },
   equipmentValue: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "700",
     color: "#0F172A",
   },

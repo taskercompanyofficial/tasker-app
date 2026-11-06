@@ -268,6 +268,16 @@ export default function TechnicianWorkOrderNavigationScreen({
     outdoor_serial_number: workOrder.outdoor_serial_number || "",
     product_indoor_model: workOrder.product_indoor_model || "",
     product_outdoor_model: workOrder.product_outdoor_model || "",
+    warranty_card_serial:
+      workOrder.warranty_card_serial ||
+      (workOrder as any).warrenty_serial_number ||
+      workOrder.warranty_serial_number ||
+      "",
+    warranty_serial_number:
+      workOrder.warranty_card_serial ||
+      (workOrder as any).warrenty_serial_number ||
+      workOrder.warranty_serial_number ||
+      "",
     purchase_date: workOrder.purchase_date || "",
     technician_remarks: workOrder.technician_remarks || "",
     service_concern_id: workOrder.service_concern?.id || null,
@@ -280,7 +290,14 @@ export default function TechnicianWorkOrderNavigationScreen({
   const isInitialMount = useRef(true);
 
   const handleFsFormChange = useCallback((key: string, value: any) => {
-    setFsFormData((prev) => ({ ...prev, [key]: value }));
+    setFsFormData((prev) => {
+      const next: typeof prev = { ...prev, [key]: value };
+      if (key === "warranty_serial_number" || key === "warranty_card_serial") {
+        next.warranty_serial_number = value;
+        next.warranty_card_serial = value;
+      }
+      return next;
+    });
   }, []);
 
   // Smooth debounced auto-save effect (1200ms of inactivity)
