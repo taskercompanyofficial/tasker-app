@@ -42,6 +42,8 @@ export const VENDOR_UPDATE_PROFILE_URL = `${API_URL}/vendor/update-profile`;
 export const VENDOR_EXTRACT_CNIC_URL = `${API_URL}/vendor/extract-cnic`;
 export const VENDOR_VERIFY_SELFIE_URL = `${API_URL}/vendor/verify-selfie`;
 export const VENDOR_CHANGE_PASSWORD_URL = `${API_URL}/vendor/change-password`;
+export const VENDOR_DELETE_ACCOUNT_URL = `${API_URL}/vendor/delete-account`;
+export const VENDOR_STAFF_DELETE_ACCOUNT_URL = `${API_URL}/vendor-staff/delete-account`;
 
 // Vendor & Staff Online Status & 24h Daily Selfie
 export const VENDOR_ONLINE_STATUS_URL = (mode: string = "vendor") =>
@@ -104,6 +106,10 @@ export const WARRANTY_TYPES_URL = `${APP_URL}/warranty-types-raw`;
 // Vendor Work Orders
 export const VENDOR_WORK_ORDER_SUMMARY_URL = `${API_URL}/vendor/work-orders/summary`;
 export const VENDOR_WORK_ORDER_URL = `${API_URL}/vendor/work-orders`;
+export const VENDOR_JOB_POOL_URL = (mode: string = "vendor") =>
+  `${API_URL}/${mode === "vendor" ? "vendor" : "vendor-staff"}/job-pool`;
+export const VENDOR_CLAIM_JOB_POOL_URL = (id: number, mode: string = "vendor") =>
+  `${API_URL}/${mode === "vendor" ? "vendor" : "vendor-staff"}/job-pool/${id}/claim`;
 export const VENDOR_WORK_ORDER_DETAILS_URL = (id: number) =>
   `${VENDOR_WORK_ORDER_URL}/${id}`;
 export const VENDOR_ACCEPT_WORK_ORDER_URL = (id: number) =>
@@ -129,6 +135,7 @@ export const VENDOR_SERVICE_CONCERNS_URL = `${VENDOR_WORK_ORDER_URL}/service-con
 export const VENDOR_SERVICE_SUB_CONCERNS_URL = (id: number) =>
   `${VENDOR_WORK_ORDER_URL}/service-concerns/${id}/sub-concerns`;
 export const VENDOR_WARRANTY_TYPES_URL = `${VENDOR_WORK_ORDER_URL}/warranty-types`;
+export const VENDOR_VOICE_TO_TEXT_URL = `${API_URL}/vendor/voice-to-text`;
 
 // Vendor Staff Auth
 export const VENDOR_STAFF_LOGIN_URL = `${API_URL}/vendor-staff/login`;
@@ -215,3 +222,16 @@ export const CHAT_SEND_MESSAGE_URL = (
   return `${API_URL}/${prefix}/chat/conversations/${conversationId}/send`;
 };
 
+
+// Account-specific location ping endpoint resolver
+export const getLocationPingUrl = (mode?: string | null) =>
+  mode === "vendor_staff" || mode === "vendor-staff"
+    ? VENDOR_STAFF_LOCATION_PING_URL
+    : VENDOR_LOCATION_PING_URL;
+
+// Google Maps Platform Server-Side Proxy Endpoints (Laravel Backend)
+export const MAPS_PLACES_AUTOCOMPLETE_URL = `${APP_URL}/maps/places/autocomplete`;
+export const MAPS_PLACE_DETAILS_URL = (placeId: string) =>
+  `${APP_URL}/maps/places/${encodeURIComponent(placeId)}`;
+export const MAPS_REVERSE_GEOCODE_URL = `${APP_URL}/maps/geocode/reverse`;
+export const MAPS_COMPUTE_ROUTE_URL = `${API_URL}/maps/routes/compute`;

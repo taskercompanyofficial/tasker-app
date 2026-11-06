@@ -231,6 +231,7 @@ export default function VendorWorkOrderEditScreen() {
             onScanWarranty={() => scanner.openScanner("warranty")}
             onSave={handleSaveDetails}
             saving={form.processing}
+            autoSaveStatus={autoSaving ? "saving" : form.isDirty ? "unsaved" : "idle"}
           />
         )}
 

@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Linking,
   Platform,
   StyleSheet,
@@ -11,10 +12,17 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import * as Haptics from "expo-haptics";
+import {
+  useAudioRecorder,
+  RecordingPresets,
+  setAudioModeAsync,
+  requestRecordingPermissionsAsync,
+} from "expo-audio";
 import { WorkOrder } from "@/types/work-order";
 import SheetSelect, { SheetSelectOption } from "@/components/SheetSelect";
 import axios from "@/lib/axios.config";
-import { VENDOR_WARRANTY_TYPES_URL } from "@/lib/api-endpoints";
+import { VENDOR_WARRANTY_TYPES_URL, VENDOR_VOICE_TO_TEXT_URL } from "@/lib/api-endpoints";
 
 interface WorkOrderDetailsTabProps {
   workOrder: WorkOrder;
@@ -32,6 +40,7 @@ interface WorkOrderDetailsTabProps {
   onScanWarranty: () => void;
   onSave?: () => Promise<void>;
   saving?: boolean;
+  autoSaveStatus?: "idle" | "unsaved" | "saving" | "saved";
 }
 
 const DEFAULT_WARRANTY_TYPES: SheetSelectOption[] = [
@@ -60,6 +69,7 @@ export default function WorkOrderDetailsTab({
   onScanWarranty,
   onSave,
   saving = false,
+  autoSaveStatus = "idle",
 }: WorkOrderDetailsTabProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -68,6 +78,136 @@ export default function WorkOrderDetailsTab({
   const [showWarrantyTypePicker, setShowWarrantyTypePicker] = useState(false);
   const [warrantyTypes, setWarrantyTypes] = useState<SheetSelectOption[]>(DEFAULT_WARRANTY_TYPES);
   const [loadingWarrantyTypes, setLoadingWarrantyTypes] = useState(false);
+
+  // Voice Typing state using expo-audio & Gemini transcription
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const voiceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const startVoiceRecording = async () => {
+    try {
+      const { granted } = await requestRecordingPermissionsAsync();
+      if (!granted) {
+        Alert.alert(
+          "Permission Required",
+          "Microphone permission is required for voice typing."
+        );
+        return;
+      }
+
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+      });
+
+      setRecordingSeconds(0);
+      setIsRecordingVoice(true);
+      try {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch (_) {}
+
+      const anyRecorder = recorder as any;
+      if (typeof anyRecorder.prepareToRecordAsync === "function") {
+        await anyRecorder.prepareToRecordAsync();
+      }
+      if (typeof anyRecorder.recordAsync === "function") {
+        await anyRecorder.recordAsync();
+      } else if (typeof anyRecorder.record === "function") {
+        await anyRecorder.record();
+      }
+
+      voiceTimerRef.current = setInterval(() => {
+        setRecordingSeconds((prev) => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Failed to start voice recording:", err);
+      setIsRecordingVoice(false);
+      if (voiceTimerRef.current) clearInterval(voiceTimerRef.current);
+    }
+  };
+
+  const stopVoiceRecording = async () => {
+    try {
+      if (voiceTimerRef.current) clearInterval(voiceTimerRef.current);
+      setIsRecordingVoice(false);
+      try {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch (_) {}
+
+      const anyRecorder = recorder as any;
+      if (typeof anyRecorder.stopAsync === "function") {
+        await anyRecorder.stopAsync();
+      } else if (typeof anyRecorder.stop === "function") {
+        await anyRecorder.stop();
+      }
+
+      await setAudioModeAsync({
+        allowsRecording: false,
+        playsInSilentMode: true,
+      }).catch(() => {});
+
+      const uri = recorder.uri;
+      if (!uri) return;
+
+      setIsTranscribing(true);
+
+      const formDataPayload = new FormData();
+      formDataPayload.append("audio", {
+        uri: Platform.OS === "android" ? uri : uri.replace("file://", ""),
+        name: `remarks_voice_${Date.now()}.m4a`,
+        type: "audio/m4a",
+      } as any);
+
+      const response = await axios.post(
+        VENDOR_VOICE_TO_TEXT_URL,
+        formDataPayload,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      const transcribedText = response.data?.text;
+      if (transcribedText) {
+        try {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch (_) {}
+        const existing = formData.technician_remarks || "";
+        const updated = existing.trim()
+          ? `${existing.trim()}\n${transcribedText.trim()}`
+          : transcribedText.trim();
+        setFormData("technician_remarks", updated);
+      }
+    } catch (err: any) {
+      console.warn("Voice transcription failed:", err);
+      Alert.alert(
+        "Voice Note",
+        err?.response?.data?.message || "Could not transcribe audio. You can also type directly in the box."
+      );
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const cancelVoiceRecording = async () => {
+    try {
+      if (voiceTimerRef.current) clearInterval(voiceTimerRef.current);
+      setIsRecordingVoice(false);
+      const anyRecorder = recorder as any;
+      if (typeof anyRecorder.stopAsync === "function") {
+        await anyRecorder.stopAsync();
+      } else if (typeof anyRecorder.stop === "function") {
+        await anyRecorder.stop();
+      }
+      await setAudioModeAsync({
+        allowsRecording: false,
+        playsInSilentMode: true,
+      }).catch(() => {});
+    } catch (e) {
+      console.warn("Cancel recording error:", e);
+    }
+  };
 
   // Fetch active warranty types from backend with safe fallback
   React.useEffect(() => {
@@ -456,30 +596,99 @@ export default function WorkOrderDetailsTab({
         )}
       </View>
 
-      {/* ─── 4. TECHNICIAN NOTES & REMARKS CARD ─── */}
+      {/* ─── 4. TECHNICIAN NOTES & REMARKS CARD (WITH VOICE TYPING & AUTO-SAVE STATUS) ─── */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderLeft}>
             <Ionicons name="clipboard-outline" size={16} color="#0F172A" />
             <Text style={styles.cardTitle}>Technician Remarks & Notes</Text>
           </View>
+
+          {/* Voice Typing Action */}
+          {isTranscribing ? (
+            <View style={styles.transcribingBadge}>
+              <ActivityIndicator size="small" color="#0284C7" />
+              <Text style={styles.transcribingText}>Transcribing...</Text>
+            </View>
+          ) : !isRecordingVoice ? (
+            <TouchableOpacity
+              style={styles.voiceTypeBtn}
+              onPress={startVoiceRecording}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="mic" size={14} color="#0284C7" />
+              <Text style={styles.voiceTypeBtnText}>Voice Type</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
+
+        {/* Live Audio Recording Bar */}
+        {isRecordingVoice && (
+          <View style={styles.recordingBar}>
+            <View style={styles.recordingLeft}>
+              <View style={styles.recordingRedDot} />
+              <Text style={styles.recordingTime}>
+                Listening ({recordingSeconds}s)...
+              </Text>
+            </View>
+            <View style={styles.recordingActions}>
+              <TouchableOpacity
+                style={styles.cancelRecBtn}
+                onPress={cancelVoiceRecording}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="trash-outline" size={15} color="#EF4444" />
+                <Text style={styles.cancelRecText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.doneRecBtn}
+                onPress={stopVoiceRecording}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="checkmark" size={15} color="#FFFFFF" />
+                <Text style={styles.doneRecText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         <TextInput
           style={styles.textAreaInput}
           value={formData.technician_remarks}
           onChangeText={(text) => setFormData("technician_remarks", text)}
-          placeholder="Enter on-site diagnostic remarks, work performed, or recommendations..."
+          placeholder="Enter on-site diagnostic remarks, work performed, or recommendations (or tap Voice Type above)..."
           placeholderTextColor="#94A3B8"
           multiline
           numberOfLines={4}
           textAlignVertical="top"
         />
 
-        {onSave && (
-          <View style={styles.saveBtnRow}>
+        {/* Footer: Smooth Auto-save Status + Manual Save Action */}
+        <View style={styles.cardFooter}>
+          <View style={styles.autoSaveStatusBox}>
+            {autoSaveStatus === "saving" && (
+              <View style={styles.autoSaveStatusRow}>
+                <ActivityIndicator size="small" color="#64748B" />
+                <Text style={styles.autoSaveStatusText}>Saving...</Text>
+              </View>
+            )}
+            {autoSaveStatus === "saved" && (
+              <View style={styles.autoSaveStatusRow}>
+                <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                <Text style={styles.autoSavedText}>All changes saved</Text>
+              </View>
+            )}
+            {autoSaveStatus === "unsaved" && (
+              <Text style={styles.autoSaveUnsavedText}>Unsaved edits</Text>
+            )}
+          </View>
+
+          {onSave && (
             <TouchableOpacity
-              style={styles.saveBtn}
+              style={[
+                styles.saveBtn,
+                autoSaveStatus === "saved" && styles.saveBtnSaved,
+              ]}
               onPress={onSave}
               disabled={saving}
               activeOpacity={0.8}
@@ -488,13 +697,19 @@ export default function WorkOrderDetailsTab({
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <>
-                  <Ionicons name="save-outline" size={15} color="#FFFFFF" />
-                  <Text style={styles.saveBtnText}>Save Details</Text>
+                  <Ionicons
+                    name={autoSaveStatus === "saved" ? "checkmark" : "save-outline"}
+                    size={15}
+                    color="#FFFFFF"
+                  />
+                  <Text style={styles.saveBtnText}>
+                    {autoSaveStatus === "saved" ? "Saved" : "Save Details"}
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
-          </View>
-        )}
+          )}
+        </View>
       </View>
 
       {/* ─── MODAL SHEET FOR WARRANTY TYPE ─── */}
@@ -822,9 +1037,132 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
   },
+  saveBtnSaved: {
+    backgroundColor: "#059669",
+  },
   saveBtnText: {
     fontSize: 13,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  voiceTypeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#F0F9FF",
+    borderWidth: 1,
+    borderColor: "#BAE6FD",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  voiceTypeBtnText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#0284C7",
+  },
+  transcribingBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#F0F9FF",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  transcribingText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#0284C7",
+  },
+  recordingBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  recordingLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
+  },
+  recordingRedDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#DC2626",
+  },
+  recordingTime: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#DC2626",
+  },
+  recordingActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  cancelRecBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  cancelRecText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#EF4444",
+  },
+  doneRecBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#0F172A",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  doneRecText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  cardFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 12,
+  },
+  autoSaveStatusBox: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  autoSaveStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  autoSaveStatusText: {
+    fontSize: 11,
+    color: "#64748B",
+    fontWeight: "500",
+  },
+  autoSavedText: {
+    fontSize: 11,
+    color: "#10B981",
+    fontWeight: "600",
+  },
+  autoSaveUnsavedText: {
+    fontSize: 11,
+    color: "#94A3B8",
+    fontStyle: "italic",
   },
 });

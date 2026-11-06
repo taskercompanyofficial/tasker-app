@@ -259,6 +259,7 @@ export default function TechnicianWorkOrderNavigationScreen({
   // Full-Screen In-Progress Execution Tab State
   const [activeFsTab, setActiveFsTab] = useState<WorkOrderTabKey>("details");
   const [isSavingFsDetails, setIsSavingFsDetails] = useState(false);
+  const [fsAutoSaveStatus, setFsAutoSaveStatus] = useState<"idle" | "unsaved" | "saving" | "saved">("idle");
   const [fsFormData, setFsFormData] = useState({
     indoor_serial_number: workOrder.indoor_serial_number || "",
     outdoor_serial_number: workOrder.outdoor_serial_number || "",
@@ -271,24 +272,79 @@ export default function TechnicianWorkOrderNavigationScreen({
     warranty_type_id: workOrder.warranty_type?.id || null,
   });
 
+  const lastSavedJsonRef = useRef<string>(JSON.stringify(fsFormData));
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialMount = useRef(true);
+
   const handleFsFormChange = useCallback((key: string, value: any) => {
     setFsFormData((prev) => ({ ...prev, [key]: value }));
   }, []);
 
+  // Smooth debounced auto-save effect (1200ms of inactivity)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    const currentJson = JSON.stringify(fsFormData);
+    if (currentJson === lastSavedJsonRef.current) {
+      return;
+    }
+
+    setFsAutoSaveStatus("unsaved");
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(async () => {
+      try {
+        setFsAutoSaveStatus("saving");
+        await axios.post(
+          VENDOR_UPDATE_WORK_ORDER_DETAILS_URL(Number(workOrder.id)),
+          fsFormData
+        );
+        lastSavedJsonRef.current = currentJson;
+        setFsAutoSaveStatus("saved");
+        setTimeout(() => {
+          setFsAutoSaveStatus((c) => (c === "saved" ? "idle" : c));
+        }, 3000);
+      } catch (err) {
+        console.warn("Auto-save silent error:", err);
+        setFsAutoSaveStatus("unsaved");
+      }
+    }, 1200);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [fsFormData, workOrder.id]);
+
   const handleFsSaveDetails = useCallback(async () => {
     try {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       setIsSavingFsDetails(true);
+      setFsAutoSaveStatus("saving");
       await axios.post(
         VENDOR_UPDATE_WORK_ORDER_DETAILS_URL(Number(workOrder.id)),
         fsFormData
       );
+      lastSavedJsonRef.current = JSON.stringify(fsFormData);
+      setFsAutoSaveStatus("saved");
       Toast.show({
         type: "success",
         text1: "Saved",
         text2: "Work order details updated successfully",
       });
       if (onRefresh) onRefresh();
+      setTimeout(() => {
+        setFsAutoSaveStatus((c) => (c === "saved" ? "idle" : c));
+      }, 3000);
     } catch (e: any) {
+      setFsAutoSaveStatus("unsaved");
       Toast.show({
         type: "error",
         text1: "Save Failed",
@@ -1208,6 +1264,7 @@ export default function TechnicianWorkOrderNavigationScreen({
               onScanWarranty={() => fsScanner.openScanner("warranty")}
               onSave={handleFsSaveDetails}
               saving={isSavingFsDetails}
+              autoSaveStatus={fsAutoSaveStatus}
             />
           )}
 

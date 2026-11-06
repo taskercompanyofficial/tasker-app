@@ -234,16 +234,14 @@ export default function WorkOrderAttachmentsTab({
                 </Text>
               </View>
 
-              {Boolean(sampleUrl) && (
-                <TouchableOpacity
-                  style={styles.sampleLink}
-                  onPress={() => setSampleModalItem(reqType)}
-                  activeOpacity={0.75}
-                >
-                  <Ionicons name="eye-outline" size={13} color="#0284C7" />
-                  <Text style={styles.sampleLinkText}>View Sample</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                style={styles.sampleLink}
+                onPress={() => setSampleModalItem(reqType)}
+                activeOpacity={0.75}
+              >
+                <Ionicons name="image-outline" size={13} color="#0284C7" />
+                <Text style={styles.sampleLinkText}>Sample Image</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Body: Uploaded Image Card OR Clean Upload Button */}
@@ -450,18 +448,35 @@ export default function WorkOrderAttachmentsTab({
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.sampleImageContainer}>
-                <Image
-                  source={{
-                    uri: getImageUrl(
-                      sampleModalItem?.reference_image_url ||
-                        sampleModalItem?.reference_image
-                    ),
-                  }}
-                  style={styles.sampleImageFull}
-                  resizeMode="contain"
-                />
-              </View>
+              {Boolean(
+                sampleModalItem?.reference_image_url ||
+                  sampleModalItem?.reference_image
+              ) ? (
+                <View style={styles.sampleImageContainer}>
+                  <Image
+                    source={{
+                      uri: getImageUrl(
+                        sampleModalItem?.reference_image_url ||
+                          sampleModalItem?.reference_image
+                      ),
+                    }}
+                    style={styles.sampleImageFull}
+                    resizeMode="contain"
+                  />
+                </View>
+              ) : (
+                <View style={styles.samplePlaceholderBox}>
+                  <View style={styles.samplePlaceholderIconCircle}>
+                    <Ionicons name="camera" size={32} color="#0284C7" />
+                  </View>
+                  <Text style={styles.samplePlaceholderTitle}>
+                    Photo Guidelines: {sampleModalItem?.name}
+                  </Text>
+                  <Text style={styles.samplePlaceholderText}>
+                    Please capture a clear, well-lit, and in-focus photograph for this requirement. Ensure labels, serial barcodes, and technical details are fully readable without flash reflection or glare.
+                  </Text>
+                </View>
+              )}
 
               <TouchableOpacity
                 style={styles.sampleCaptureBtn}
@@ -821,6 +836,40 @@ const styles = StyleSheet.create({
   sampleImageFull: {
     width: "100%",
     height: "100%",
+  },
+  samplePlaceholderBox: {
+    width: "100%",
+    minHeight: 200,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    padding: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  samplePlaceholderIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#E0F2FE",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  samplePlaceholderTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0F172A",
+    textAlign: "center",
+    marginBottom: 6,
+  },
+  samplePlaceholderText: {
+    fontSize: 12,
+    color: "#64748B",
+    textAlign: "center",
+    lineHeight: 18,
+    paddingHorizontal: 8,
   },
   sampleCaptureBtn: {
     flexDirection: "row",
