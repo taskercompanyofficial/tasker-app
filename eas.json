@@ -7,24 +7,38 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "channel": "development"
+      "channel": "development",
+      "environment": "development",
+      "env": {
+        "GOOGLE_MAPS_ANDROID_API_KEY": "AIzaSyCIVVHDThwQ_aCBr_EAw_LpmA7U6vd4UUo",
+        "GOOGLE_MAPS_IOS_API_KEY": "AIzaSyCIVVHDThwQ_aCBr_EAw_LpmA7U6vd4UUo"
+      }
     },
     "preview": {
       "distribution": "internal",
       "channel": "preview",
+      "environment": "preview",
       "uploadSourceMaps": true,
       "env": {
         "EXPO_PUBLIC_BACKEND_URL": "https://api.taskercompany.cloud",
-        "EXPO_PUBLIC_STORAGE_URL": "https://api.taskercompany.cloud/storage"
+        "EXPO_PUBLIC_STORAGE_URL": "https://api.taskercompany.cloud/storage",
+        "GOOGLE_MAPS_ANDROID_API_KEY": "AIzaSyCIVVHDThwQ_aCBr_EAw_LpmA7U6vd4UUo",
+        "GOOGLE_MAPS_IOS_API_KEY": "AIzaSyCIVVHDThwQ_aCBr_EAw_LpmA7U6vd4UUo"
       }
     },
     "production": {
       "autoIncrement": true,
       "channel": "production",
+      "environment": "production",
       "uploadSourceMaps": true,
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
         "EXPO_PUBLIC_BACKEND_URL": "https://api.taskercompany.cloud",
-        "EXPO_PUBLIC_STORAGE_URL": "https://api.taskercompany.cloud/storage"
+        "EXPO_PUBLIC_STORAGE_URL": "https://api.taskercompany.cloud/storage",
+        "GOOGLE_MAPS_ANDROID_API_KEY": "AIzaSyCIVVHDThwQ_aCBr_EAw_LpmA7U6vd4UUo",
+        "GOOGLE_MAPS_IOS_API_KEY": "AIzaSyCIVVHDThwQ_aCBr_EAw_LpmA7U6vd4UUo"
       }
     }
   },
