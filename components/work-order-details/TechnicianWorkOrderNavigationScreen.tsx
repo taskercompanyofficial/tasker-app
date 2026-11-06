@@ -996,9 +996,9 @@ export default function TechnicianWorkOrderNavigationScreen({
       <View style={[styles.fsContainer, { paddingTop: insets.top }]}>
         {/* Top Header: Transparent bg, Back Button, Mid: WO# & Service Type, Right: Countdown */}
         <View style={styles.fsHeader}>
-          {/* 1. Left: Back Button */}
+          {/* 1. Left: Back Button (Flat, No Shadows) */}
           <TouchableOpacity
-            style={styles.floatingRoundBtn}
+            style={styles.fsHeaderBackBtn}
             onPress={() =>
               router.canGoBack()
                 ? router.back()
@@ -2085,6 +2085,16 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     letterSpacing: 0.5,
   },
+  fsHeaderBackBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#F8FAFC",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
   fsHeaderRight: {
     flexDirection: "row",
     alignItems: "center",
@@ -2202,7 +2212,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    ...Shadows.sm,
   },
   fsBlankCanvas: {
     backgroundColor: "#FFFFFF",
@@ -2214,7 +2223,6 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
     borderColor: "#CBD5E1",
     marginTop: 8,
-    ...Shadows.sm,
   },
   fsBlankTitle: {
     fontSize: 16,

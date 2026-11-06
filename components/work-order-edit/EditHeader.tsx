@@ -27,7 +27,7 @@ export default function EditHeader({
 
   return (
     <View style={styles.header}>
-      {/* 1. Left: Back Button */}
+      {/* 1. Left: Back Button (Flat, No Shadows) */}
       <TouchableOpacity
         onPress={() => router.back()}
         style={styles.backButton}
@@ -49,7 +49,7 @@ export default function EditHeader({
         ) : null}
       </View>
 
-      {/* 3. Right Corner: Countdown Timer or Info Icon */}
+      {/* 3. Right Corner: Countdown Timer or Info Icon (Flat, No Shadows) */}
       {countdown ? (
         <View style={styles.headerTimerBadge}>
           <View style={styles.headerTimerDot} />
@@ -69,7 +69,7 @@ export default function EditHeader({
           />
         </TouchableOpacity>
       ) : (
-        <View style={{ width: 42 }} />
+        <View style={{ width: 40 }} />
       )}
     </View>
   );
@@ -85,19 +85,14 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   backButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "rgba(255, 255, 255, 0.96)",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#F8FAFC",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
   headerCenter: {
     flex: 1,
@@ -143,10 +138,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   infoButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "rgba(255, 255, 255, 0.96)",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#F8FAFC",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
