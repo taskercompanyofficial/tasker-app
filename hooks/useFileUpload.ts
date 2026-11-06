@@ -1,8 +1,11 @@
 import {
   VENDOR_DELETE_WORK_ORDER_FILE_URL,
+  VENDOR_STAFF_DELETE_WORK_ORDER_FILE_URL,
   VENDOR_FILE_TYPES_URL,
   VENDOR_UPLOAD_WORK_ORDER_FILE_URL,
+  VENDOR_STAFF_UPLOAD_WORK_ORDER_FILE_URL,
 } from "@/lib/api-endpoints";
+import { useAuthStore } from "@/context/auth-store";
 import axios from "@/lib/axios.config";
 import { FileType } from "@/types/file-type";
 import * as ImagePicker from "expo-image-picker";
@@ -54,6 +57,9 @@ export function useFileUpload({
   onError,
   onFilesChanged,
 }: UseFileUploadOptions): UseFileUploadReturn {
+  const appMode = useAuthStore((s) => s.appMode);
+  const isStaff = appMode === "vendor_staff";
+
   const [fileTypes, setFileTypes] = useState<FileType[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadingFileTypeId, setUploadingFileTypeId] = useState<number | null>(null);
@@ -135,7 +141,11 @@ export function useFileUpload({
       formData.append("file_type_id", fileTypeId.toString());
       formData.append("confirm_duplicate", "1");
 
-      await axios.post(VENDOR_UPLOAD_WORK_ORDER_FILE_URL(workOrderId), formData, {
+      const uploadUrl = isStaff
+        ? VENDOR_STAFF_UPLOAD_WORK_ORDER_FILE_URL(workOrderId)
+        : VENDOR_UPLOAD_WORK_ORDER_FILE_URL(workOrderId);
+
+      await axios.post(uploadUrl, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -315,7 +325,10 @@ export function useFileUpload({
 
   const handleFileDelete = async (file: any) => {
     try {
-      await axios.delete(VENDOR_DELETE_WORK_ORDER_FILE_URL(workOrderId, file.id));
+      const deleteUrl = isStaff
+        ? VENDOR_STAFF_DELETE_WORK_ORDER_FILE_URL(workOrderId, file.id)
+        : VENDOR_DELETE_WORK_ORDER_FILE_URL(workOrderId, file.id);
+      await axios.delete(deleteUrl);
       onSuccess("File deleted successfully");
       onFilesChanged();
     } catch (error: any) {
@@ -328,7 +341,10 @@ export function useFileUpload({
     try {
       setUploading(true);
       for (const file of files) {
-        await axios.delete(VENDOR_DELETE_WORK_ORDER_FILE_URL(workOrderId, file.id));
+        const deleteUrl = isStaff
+          ? VENDOR_STAFF_DELETE_WORK_ORDER_FILE_URL(workOrderId, file.id)
+          : VENDOR_DELETE_WORK_ORDER_FILE_URL(workOrderId, file.id);
+        await axios.delete(deleteUrl);
       }
       onSuccess("All files deleted successfully");
       onFilesChanged();

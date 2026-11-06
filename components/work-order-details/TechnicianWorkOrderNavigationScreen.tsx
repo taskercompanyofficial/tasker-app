@@ -9,6 +9,7 @@ import {
   VENDOR_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL,
   VENDOR_STAFF_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL,
   VENDOR_UPDATE_WORK_ORDER_DETAILS_URL,
+  VENDOR_STAFF_UPDATE_WORK_ORDER_DETAILS_URL,
 } from "@/lib/api-endpoints";
 import {
   WorkOrderMinimalTabBar,
@@ -35,7 +36,10 @@ import {
   projectOntoPolyline,
   resolveActiveStep,
 } from "@/lib/geo";
-import { startVendorBackgroundNavigation } from "@/lib/vendorBackgroundLocation";
+import {
+  startVendorBackgroundNavigation,
+  clearVendorActiveWorkOrderTracking,
+} from "@/lib/vendorBackgroundLocation";
 import { WorkOrder } from "@/types/work-order";
 import { Ionicons } from "@expo/vector-icons";
 import BottomSheet, {
@@ -370,10 +374,11 @@ export default function TechnicianWorkOrderNavigationScreen({
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       setIsSavingFsDetails(true);
       setFsAutoSaveStatus("saving");
-      await axios.post(
-        VENDOR_UPDATE_WORK_ORDER_DETAILS_URL(Number(workOrder.id)),
-        fsFormData
-      );
+      const isStaff = appMode === "vendor_staff";
+      const updateDetailsUrl = isStaff
+        ? VENDOR_STAFF_UPDATE_WORK_ORDER_DETAILS_URL(Number(workOrder.id))
+        : VENDOR_UPDATE_WORK_ORDER_DETAILS_URL(Number(workOrder.id));
+      await axios.post(updateDetailsUrl, fsFormData);
       lastSavedJsonRef.current = JSON.stringify(fsFormData);
       setFsAutoSaveStatus("saved");
       Toast.show({
@@ -578,6 +583,16 @@ export default function TechnicianWorkOrderNavigationScreen({
 
         const subStatus = fsIsWarrantyCase ? "warranty-completed" : "work-completed";
 
+        // Pre-sync all form details to database before final status transition
+        try {
+          const updateDetailsUrl = isStaff
+            ? VENDOR_STAFF_UPDATE_WORK_ORDER_DETAILS_URL(Number(workOrder.id))
+            : VENDOR_UPDATE_WORK_ORDER_DETAILS_URL(Number(workOrder.id));
+          await axios.post(updateDetailsUrl, fsFormData);
+        } catch (detailErr) {
+          console.warn("Could not pre-sync details before completion:", detailErr);
+        }
+
         await axios.post(statusUrl, {
           status_slug: "completed",
           sub_status_slug: subStatus,
@@ -591,6 +606,12 @@ export default function TechnicianWorkOrderNavigationScreen({
           labor_amount: settlementData.labor_amount,
           is_amount_received: settlementData.is_amount_received,
         });
+
+        // Clear active navigation trip and tracking
+        activeTripStore.setTrip(null);
+        try {
+          await clearVendorActiveWorkOrderTracking();
+        } catch {}
 
         setShowCompletionModal(false);
         Toast.show({
@@ -1104,6 +1125,20 @@ export default function TechnicianWorkOrderNavigationScreen({
         workOrder.work_order_number || String(workOrder.id),
         customerName,
       );
+    } catch {}
+
+    // Notify backend that technician is on the way
+    try {
+      const isStaff = appMode === "vendor_staff";
+      const statusUrl = isStaff
+        ? VENDOR_STAFF_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL(Number(workOrder.id))
+        : VENDOR_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL(Number(workOrder.id));
+      axios
+        .post(statusUrl, {
+          status_slug: "in-progress",
+          sub_status_slug: "going-to-work",
+        })
+        .catch((e) => console.warn("Going-to-work update note:", e));
     } catch {}
 
     activeTripStore.setTrip({

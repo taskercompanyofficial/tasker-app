@@ -137,6 +137,14 @@ export const VENDOR_SERVICE_SUB_CONCERNS_URL = (id: number) =>
 export const VENDOR_WARRANTY_TYPES_URL = `${VENDOR_WORK_ORDER_URL}/warranty-types`;
 export const VENDOR_VOICE_TO_TEXT_URL = `${API_URL}/vendor/voice-to-text`;
 
+// Vendor Staff Work Order Operations
+export const VENDOR_STAFF_UPDATE_WORK_ORDER_DETAILS_URL = (id: number) =>
+  `${API_URL}/vendor-staff/work-orders/${id}/update-details`;
+export const VENDOR_STAFF_UPLOAD_WORK_ORDER_FILE_URL = (id: number) =>
+  `${API_URL}/vendor-staff/work-orders/${id}/upload-file`;
+export const VENDOR_STAFF_DELETE_WORK_ORDER_FILE_URL = (id: number, fileId: number) =>
+  `${API_URL}/vendor-staff/work-orders/${id}/files/${fileId}`;
+
 // Vendor Staff Auth
 export const VENDOR_STAFF_LOGIN_URL = `${API_URL}/vendor-staff/login`;
 export const VENDOR_STAFF_ME_URL = `${API_URL}/vendor-staff/me`;
