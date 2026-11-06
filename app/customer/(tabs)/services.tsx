@@ -47,7 +47,9 @@ export default function ServicesPage() {
   const fetchData = async () => {
     try {
       const servicesRes = await myAxios.get(PARENT_SERVICE_URL);
-      const fetchedServices = servicesRes.data.data || [];
+      const fetchedServices = (servicesRes.data.data || []).filter(
+        (s: any) => !s.status || s.status === "active"
+      );
 
       setServices(fetchedServices);
       setFilteredServices(fetchedServices);
