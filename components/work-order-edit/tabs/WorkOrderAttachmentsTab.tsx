@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -62,8 +62,8 @@ export default function WorkOrderAttachmentsTab({
   // Sample preview modal
   const [sampleModalItem, setSampleModalItem] = useState<FileType | null>(null);
 
-  // Full-size uploaded image viewer modal
-  const [viewingFile, setViewingFile] = useState<WorkOrderFile | null>(null);
+  // Full-size uploaded image gallery viewer modal (with slide/next/prev)
+  const [viewingIndex, setViewingIndex] = useState<number | null>(null);
 
   // Pick source sheet for a specific file type
   const [pickingFileType, setPickingFileType] = useState<FileType | null>(null);
@@ -73,6 +73,42 @@ export default function WorkOrderAttachmentsTab({
 
   // Bottom sheet for "Upload Other"
   const [showOtherSheet, setShowOtherSheet] = useState(false);
+
+  // Collect all uploaded files that have valid file_path for gallery swipe
+  const allUploadedFiles = useMemo(() => {
+    if (!Array.isArray(files)) return [];
+    return files.filter((f) => Boolean(f && f.file_path));
+  }, [files]);
+
+  const openImageViewer = (file: WorkOrderFile) => {
+    const idx = allUploadedFiles.findIndex((f) => f.id === file.id);
+    setViewingIndex(idx !== -1 ? idx : 0);
+  };
+
+  const handlePrevImage = () => {
+    if (viewingIndex !== null && viewingIndex > 0) {
+      setViewingIndex(viewingIndex - 1);
+    }
+  };
+
+  const handleNextImage = () => {
+    if (viewingIndex !== null && viewingIndex < allUploadedFiles.length - 1) {
+      setViewingIndex(viewingIndex + 1);
+    }
+  };
+
+  const touchStartXRef = useRef<number>(0);
+  const handleTouchStart = (e: any) => {
+    touchStartXRef.current = e.nativeEvent.pageX;
+  };
+  const handleTouchEnd = (e: any) => {
+    const diff = e.nativeEvent.pageX - touchStartXRef.current;
+    if (diff > 45) {
+      handlePrevImage(); // Swiped right -> show previous image
+    } else if (diff < -45) {
+      handleNextImage(); // Swiped left -> show next image
+    }
+  };
 
   // 1. Safe list of all available file types (filtered against null/undefined)
   const safeFileTypes = useMemo(() => {
@@ -236,14 +272,26 @@ export default function WorkOrderAttachmentsTab({
           (uploadingFileTypeId !== null && uploadingFileTypeId === reqType.id) ||
           localUploadingTypeId === reqType.id;
 
+        const isRejected = uploadedFile?.approval_status === "rejected";
+        const rejectRemark = uploadedFile?.approval_remark;
+
         return (
-          <View key={reqType.id} style={styles.card}>
-            {/* Header: File Type Name with red * for required, sample link on right */}
+          <View
+            key={reqType.id}
+            style={[styles.card, isRejected && styles.cardRejected]}
+          >
+            {/* Header: File Type Name with red * for required, status pill or sample link on right */}
             <View style={styles.cardHeader}>
               <View style={styles.titleRow}>
                 <Text style={styles.fileNameTitle}>
                   {reqType.name} <Text style={styles.requiredStar}>*</Text>
                 </Text>
+                {isRejected && (
+                  <View style={styles.rejectedBadge}>
+                    <Ionicons name="close-circle" size={11} color="#DC2626" />
+                    <Text style={styles.rejectedBadgeText}>Rejected</Text>
+                  </View>
+                )}
               </View>
 
               <TouchableOpacity
@@ -256,59 +304,105 @@ export default function WorkOrderAttachmentsTab({
               </TouchableOpacity>
             </View>
 
-            {/* Body: Uploaded Image Card OR Clean Upload Button */}
+            {/* Body: Compact Thumbnail Row OR Clean Upload Button */}
             {isUploaded ? (
-              <View style={styles.uploadedImageBox}>
+              <View
+                style={[
+                  styles.uploadedCompactRow,
+                  isRejected && styles.uploadedCompactRowRejected,
+                ]}
+              >
+                {/* Left: Compact square thumbnail with zoom overlay */}
                 <TouchableOpacity
-                  onPress={() => setViewingFile(uploadedFile!)}
-                  activeOpacity={0.88}
-                  style={styles.uploadedTouchArea}
+                  onPress={() => openImageViewer(uploadedFile!)}
+                  activeOpacity={0.85}
+                  style={styles.thumbnailTouch}
                 >
                   <Image
                     source={{ uri: getImageUrl(uploadedFile?.file_path) }}
-                    style={styles.uploadedImagePreview}
+                    style={styles.thumbnailImage}
                     resizeMode="cover"
                   />
-                  <View style={styles.viewZoomOverlay}>
-                    <Ionicons name="expand" size={16} color="#FFFFFF" />
+                  <View style={styles.thumbnailZoomBadge}>
+                    <Ionicons name="expand" size={12} color="#FFFFFF" />
                   </View>
                 </TouchableOpacity>
 
-                {/* Bottom Row Actions for Uploaded Photo */}
-                <View style={styles.uploadedActionRow}>
-                  <TouchableOpacity
-                    style={styles.replaceBtn}
-                    onPress={() => setPickingFileType(reqType)}
-                    disabled={isThisUploading}
-                    activeOpacity={0.8}
-                  >
-                    {isThisUploading ? (
-                      <ActivityIndicator size="small" color="#0F172A" />
+                {/* Right: Status pill, Rejection remark, and Actions */}
+                <View style={styles.thumbnailRightCol}>
+                  <View style={styles.statusPillRow}>
+                    {isRejected ? (
+                      <View style={styles.rejectedPill}>
+                        <Ionicons name="alert-circle" size={11} color="#DC2626" />
+                        <Text style={styles.rejectedPillText}>Needs Correction</Text>
+                      </View>
                     ) : (
-                      <>
-                        <Ionicons name="camera-outline" size={14} color="#0F172A" />
-                        <Text style={styles.replaceBtnText}>Replace Photo</Text>
-                      </>
+                      <View style={styles.uploadedSuccessPill}>
+                        <Ionicons name="checkmark-circle" size={11} color="#059669" />
+                        <Text style={styles.uploadedSuccessPillText}>Photo Attached</Text>
+                      </View>
                     )}
-                  </TouchableOpacity>
+                    <Text style={styles.tapToViewHint}>Tap image to view full</Text>
+                  </View>
 
-                  <TouchableOpacity
-                    style={styles.deleteBtn}
-                    onPress={() => {
-                      Alert.alert("Delete Photo", `Delete ${reqType.name}?`, [
-                        { text: "Cancel", style: "cancel" },
-                        {
-                          text: "Delete",
-                          style: "destructive",
-                          onPress: () => onDelete(uploadedFile),
-                        },
-                      ]);
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="trash-outline" size={14} color="#DC2626" />
-                    <Text style={styles.deleteBtnText}>Delete</Text>
-                  </TouchableOpacity>
+                  {/* Rejection Remarks in red box */}
+                  {isRejected && Boolean(rejectRemark) && (
+                    <View style={styles.fileRejectBox}>
+                      <Text style={styles.fileRejectText} numberOfLines={2}>
+                        Reason: {rejectRemark}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={styles.compactActionRow}>
+                    <TouchableOpacity
+                      style={[
+                        styles.replaceBtnCompact,
+                        isRejected && styles.replaceBtnCompactRejected,
+                      ]}
+                      onPress={() => setPickingFileType(reqType)}
+                      disabled={isThisUploading}
+                      activeOpacity={0.8}
+                    >
+                      {isThisUploading ? (
+                        <ActivityIndicator size="small" color="#0F172A" />
+                      ) : (
+                        <>
+                          <Ionicons
+                            name="camera-outline"
+                            size={13}
+                            color={isRejected ? "#DC2626" : "#0F172A"}
+                          />
+                          <Text
+                            style={[
+                              styles.replaceBtnText,
+                              isRejected && { color: "#DC2626" },
+                            ]}
+                          >
+                            {isRejected ? "Re-upload" : "Replace"}
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.deleteBtnCompact}
+                      onPress={() => {
+                        Alert.alert("Delete Photo", `Delete ${reqType.name}?`, [
+                          { text: "Cancel", style: "cancel" },
+                          {
+                            text: "Delete",
+                            style: "destructive",
+                            onPress: () => onDelete(uploadedFile),
+                          },
+                        ]);
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="trash-outline" size={13} color="#DC2626" />
+                      <Text style={styles.deleteBtnText}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             ) : (
@@ -355,13 +449,17 @@ export default function WorkOrderAttachmentsTab({
             {otherFiles.map((f, i) => (
               <View key={f.id || i} style={styles.otherFileCard}>
                 <TouchableOpacity
-                  onPress={() => setViewingFile(f)}
+                  onPress={() => openImageViewer(f)}
                   activeOpacity={0.85}
+                  style={styles.otherFileTouch}
                 >
                   <Image
                     source={{ uri: getImageUrl(f.file_path) }}
                     style={styles.otherFileImage}
                   />
+                  <View style={styles.thumbnailZoomBadge}>
+                    <Ionicons name="expand" size={10} color="#FFFFFF" />
+                  </View>
                 </TouchableOpacity>
                 <View style={styles.otherFileInfo}>
                   <Text style={styles.otherFileName} numberOfLines={1}>
@@ -516,33 +614,85 @@ export default function WorkOrderAttachmentsTab({
         )}
       </Modal>
 
-      {/* ─── MODAL 3: FULL VIEW OF UPLOADED FILE ─── */}
+      {/* ─── MODAL 3: FULL VIEW GALLERY WITH NEXT / PREVIOUS & SWIPE ─── */}
       <Modal
-        visible={Boolean(viewingFile)}
+        visible={
+          viewingIndex !== null &&
+          viewingIndex >= 0 &&
+          viewingIndex < allUploadedFiles.length
+        }
         transparent
         animationType="fade"
-        onRequestClose={() => setViewingFile(null)}
+        onRequestClose={() => setViewingIndex(null)}
       >
-        {Boolean(viewingFile) && (
-          <View style={styles.fullViewerOverlay}>
-            <TouchableOpacity
-              style={styles.fullViewerCloseBtn}
-              onPress={() => setViewingFile(null)}
-            >
-              <Ionicons name="close" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
+        {viewingIndex !== null && allUploadedFiles[viewingIndex] && (
+          <View
+            style={styles.fullViewerOverlay}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            {/* Top Bar with Counter and Close Button */}
+            <View style={styles.fullViewerTopBar}>
+              <TouchableOpacity
+                style={styles.fullViewerCloseBtn}
+                onPress={() => setViewingIndex(null)}
+              >
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+              <Text style={styles.fullViewerCounter}>
+                {viewingIndex + 1} of {allUploadedFiles.length}
+              </Text>
+              <View style={{ width: 40 }} />
+            </View>
 
-            {Boolean(viewingFile?.file_path) && (
+            {/* Main Image with Navigation Arrows */}
+            <View style={styles.fullViewerCenter}>
               <Image
-                source={{ uri: getImageUrl(viewingFile?.file_path) }}
+                source={{
+                  uri: getImageUrl(allUploadedFiles[viewingIndex].file_path),
+                }}
                 style={styles.fullViewerImage}
                 resizeMode="contain"
               />
-            )}
 
+              {/* Left Arrow (Previous) */}
+              {viewingIndex > 0 && (
+                <TouchableOpacity
+                  style={[styles.viewerNavArrow, styles.viewerNavArrowLeft]}
+                  onPress={handlePrevImage}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="chevron-back" size={26} color="#FFFFFF" />
+                </TouchableOpacity>
+              )}
+
+              {/* Right Arrow (Next) */}
+              {viewingIndex < allUploadedFiles.length - 1 && (
+                <TouchableOpacity
+                  style={[styles.viewerNavArrow, styles.viewerNavArrowRight]}
+                  onPress={handleNextImage}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="chevron-forward" size={26} color="#FFFFFF" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Bottom Bar: Title & Rejection Info */}
             <View style={styles.fullViewerBottom}>
               <Text style={styles.fullViewerTitle}>
-                {viewingFile?.file_type?.name || "Uploaded Photo"}
+                {allUploadedFiles[viewingIndex].file_type?.name || "Uploaded Photo"}
+              </Text>
+              {allUploadedFiles[viewingIndex].approval_status === "rejected" && (
+                <View style={styles.viewerRejectBanner}>
+                  <Ionicons name="alert-circle" size={13} color="#EF4444" />
+                  <Text style={styles.viewerRejectText}>
+                    Rejected: {allUploadedFiles[viewingIndex].approval_remark || "Please re-upload photo"}
+                  </Text>
+                </View>
+              )}
+              <Text style={styles.viewerSwipeHint}>
+                Swipe left / right or tap arrows to view next/previous photo
               </Text>
             </View>
           </View>
@@ -570,137 +720,223 @@ export default function WorkOrderAttachmentsTab({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 40,
-    gap: 12,
+    paddingHorizontal: 10,
+    paddingTop: 8,
+    paddingBottom: 36,
+    gap: 8,
   },
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    padding: 14,
+    padding: 10,
     elevation: 0,
     shadowColor: "transparent",
+  },
+  cardRejected: {
+    borderColor: "#EF4444",
+    backgroundColor: "#FEF2F2",
   },
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    flexWrap: "wrap",
+    gap: 4,
   },
   fileNameTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
     color: "#0F172A",
   },
   requiredStar: {
     color: "#DC2626",
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
+  },
+  rejectedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "#FEE2E2",
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+  },
+  rejectedBadgeText: {
+    fontSize: 9.5,
+    fontWeight: "700",
+    color: "#B91C1C",
   },
   sampleLink: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 3,
     backgroundColor: "#F0F9FF",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 5,
     borderWidth: 1,
     borderColor: "#BAE6FD",
   },
   sampleLinkText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "600",
     color: "#0284C7",
   },
   uploadPromptBox: {
-    paddingVertical: 4,
+    paddingVertical: 2,
   },
   uploadMainBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: 6,
     backgroundColor: "#0F172A",
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 9,
+    borderRadius: 7,
   },
   uploadMainBtnText: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: "600",
     color: "#FFFFFF",
   },
-  uploadedImageBox: {
-    borderRadius: 10,
-    overflow: "hidden",
+  uploadedCompactRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    backgroundColor: "#F8FAFC",
+    padding: 8,
   },
-  uploadedTouchArea: {
+  uploadedCompactRowRejected: {
+    backgroundColor: "#FFF5F5",
+    borderColor: "#FECACA",
+  },
+  thumbnailTouch: {
     position: "relative",
-    width: "100%",
-    height: 150,
-    backgroundColor: "#F1F5F9",
+    width: 66,
+    height: 66,
+    borderRadius: 7,
+    overflow: "hidden",
+    backgroundColor: "#E2E8F0",
   },
-  uploadedImagePreview: {
+  thumbnailImage: {
     width: "100%",
     height: "100%",
   },
-  viewZoomOverlay: {
+  thumbnailZoomBadge: {
     position: "absolute",
-    top: 8,
-    right: 8,
-    backgroundColor: "rgba(15, 23, 42, 0.7)",
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    bottom: 3,
+    right: 3,
+    backgroundColor: "rgba(15, 23, 42, 0.75)",
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
-  uploadedActionRow: {
+  thumbnailRightCol: {
+    flex: 1,
+    justifyContent: "center",
+    gap: 4,
+  },
+  statusPillRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
   },
-  replaceBtn: {
+  uploadedSuccessPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
+    gap: 3,
+    backgroundColor: "#DCFCE7",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  uploadedSuccessPillText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#15803D",
+  },
+  rejectedPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "#FEE2E2",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  rejectedPillText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#DC2626",
+  },
+  tapToViewHint: {
+    fontSize: 10,
+    color: "#64748B",
+  },
+  fileRejectBox: {
+    backgroundColor: "#FEE2E2",
+    borderRadius: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+  },
+  fileRejectText: {
+    fontSize: 10.5,
+    fontWeight: "600",
+    color: "#B91C1C",
+  },
+  compactActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 2,
+  },
+  replaceBtnCompact: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 5,
     backgroundColor: "#F1F5F9",
     borderWidth: 1,
     borderColor: "#CBD5E1",
   },
+  replaceBtnCompactRejected: {
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FCA5A5",
+  },
   replaceBtnText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     color: "#0F172A",
   },
-  deleteBtn: {
+  deleteBtnCompact: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    gap: 3,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
   },
   deleteBtnText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     color: "#DC2626",
   },
@@ -708,46 +944,52 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    paddingVertical: 11,
+    gap: 5,
+    paddingVertical: 9,
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    borderRadius: 8,
+    borderRadius: 7,
     backgroundColor: "#F8FAFC",
     marginTop: 4,
   },
   uploadOtherBtnText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
     color: "#0F172A",
   },
   otherFilesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
-    marginTop: 12,
+    gap: 8,
+    marginTop: 8,
   },
   otherFileCard: {
-    width: (SCREEN_WIDTH - 24 - 28 - 10) / 2,
+    width: (SCREEN_WIDTH - 20 - 20 - 8) / 2,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    borderRadius: 8,
+    borderRadius: 7,
     overflow: "hidden",
     backgroundColor: "#FFFFFF",
   },
+  otherFileTouch: {
+    position: "relative",
+    width: "100%",
+    height: 75,
+    backgroundColor: "#F1F5F9",
+  },
   otherFileImage: {
     width: "100%",
-    height: 90,
+    height: "100%",
   },
   otherFileInfo: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 6,
+    padding: 5,
     backgroundColor: "#F8FAFC",
   },
   otherFileName: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "600",
     color: "#0F172A",
     flex: 1,
@@ -764,62 +1006,62 @@ const styles = StyleSheet.create({
   },
   sourcePickerBox: {
     width: "100%",
-    maxWidth: 340,
+    maxWidth: 320,
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 18,
+    borderRadius: 14,
+    padding: 16,
     alignItems: "center",
   },
   sourcePickerTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
     color: "#0F172A",
     textAlign: "center",
   },
   sourcePickerSub: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#64748B",
     textAlign: "center",
     marginTop: 4,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   sourceBtnRow: {
     flexDirection: "row",
-    gap: 16,
+    gap: 12,
     width: "100%",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: 14,
   },
   sourceChoiceBtn: {
     flex: 1,
     alignItems: "center",
     backgroundColor: "#F8FAFC",
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
   sourceIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   sourceChoiceText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     color: "#0F172A",
   },
   sourceCancelBtn: {
-    paddingVertical: 8,
+    paddingVertical: 6,
     width: "100%",
     alignItems: "center",
   },
   sourceCancelText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
     color: "#64748B",
   },
@@ -828,15 +1070,15 @@ const styles = StyleSheet.create({
     maxHeight: SCREEN_HEIGHT * 0.85,
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
-    padding: 16,
+    padding: 14,
   },
   sampleModalHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   sampleModalTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
     color: "#0F172A",
   },
@@ -845,9 +1087,9 @@ const styles = StyleSheet.create({
   },
   sampleImageContainer: {
     width: "100%",
-    height: 250,
+    height: 220,
     backgroundColor: "#F1F5F9",
-    borderRadius: 10,
+    borderRadius: 8,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
@@ -858,37 +1100,37 @@ const styles = StyleSheet.create({
   },
   samplePlaceholderBox: {
     width: "100%",
-    minHeight: 200,
+    minHeight: 180,
     backgroundColor: "#F8FAFC",
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    padding: 20,
+    padding: 16,
     alignItems: "center",
     justifyContent: "center",
   },
   samplePlaceholderIconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: "#E0F2FE",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   samplePlaceholderTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
     color: "#0F172A",
     textAlign: "center",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   samplePlaceholderText: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#64748B",
     textAlign: "center",
-    lineHeight: 18,
-    paddingHorizontal: 8,
+    lineHeight: 16,
+    paddingHorizontal: 6,
   },
   sampleCaptureBtn: {
     flexDirection: "row",
@@ -896,40 +1138,94 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     backgroundColor: "#0F172A",
-    paddingVertical: 11,
-    borderRadius: 8,
-    marginTop: 14,
+    paddingVertical: 10,
+    borderRadius: 7,
+    marginTop: 12,
   },
   sampleCaptureBtnText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
     color: "#FFFFFF",
   },
   fullViewerOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.95)",
-    justifyContent: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.96)",
+    justifyContent: "space-between",
+  },
+  fullViewerTopBar: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: Platform.OS === "ios" ? 54 : 36,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
   },
   fullViewerCloseBtn: {
-    position: "absolute",
-    top: 50,
-    right: 20,
-    zIndex: 10,
-    padding: 8,
+    padding: 6,
+  },
+  fullViewerCounter: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: 0.5,
+  },
+  fullViewerCenter: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
   },
   fullViewerImage: {
     width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT * 0.75,
+    height: SCREEN_HEIGHT * 0.72,
+  },
+  viewerNavArrow: {
+    position: "absolute",
+    top: "45%",
+    backgroundColor: "rgba(15, 23, 42, 0.65)",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 20,
+  },
+  viewerNavArrowLeft: {
+    left: 12,
+  },
+  viewerNavArrowRight: {
+    right: 12,
   },
   fullViewerBottom: {
-    position: "absolute",
-    bottom: 40,
+    paddingBottom: Platform.OS === "ios" ? 44 : 24,
+    paddingHorizontal: 20,
     alignItems: "center",
+    gap: 6,
   },
   fullViewerTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
     color: "#FFFFFF",
+    textAlign: "center",
+  },
+  viewerRejectBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(239, 68, 68, 0.2)",
+    borderWidth: 1,
+    borderColor: "#EF4444",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  viewerRejectText: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "#FCA5A5",
+  },
+  viewerSwipeHint: {
+    fontSize: 11,
+    color: "#94A3B8",
   },
 });

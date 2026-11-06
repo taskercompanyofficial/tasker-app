@@ -456,8 +456,84 @@ export default function WorkOrderDetailsTab({
     };
   }, [workOrder, isWarrantyCase]);
 
+  // Rejection / Rework Info if rejected after completion
+  const rejectionInfo = useMemo(() => {
+    const isRejectedStatus =
+      workOrder.sub_status?.slug?.includes("reject") ||
+      workOrder.sub_status?.slug?.includes("rework") ||
+      workOrder.status?.slug?.includes("reject");
+
+    if (workOrder.reject_reason) {
+      return {
+        isRejected: true,
+        reason: workOrder.reject_reason,
+        rejectedAt: workOrder.rejected_at,
+      };
+    }
+
+    if (workOrder.technician_remarks?.includes("[Rework Required")) {
+      const match = workOrder.technician_remarks.match(/\[Rework Required[^\]]*\]:\s*([^\n\r]*)/);
+      return {
+        isRejected: true,
+        reason: match ? match[1] : "Work order was rejected and returned for rework.",
+        rejectedAt: workOrder.rejected_at,
+      };
+    }
+
+    if (Array.isArray(workOrder.histories)) {
+      const reworkHist = workOrder.histories.find(
+        (h) =>
+          h.action_type === "rework_required" ||
+          h.action_type === "technician_rejected" ||
+          h.description?.toLowerCase().includes("rejected")
+      );
+      if (reworkHist) {
+        return {
+          isRejected: true,
+          reason:
+            reworkHist.metadata?.rejection_reason ||
+            reworkHist.description ||
+            "Job sent back for rework.",
+          rejectedAt: reworkHist.created_at,
+        };
+      }
+    }
+
+    if (isRejectedStatus) {
+      return {
+        isRejected: true,
+        reason: "This work order has been rejected by QA/Admin and requires your correction.",
+        rejectedAt: workOrder.rejected_at,
+      };
+    }
+
+    return null;
+  }, [workOrder]);
+
   return (
     <View style={styles.container}>
+      {/* ─── 0. REJECTION / REWORK ALERT CARD ─── */}
+      {rejectionInfo?.isRejected && (
+        <View style={styles.rejectionCard}>
+          <View style={styles.rejectionHeader}>
+            <View style={styles.rejectionHeaderLeft}>
+              <Ionicons name="alert-circle" size={16} color="#DC2626" />
+              <Text style={styles.rejectionTitle}>Job Rejected / Correction Required</Text>
+            </View>
+            <View style={styles.rejectionBadge}>
+              <Text style={styles.rejectionBadgeText}>Action Needed</Text>
+            </View>
+          </View>
+          <Text style={styles.rejectionReasonLabel}>Rejection Remarks:</Text>
+          <View style={styles.rejectionReasonBox}>
+            <Text style={styles.rejectionReasonText}>{rejectionInfo.reason}</Text>
+          </View>
+          <Text style={styles.rejectionHelper}>
+            Please review the rejected remarks, correct any invalid serials or re-upload rejected photos, and resubmit.
+          </Text>
+        </View>
+      )}
+
       {/* ─── 1. CUSTOMER & SITE CARD (MINIMAL, ZERO SHADOW) ─── */}
       <View style={styles.card}>
         <View style={styles.customerHeader}>
@@ -1029,6 +1105,72 @@ const styles = StyleSheet.create({
     padding: 10,
     elevation: 0,
     shadowColor: "transparent",
+  },
+  rejectionCard: {
+    backgroundColor: "#FEF2F2",
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "#EF4444",
+    padding: 11,
+    elevation: 0,
+    shadowColor: "transparent",
+    marginBottom: 2,
+  },
+  rejectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  rejectionHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
+  },
+  rejectionTitle: {
+    fontSize: 12.5,
+    fontWeight: "800",
+    color: "#DC2626",
+    textTransform: "uppercase",
+  },
+  rejectionBadge: {
+    backgroundColor: "#FEE2E2",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+  },
+  rejectionBadgeText: {
+    fontSize: 9.5,
+    fontWeight: "700",
+    color: "#B91C1C",
+  },
+  rejectionReasonLabel: {
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: "#991B1B",
+    marginBottom: 3,
+  },
+  rejectionReasonBox: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    padding: 8,
+    marginBottom: 6,
+  },
+  rejectionReasonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#7F1D1D",
+    lineHeight: 16,
+  },
+  rejectionHelper: {
+    fontSize: 10,
+    color: "#B91C1C",
+    lineHeight: 14,
   },
   cardSubtitle: {
     fontSize: 10.5,

@@ -45,6 +45,7 @@ import type * as SpeechType from "expo-speech";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Linking,
   Platform,
   Pressable,
@@ -1281,59 +1282,66 @@ export default function TechnicianWorkOrderNavigationScreen({
           activityCount={workOrder.histories?.length || 0}
         />
 
-        {/* Scrollable Work Order Update View */}
-        <ScrollView
-          contentContainerStyle={styles.fsScrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={Boolean(refreshing || isPullRefreshing)}
-              onRefresh={handlePullToRefresh}
-              colors={["#0F172A"]}
-              tintColor="#0F172A"
-            />
-          }
+        {/* Scrollable Work Order Update View with KeyboardAvoidingView */}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
         >
-          {activeFsTab === "details" && (
-            <WorkOrderDetailsTab
-              workOrder={workOrder}
-              formData={fsFormData}
-              setFormData={handleFsFormChange}
-              onScanIndoor={() => fsScanner.openScanner("indoor")}
-              onScanOutdoor={() => fsScanner.openScanner("outdoor")}
-              onScanWarranty={() => fsScanner.openScanner("warranty")}
-              onSave={handleFsSaveDetails}
-              saving={isSavingFsDetails}
-              autoSaveStatus={fsAutoSaveStatus}
-            />
-          )}
+          <ScrollView
+            contentContainerStyle={styles.fsScrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            refreshControl={
+              <RefreshControl
+                refreshing={Boolean(refreshing || isPullRefreshing)}
+                onRefresh={handlePullToRefresh}
+                colors={["#0F172A"]}
+                tintColor="#0F172A"
+              />
+            }
+          >
+            {activeFsTab === "details" && (
+              <WorkOrderDetailsTab
+                workOrder={workOrder}
+                formData={fsFormData}
+                setFormData={handleFsFormChange}
+                onScanIndoor={() => fsScanner.openScanner("indoor")}
+                onScanOutdoor={() => fsScanner.openScanner("outdoor")}
+                onScanWarranty={() => fsScanner.openScanner("warranty")}
+                onSave={handleFsSaveDetails}
+                saving={isSavingFsDetails}
+                autoSaveStatus={fsAutoSaveStatus}
+              />
+            )}
 
-          {activeFsTab === "attachments" && (
-            <WorkOrderAttachmentsTab
-              workOrder={workOrder}
-              files={workOrder.files || []}
-              fileTypes={fsFileUpload.fileTypes}
-              uploading={fsFileUpload.uploading}
-              uploadingFileTypeId={fsFileUpload.uploadingFileTypeId}
-              processing={fsFileUpload.processing}
-              uploadData={fsFileUpload.uploadData}
-              onSelectFileType={fsFileUpload.handleSelectFileType}
-              onSelectCamera={fsFileUpload.handleSelectCamera}
-              onSelectGallery={fsFileUpload.handleSelectGallery}
-              onConfirmUpload={fsFileUpload.handleConfirmUpload}
-              onCancelPreview={fsFileUpload.handleCancelPreview}
-              showPreviewModal={fsFileUpload.showPreviewModal}
-              onDelete={fsFileUpload.handleFileDelete}
-              isWarrantyCase={fsIsWarrantyCase}
-              captureAndUploadForType={fsFileUpload.captureAndUploadForType}
-              uploadDirectFile={fsFileUpload.uploadDirectFile}
-            />
-          )}
+            {activeFsTab === "attachments" && (
+              <WorkOrderAttachmentsTab
+                workOrder={workOrder}
+                files={workOrder.files || []}
+                fileTypes={fsFileUpload.fileTypes}
+                uploading={fsFileUpload.uploading}
+                uploadingFileTypeId={fsFileUpload.uploadingFileTypeId}
+                processing={fsFileUpload.processing}
+                uploadData={fsFileUpload.uploadData}
+                onSelectFileType={fsFileUpload.handleSelectFileType}
+                onSelectCamera={fsFileUpload.handleSelectCamera}
+                onSelectGallery={fsFileUpload.handleSelectGallery}
+                onConfirmUpload={fsFileUpload.handleConfirmUpload}
+                onCancelPreview={fsFileUpload.handleCancelPreview}
+                showPreviewModal={fsFileUpload.showPreviewModal}
+                onDelete={fsFileUpload.handleFileDelete}
+                isWarrantyCase={fsIsWarrantyCase}
+                captureAndUploadForType={fsFileUpload.captureAndUploadForType}
+                uploadDirectFile={fsFileUpload.uploadDirectFile}
+              />
+            )}
 
-          {activeFsTab === "activity" && (
-            <WorkOrderActivityTab workOrder={workOrder} />
-          )}
-        </ScrollView>
+            {activeFsTab === "activity" && (
+              <WorkOrderActivityTab workOrder={workOrder} />
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
 
         {/* Barcode Scanner */}
         <BarcodeScanner

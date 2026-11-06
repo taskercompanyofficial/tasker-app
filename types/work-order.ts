@@ -55,6 +55,8 @@ export interface WorkOrderFile {
   notes?: string;
   uploaded_at: string;
   uploaded_by?: number;
+  approval_status?: "pending" | "approved" | "rejected" | string;
+  approval_remark?: string | null;
 }
 
 export interface WorkOrder {
@@ -65,6 +67,8 @@ export interface WorkOrder {
   status: WorkOrderStatus;
   sub_status?: WorkOrderStatus;
   priority: "low" | "medium" | "high" | "urgent";
+  reject_reason?: string | null;
+  rejected_at?: string | null;
 
   // Customer
   customer: WorkOrderCustomer;
