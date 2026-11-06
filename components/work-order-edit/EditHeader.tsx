@@ -7,26 +7,70 @@ import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 
 interface EditHeaderProps {
-  onInfoPress: () => void;
+  onInfoPress?: () => void;
+  workOrderNumber?: string | number;
+  serviceName?: string;
+  countdown?: string;
 }
 
-export default function EditHeader({ onInfoPress }: EditHeaderProps) {
+export default function EditHeader({
+  onInfoPress,
+  workOrderNumber,
+  serviceName,
+  countdown,
+}: EditHeaderProps) {
+  const title = workOrderNumber
+    ? String(workOrderNumber).startsWith("#")
+      ? `Order ${workOrderNumber}`
+      : `Order #${workOrderNumber}`
+    : "Edit Work Order";
+
   return (
     <View style={styles.header}>
+      {/* 1. Left: Back Button */}
       <TouchableOpacity
         onPress={() => router.back()}
-        style={styles.headerButton}
+        style={styles.backButton}
+        activeOpacity={0.8}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <DirectionalIcon name="arrow-back" size={20} color="#111827" />
+        <DirectionalIcon name="arrow-back" size={20} color="#0F172A" />
       </TouchableOpacity>
-      <AppText style={styles.headerTitle}>Edit Work Order</AppText>
-      <TouchableOpacity onPress={onInfoPress} style={styles.headerButton}>
-        <Ionicons
-          name="information-circle-outline"
-          size={20}
-          color={Colors.themes.provider.primary}
-        />
-      </TouchableOpacity>
+
+      {/* 2. Mid: Work Order Number & Service Type */}
+      <View style={styles.headerCenter}>
+        <AppText style={styles.headerTitle} numberOfLines={1}>
+          {title}
+        </AppText>
+        {serviceName ? (
+          <AppText style={styles.headerSubtitle} numberOfLines={1}>
+            {serviceName}
+          </AppText>
+        ) : null}
+      </View>
+
+      {/* 3. Right Corner: Countdown Timer or Info Icon */}
+      {countdown ? (
+        <View style={styles.headerTimerBadge}>
+          <View style={styles.headerTimerDot} />
+          <AppText style={styles.headerTimerDigits}>{countdown}</AppText>
+        </View>
+      ) : onInfoPress ? (
+        <TouchableOpacity
+          onPress={onInfoPress}
+          style={styles.infoButton}
+          activeOpacity={0.8}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons
+            name="information-circle-outline"
+            size={22}
+            color={Colors.themes.provider.primary}
+          />
+        </TouchableOpacity>
+      ) : (
+        <View style={{ width: 42 }} />
+      )}
     </View>
   );
 }
@@ -36,20 +80,76 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: "transparent",
   },
-  headerButton: {
-    padding: 4,
-    width: 32,
+  backButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(255, 255, 255, 0.96)",
     alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 10,
   },
   headerTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#111827",
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#0F172A",
+    textAlign: "center",
+  },
+  headerSubtitle: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#64748B",
+    marginTop: 2,
+    textAlign: "center",
+  },
+  headerTimerBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5.5,
+    backgroundColor: "#FFFBEB",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  headerTimerDot: {
+    width: 6.5,
+    height: 6.5,
+    borderRadius: 3.25,
+    backgroundColor: "#D97706",
+  },
+  headerTimerDigits: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#B45309",
+    fontVariant: ["tabular-nums"],
+    letterSpacing: 0.5,
+  },
+  infoButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(255, 255, 255, 0.96)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
 });

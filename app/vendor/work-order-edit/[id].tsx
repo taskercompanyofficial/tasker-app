@@ -121,7 +121,15 @@ export default function VendorWorkOrderEditScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       {/* Header */}
-      <EditHeader onInfoPress={() => setShowGuideModal(true)} />
+      <EditHeader
+        onInfoPress={() => setShowGuideModal(true)}
+        workOrderNumber={workOrder?.work_order_number || workOrder?.id}
+        serviceName={
+          workOrder?.parent_service?.name ||
+          workOrder?.service?.name ||
+          "Service Order"
+        }
+      />
 
       {/* Auto-save Indicator */}
       {autoSaving && (

@@ -206,6 +206,45 @@ export default function TechnicianWorkOrderNavigationScreen({
   );
   const isWorkStarted = isWorkAlreadyStarted || hasStartedWorkInSession;
 
+  // Live in-progress service elapsed timer
+  const startTimestamp = useMemo(() => {
+    if (workOrder.service_start_date && workOrder.service_start_time) {
+      const parsed = Date.parse(
+        `${workOrder.service_start_date}T${workOrder.service_start_time}`,
+      );
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+    if (workOrder.updated_at) {
+      const parsed = Date.parse(workOrder.updated_at);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+    return sessionStartTimeRef.current;
+  }, [
+    workOrder.service_start_date,
+    workOrder.service_start_time,
+    workOrder.updated_at,
+  ]);
+
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
+
+  useEffect(() => {
+    if (!isWorkStarted) return;
+    const updateElapsed = () => {
+      const diff = Math.max(0, Math.floor((Date.now() - startTimestamp) / 1000));
+      setElapsedSeconds(diff);
+    };
+    updateElapsed();
+    const interval = setInterval(updateElapsed, 1000);
+    return () => clearInterval(interval);
+  }, [isWorkStarted, startTimestamp]);
+
+  const timerHours = Math.floor(elapsedSeconds / 3600);
+  const timerMinutes = Math.floor((elapsedSeconds % 3600) / 60);
+  const timerSecs = elapsedSeconds % 60;
+  const formattedCountdown = `${timerHours.toString().padStart(2, "0")}:${timerMinutes
+    .toString()
+    .padStart(2, "0")}:${timerSecs.toString().padStart(2, "0")}`;
+
   const isAlreadyAccepted = Boolean(
     isAccepted ||
       workOrder.accepted_at ||
@@ -955,8 +994,9 @@ export default function TechnicianWorkOrderNavigationScreen({
   if (isWorkStarted) {
     return (
       <View style={[styles.fsContainer, { paddingTop: insets.top }]}>
-        {/* Top Header */}
+        {/* Top Header: Transparent bg, Back Button, Mid: WO# & Service Type, Right: Countdown */}
         <View style={styles.fsHeader}>
+          {/* 1. Left: Back Button */}
           <TouchableOpacity
             style={styles.floatingRoundBtn}
             onPress={() =>
@@ -965,9 +1005,12 @@ export default function TechnicianWorkOrderNavigationScreen({
                 : router.replace("/vendor/(tabs)/jobs?status=active")
             }
             activeOpacity={0.8}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <DirectionalIcon name="arrow-back" size={20} color="#0F172A" />
           </TouchableOpacity>
+
+          {/* 2. Mid: Work Order Number & Service Type */}
           <View style={styles.fsHeaderCenter}>
             <Text style={styles.fsHeaderTitle} numberOfLines={1}>
               {workOrder.work_order_number
@@ -980,33 +1023,11 @@ export default function TechnicianWorkOrderNavigationScreen({
                 "Service Order"}
             </Text>
           </View>
-          <View style={styles.fsHeaderRight}>
-            <View
-              style={[
-                styles.fsTypePill,
-                isWarranty ? styles.fsTypePillWarranty : styles.fsTypePillStandard,
-              ]}
-            >
-              <Ionicons
-                name={isWarranty ? "shield-checkmark" : "pricetag"}
-                size={11}
-                color={isWarranty ? "#059669" : "#2563EB"}
-                style={{ marginRight: 4 }}
-              />
-              <Text
-                style={[
-                  styles.fsTypeText,
-                  isWarranty ? styles.fsTypeTextWarranty : styles.fsTypeTextStandard,
-                ]}
-                numberOfLines={1}
-              >
-                {orderTypeLabel}
-              </Text>
-            </View>
-            <View style={styles.fsStatusPill}>
-              <View style={styles.fsStatusDot} />
-              <Text style={styles.fsStatusText}>In Progress</Text>
-            </View>
+
+          {/* 3. Right Corner: Countdown / In-Progress Timer */}
+          <View style={styles.fsHeaderTimerBadge}>
+            <View style={styles.fsHeaderTimerDot} />
+            <Text style={styles.fsHeaderTimerDigits}>{formattedCountdown}</Text>
           </View>
         </View>
 
@@ -1015,11 +1036,6 @@ export default function TechnicianWorkOrderNavigationScreen({
           contentContainerStyle={styles.fsScrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Live Countdown / Stopwatch to started time */}
-          <WorkStartedTimerCard
-            workOrder={workOrder}
-            sessionStartTime={sessionStartTimeRef.current}
-          />
 
           {/* Customer & Location Card */}
           <View style={styles.fsCard}>
@@ -2023,25 +2039,51 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-    backgroundColor: "#FFFFFF",
-    ...Shadows.sm,
+    paddingVertical: 10,
+    backgroundColor: "transparent",
   },
   fsHeaderCenter: {
     flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
     marginHorizontal: 10,
   },
   fsHeaderTitle: {
     fontSize: 15,
     fontWeight: "800",
     color: "#0F172A",
+    textAlign: "center",
   },
   fsHeaderSubtitle: {
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: "500",
     color: "#64748B",
-    marginTop: 1,
+    marginTop: 2,
+    textAlign: "center",
+  },
+  fsHeaderTimerBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5.5,
+    backgroundColor: "#FFFBEB",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  fsHeaderTimerDot: {
+    width: 6.5,
+    height: 6.5,
+    borderRadius: 3.25,
+    backgroundColor: "#D97706",
+  },
+  fsHeaderTimerDigits: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#B45309",
+    fontVariant: ["tabular-nums"],
+    letterSpacing: 0.5,
   },
   fsHeaderRight: {
     flexDirection: "row",
