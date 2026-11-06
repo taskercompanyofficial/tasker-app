@@ -250,6 +250,8 @@ export default function VendorWorkOrderEditScreen() {
             showPreviewModal={fileUpload.showPreviewModal}
             onDelete={fileUpload.handleFileDelete}
             isWarrantyCase={isWarrantyCase}
+            captureAndUploadForType={fileUpload.captureAndUploadForType}
+            uploadDirectFile={fileUpload.uploadDirectFile}
           />
         )}
 

@@ -5,12 +5,14 @@ import {
   Dimensions,
   Image,
   Modal,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { FileType } from "@/types/file-type";
 import { WorkOrder, WorkOrderFile } from "@/types/work-order";
 import getImageUrl from "@/lib/utils";
@@ -33,6 +35,8 @@ interface WorkOrderAttachmentsTabProps {
   showPreviewModal: boolean;
   onDelete: (file: any) => Promise<void>;
   isWarrantyCase?: boolean;
+  captureAndUploadForType?: (fileTypeId: number, source: "camera" | "gallery") => Promise<void>;
+  uploadDirectFile?: (uri: string, fileTypeId: number) => Promise<void>;
 }
 
 export default function WorkOrderAttachmentsTab({
@@ -50,12 +54,17 @@ export default function WorkOrderAttachmentsTab({
   showPreviewModal,
   onDelete,
   isWarrantyCase = false,
+  captureAndUploadForType,
+  uploadDirectFile,
 }: WorkOrderAttachmentsTabProps) {
   // Sample preview modal
   const [sampleModalItem, setSampleModalItem] = useState<FileType | null>(null);
 
   // Full-size uploaded image viewer modal
   const [viewingFile, setViewingFile] = useState<WorkOrderFile | null>(null);
+
+  // Pick source sheet for a specific file type
+  const [pickingFileType, setPickingFileType] = useState<FileType | null>(null);
 
   // Bottom sheet for "Upload Other"
   const [showOtherSheet, setShowOtherSheet] = useState(false);
@@ -84,7 +93,6 @@ export default function WorkOrderAttachmentsTab({
     });
 
     // Apply CRM Warranty Rules:
-    // If it's a warranty job, serial barcode photos and warranty card must be required
     const list = [...fromParent];
     if (isWarrantyCase) {
       const serialKeywords = ["serial", "barcode", "warranty"];
@@ -100,7 +108,7 @@ export default function WorkOrderAttachmentsTab({
       });
     }
 
-    // Default fallback if no requirement rules are configured
+    // Default fallback if no requirements configured
     if (list.length === 0) {
       safeFileTypes.forEach((ft) => {
         const slug = (ft.slug || "").toLowerCase();
@@ -127,7 +135,7 @@ export default function WorkOrderAttachmentsTab({
       .map((ft) => ({
         value: ft.id,
         label: ft.name || `File Type #${ft.id}`,
-        description: ft.description || null,
+        description: null,
       }));
   }, [safeFileTypes, requiredFileTypes]);
 
@@ -148,13 +156,55 @@ export default function WorkOrderAttachmentsTab({
     );
   }, [safeFiles, reqIdSet]);
 
-  // Direct 1-tap trigger for a specific required file type
-  const handleDirectCapture = (fileTypeId: number, source: "camera" | "gallery") => {
-    onSelectFileType(fileTypeId);
-    if (source === "camera") {
-      onSelectCamera();
-    } else {
-      onSelectGallery();
+  const handleSourceSelect = async (source: "camera" | "gallery") => {
+    if (!pickingFileType) return;
+    const targetType = pickingFileType;
+    setPickingFileType(null);
+
+    if (captureAndUploadForType) {
+      await captureAndUploadForType(targetType.id, source);
+      return;
+    }
+
+    try {
+      if (source === "camera") {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert("Permission Required", "Camera permission is required to capture photos.");
+          return;
+        }
+        const result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ["images"],
+          quality: 0.6,
+          allowsEditing: false,
+        });
+        if (!result.canceled && result.assets[0]?.uri) {
+          if (uploadDirectFile) {
+            await uploadDirectFile(result.assets[0].uri, targetType.id);
+          }
+        }
+      } else {
+        if (Platform.OS !== "android") {
+          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (status !== "granted") {
+            Alert.alert("Permission Required", "Gallery permission is required to select photos.");
+            return;
+          }
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["images"],
+          quality: 0.6,
+          allowsMultipleSelection: false,
+        });
+        if (!result.canceled && result.assets[0]?.uri) {
+          if (uploadDirectFile) {
+            await uploadDirectFile(result.assets[0].uri, targetType.id);
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error("Direct pick & upload error:", err);
+      Alert.alert("Upload Error", err.message || "Failed to pick or upload photo");
     }
   };
 
@@ -165,175 +215,113 @@ export default function WorkOrderAttachmentsTab({
 
   return (
     <View style={styles.container}>
-      {/* ─── 1. REQUIRED FILES TABLE / CHECKLIST ─── */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View style={styles.cardHeaderLeft}>
-            <Ionicons name="shield-checkmark-outline" size={16} color="#0F172A" />
-            <Text style={styles.cardTitle}>Required Job Attachments</Text>
-          </View>
-          <View style={styles.counterBadge}>
-            <Text style={styles.counterBadgeText}>
-              {
-                requiredFileTypes.filter((rf) =>
-                  safeFiles.some(
-                    (f) => (f.file_type?.id || (f as any).file_type_id) === rf.id
-                  )
-                ).length
-              }{" "}
-              / {requiredFileTypes.length} Done
-            </Text>
-          </View>
-        </View>
+      {/* ─── EACH IMAGE IN ITS OWN DISTINCT CARD (NO BADGES, * FOR REQUIRED) ─── */}
+      {requiredFileTypes.map((reqType) => {
+        if (!reqType) return null;
+        const uploadedFile = safeFiles.find(
+          (f) => (f.file_type?.id || (f as any).file_type_id) === reqType.id
+        );
+        const isUploaded = Boolean(uploadedFile);
+        const sampleUrl = reqType.reference_image_url || reqType.reference_image;
 
-        <Text style={styles.cardDescription}>
-          The following photos are required by standard operating procedure. Check the sample photo before capturing.
-        </Text>
+        return (
+          <View key={reqType.id} style={styles.card}>
+            {/* Header: File Type Name with red * for required, sample link on right */}
+            <View style={styles.cardHeader}>
+              <View style={styles.titleRow}>
+                <Text style={styles.fileNameTitle}>
+                  {reqType.name} <Text style={styles.requiredStar}>*</Text>
+                </Text>
+              </View>
 
-        {/* Required Files Table Rows */}
-        <View style={styles.table}>
-          {requiredFileTypes.map((reqType, index) => {
-            if (!reqType) return null;
-            const uploadedFile = safeFiles.find(
-              (f) => (f.file_type?.id || (f as any).file_type_id) === reqType.id
-            );
-            const isDone = Boolean(uploadedFile);
-            const sampleUrl = reqType.reference_image_url || reqType.reference_image;
+              {Boolean(sampleUrl) && (
+                <TouchableOpacity
+                  style={styles.sampleLink}
+                  onPress={() => setSampleModalItem(reqType)}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name="eye-outline" size={13} color="#0284C7" />
+                  <Text style={styles.sampleLinkText}>View Sample</Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
-            return (
-              <View
-                key={reqType.id || index}
-                style={[
-                  styles.tableRow,
-                  index === requiredFileTypes.length - 1 && styles.tableRowLast,
-                ]}
-              >
-                {/* Left: Info & Badges */}
-                <View style={styles.rowInfo}>
-                  <View style={styles.rowTitleRow}>
-                    <Text style={styles.rowTitle}>{reqType.name}</Text>
-                    {isDone ? (
-                      <View style={styles.doneBadge}>
-                        <Ionicons name="checkmark-circle" size={12} color="#059669" />
-                        <Text style={styles.doneBadgeText}>Uploaded</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.requiredBadge}>
-                        <Text style={styles.requiredBadgeText}>Required</Text>
-                      </View>
-                    )}
+            {/* Body: Uploaded Image Card OR Clean Upload Button */}
+            {isUploaded ? (
+              <View style={styles.uploadedImageBox}>
+                <TouchableOpacity
+                  onPress={() => setViewingFile(uploadedFile!)}
+                  activeOpacity={0.88}
+                  style={styles.uploadedTouchArea}
+                >
+                  <Image
+                    source={{ uri: getImageUrl(uploadedFile?.file_path) }}
+                    style={styles.uploadedImagePreview}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.viewZoomOverlay}>
+                    <Ionicons name="expand" size={16} color="#FFFFFF" />
                   </View>
+                </TouchableOpacity>
 
-                  {Boolean(reqType.description) && (
-                    <Text style={styles.rowDesc} numberOfLines={2}>
-                      {reqType.description}
-                    </Text>
-                  )}
+                {/* Bottom Row Actions for Uploaded Photo */}
+                <View style={styles.uploadedActionRow}>
+                  <TouchableOpacity
+                    style={styles.replaceBtn}
+                    onPress={() => setPickingFileType(reqType)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="camera-outline" size={14} color="#0F172A" />
+                    <Text style={styles.replaceBtnText}>Replace Photo</Text>
+                  </TouchableOpacity>
 
-                  {/* Sample Image Pill & Upload Status */}
-                  <View style={styles.rowMetaRow}>
-                    {Boolean(sampleUrl) ? (
-                      <TouchableOpacity
-                        style={styles.samplePill}
-                        onPress={() => setSampleModalItem(reqType)}
-                        activeOpacity={0.75}
-                      >
-                        <Ionicons name="eye-outline" size={12} color="#0284C7" />
-                        <Text style={styles.samplePillText}>View Sample</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <Text style={styles.noSampleText}>No sample image</Text>
-                    )}
-
-                    {isDone && (
-                      <TouchableOpacity
-                        style={styles.viewUploadedPill}
-                        onPress={() => setViewingFile(uploadedFile!)}
-                        activeOpacity={0.75}
-                      >
-                        <Ionicons name="image-outline" size={12} color="#0F172A" />
-                        <Text style={styles.viewUploadedPillText}>View Upload</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-
-                {/* Right: Uploaded Thumbnail or 1-Tap Capture Buttons */}
-                <View style={styles.rowAction}>
-                  {isDone ? (
-                    <View style={styles.thumbnailContainer}>
-                      <TouchableOpacity
-                        onPress={() => setViewingFile(uploadedFile!)}
-                        activeOpacity={0.85}
-                      >
-                        <Image
-                          source={{
-                            uri: getImageUrl(uploadedFile?.file_path),
-                          }}
-                          style={styles.thumbnailImage}
-                        />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.thumbDeleteBtn}
-                        onPress={() => {
-                          Alert.alert(
-                            "Delete Photo",
-                            `Delete ${reqType.name}?`,
-                            [
-                              { text: "Cancel", style: "cancel" },
-                              {
-                                text: "Delete",
-                                style: "destructive",
-                                onPress: () => onDelete(uploadedFile),
-                              },
-                            ]
-                          );
-                        }}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="close" size={12} color="#FFFFFF" />
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    <View style={styles.directActionColumn}>
-                      <TouchableOpacity
-                        style={styles.directCameraBtn}
-                        onPress={() => handleDirectCapture(reqType.id, "camera")}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="camera" size={14} color="#0F172A" />
-                        <Text style={styles.directBtnText}>Camera</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={styles.directGalleryBtn}
-                        onPress={() => handleDirectCapture(reqType.id, "gallery")}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="images-outline" size={12} color="#475569" />
-                        <Text style={styles.directGalleryText}>Gallery</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
+                  <TouchableOpacity
+                    style={styles.deleteBtn}
+                    onPress={() => {
+                      Alert.alert("Delete Photo", `Delete ${reqType.name}?`, [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                          text: "Delete",
+                          style: "destructive",
+                          onPress: () => onDelete(uploadedFile),
+                        },
+                      ]);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="trash-outline" size={14} color="#DC2626" />
+                    <Text style={styles.deleteBtnText}>Delete</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
-            );
-          })}
-        </View>
-      </View>
+            ) : (
+              <View style={styles.uploadPromptBox}>
+                <TouchableOpacity
+                  style={styles.uploadMainBtn}
+                  onPress={() => setPickingFileType(reqType)}
+                  disabled={uploading}
+                  activeOpacity={0.8}
+                >
+                  {uploading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Ionicons name="camera" size={16} color="#FFFFFF" />
+                      <Text style={styles.uploadMainBtnText}>Upload Photo</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        );
+      })}
 
-      {/* ─── 2. "+ UPLOAD OTHER / ADDITIONAL FILES" ─── */}
+      {/* ─── ADDITIONAL ATTACHMENTS CARD ─── */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <View style={styles.cardHeaderLeft}>
-            <Ionicons name="folder-open-outline" size={16} color="#0F172A" />
-            <Text style={styles.cardTitle}>Additional Proofs & Documents</Text>
-          </View>
+          <Text style={styles.fileNameTitle}>Additional Attachments</Text>
         </View>
-
-        <Text style={styles.cardDescription}>
-          Need to attach extra files like spare part photos, purchase bills, or pressure gauge readings?
-        </Text>
 
         <TouchableOpacity
           style={styles.uploadOtherBtn}
@@ -384,7 +372,61 @@ export default function WorkOrderAttachmentsTab({
         )}
       </View>
 
-      {/* ─── MODAL 1: SAMPLE REFERENCE IMAGE VIEWER ─── */}
+      {/* ─── MODAL 1: PICK SOURCE (CAMERA OR GALLERY) ─── */}
+      <Modal
+        visible={Boolean(pickingFileType)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPickingFileType(null)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setPickingFileType(null)}
+        >
+          <View style={styles.sourcePickerBox}>
+            <Text style={styles.sourcePickerTitle}>
+              Upload {pickingFileType?.name}
+            </Text>
+            <Text style={styles.sourcePickerSub}>
+              Choose how you would like to attach this photo:
+            </Text>
+
+            <View style={styles.sourceBtnRow}>
+              <TouchableOpacity
+                style={styles.sourceChoiceBtn}
+                onPress={() => handleSourceSelect("camera")}
+                activeOpacity={0.8}
+              >
+                <View style={styles.sourceIconBox}>
+                  <Ionicons name="camera" size={24} color="#0F172A" />
+                </View>
+                <Text style={styles.sourceChoiceText}>Take Photo</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.sourceChoiceBtn}
+                onPress={() => handleSourceSelect("gallery")}
+                activeOpacity={0.8}
+              >
+                <View style={styles.sourceIconBox}>
+                  <Ionicons name="images" size={24} color="#0F172A" />
+                </View>
+                <Text style={styles.sourceChoiceText}>From Gallery</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.sourceCancelBtn}
+              onPress={() => setPickingFileType(null)}
+            >
+              <Text style={styles.sourceCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ─── MODAL 2: SAMPLE REFERENCE IMAGE VIEWER ─── */}
       <Modal
         visible={Boolean(sampleModalItem)}
         transparent
@@ -397,10 +439,7 @@ export default function WorkOrderAttachmentsTab({
               <View style={styles.sampleModalHeader}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sampleModalTitle}>
-                    Sample Photo: {sampleModalItem?.name}
-                  </Text>
-                  <Text style={styles.sampleModalSubtitle}>
-                    Please match this angle and framing when capturing
+                    Sample: {sampleModalItem?.name}
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -424,85 +463,20 @@ export default function WorkOrderAttachmentsTab({
                 />
               </View>
 
-              {Boolean(sampleModalItem?.description) && (
-                <View style={styles.sampleInstructions}>
-                  <Ionicons name="information-circle-outline" size={16} color="#0284C7" />
-                  <Text style={styles.sampleInstructionsText}>
-                    {sampleModalItem?.description}
-                  </Text>
-                </View>
-              )}
-
               <TouchableOpacity
                 style={styles.sampleCaptureBtn}
                 onPress={() => {
-                  const typeId = sampleModalItem!.id;
+                  const target = sampleModalItem!;
                   setSampleModalItem(null);
-                  setTimeout(() => handleDirectCapture(typeId, "camera"), 300);
+                  setTimeout(() => setPickingFileType(target), 300);
                 }}
                 activeOpacity={0.8}
               >
                 <Ionicons name="camera" size={16} color="#FFFFFF" />
                 <Text style={styles.sampleCaptureBtnText}>
-                  Open Camera For This Photo
+                  Take Photo For This Requirement
                 </Text>
               </TouchableOpacity>
-            </View>
-          </View>
-        )}
-      </Modal>
-
-      {/* ─── MODAL 2: UPLOAD CONFIRMATION PREVIEW ─── */}
-      <Modal
-        visible={Boolean(showPreviewModal && uploadData)}
-        transparent
-        animationType="slide"
-        onRequestClose={onCancelPreview}
-      >
-        {Boolean(uploadData) && (
-          <View style={styles.modalOverlay}>
-            <View style={styles.previewModalBox}>
-              <View style={styles.previewModalHeader}>
-                <Text style={styles.previewModalTitle}>
-                  Confirm {selectedFileTypeName}
-                </Text>
-                <TouchableOpacity onPress={onCancelPreview} style={styles.modalCloseBtn}>
-                  <Ionicons name="close" size={20} color="#0F172A" />
-                </TouchableOpacity>
-              </View>
-
-              {Boolean(uploadData?.imageUri) && (
-                <Image
-                  source={{ uri: uploadData!.imageUri }}
-                  style={styles.previewImage}
-                  resizeMode="contain"
-                />
-              )}
-
-              <View style={styles.previewBtnRow}>
-                <TouchableOpacity
-                  style={styles.previewCancelBtn}
-                  onPress={onCancelPreview}
-                  disabled={uploading || processing}
-                >
-                  <Text style={styles.previewCancelText}>Retake / Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.previewConfirmBtn}
-                  onPress={onConfirmUpload}
-                  disabled={uploading || processing}
-                >
-                  {uploading || processing ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <>
-                      <Ionicons name="cloud-upload" size={16} color="#FFFFFF" />
-                      <Text style={styles.previewConfirmText}>Upload Photo</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
             </View>
           </View>
         )}
@@ -536,11 +510,6 @@ export default function WorkOrderAttachmentsTab({
               <Text style={styles.fullViewerTitle}>
                 {viewingFile?.file_type?.name || "Uploaded Photo"}
               </Text>
-              {Boolean(viewingFile?.uploaded_at) && (
-                <Text style={styles.fullViewerTime}>
-                  Uploaded: {new Date(viewingFile!.uploaded_at).toLocaleString()}
-                </Text>
-              )}
             </View>
           </View>
         )}
@@ -554,7 +523,10 @@ export default function WorkOrderAttachmentsTab({
         selectedValue={null}
         onSelect={(typeId) => {
           setShowOtherSheet(false);
-          setTimeout(() => handleDirectCapture(typeId, "camera"), 300);
+          const found = safeFileTypes.find((ft) => ft.id === typeId);
+          if (found) {
+            setTimeout(() => setPickingFileType(found), 300);
+          }
         }}
         onClose={() => setShowOtherSheet(false)}
       />
@@ -582,213 +554,133 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  cardHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  cardTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#0F172A",
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
-  },
-  cardDescription: {
-    fontSize: 12,
-    color: "#64748B",
-    lineHeight: 17,
     marginBottom: 12,
   },
-  counterBadge: {
-    backgroundColor: "#F1F5F9",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  counterBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  table: {
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 8,
-    overflow: "hidden",
-  },
-  tableRow: {
+  titleRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-    backgroundColor: "#FFFFFF",
-    gap: 10,
-  },
-  tableRowLast: {
-    borderBottomWidth: 0,
-  },
-  rowInfo: {
     flex: 1,
   },
-  rowTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flexWrap: "wrap",
-  },
-  rowTitle: {
-    fontSize: 13,
+  fileNameTitle: {
+    fontSize: 14,
     fontWeight: "700",
     color: "#0F172A",
   },
-  requiredBadge: {
-    backgroundColor: "#FEF3C7",
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-    borderRadius: 4,
-  },
-  requiredBadgeText: {
-    fontSize: 10,
+  requiredStar: {
+    color: "#DC2626",
+    fontSize: 15,
     fontWeight: "700",
-    color: "#B45309",
   },
-  doneBadge: {
+  sampleLink: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
-    backgroundColor: "#D1FAE5",
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-    borderRadius: 4,
-  },
-  doneBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#059669",
-  },
-  rowDesc: {
-    fontSize: 11,
-    color: "#64748B",
-    marginTop: 2,
-    lineHeight: 15,
-  },
-  rowMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 6,
-  },
-  samplePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: "#E0F2FE",
-    paddingHorizontal: 7,
+    gap: 4,
+    backgroundColor: "#F0F9FF",
+    paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#BAE6FD",
   },
-  samplePillText: {
+  sampleLinkText: {
     fontSize: 11,
     fontWeight: "600",
     color: "#0284C7",
   },
-  viewUploadedPill: {
+  uploadPromptBox: {
+    paddingVertical: 4,
+  },
+  uploadMainBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
-    backgroundColor: "#F1F5F9",
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  viewUploadedPillText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#0F172A",
-  },
-  noSampleText: {
-    fontSize: 10,
-    color: "#94A3B8",
-    fontStyle: "italic",
-  },
-  rowAction: {
-    alignItems: "center",
     justifyContent: "center",
-  },
-  thumbnailContainer: {
-    position: "relative",
-    width: 54,
-    height: 54,
+    gap: 8,
+    backgroundColor: "#0F172A",
+    paddingVertical: 12,
     borderRadius: 8,
+  },
+  uploadMainBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  uploadedImageBox: {
+    borderRadius: 10,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: "#E2E8F0",
+    backgroundColor: "#F8FAFC",
   },
-  thumbnailImage: {
+  uploadedTouchArea: {
+    position: "relative",
+    width: "100%",
+    height: 150,
+    backgroundColor: "#F1F5F9",
+  },
+  uploadedImagePreview: {
     width: "100%",
     height: "100%",
   },
-  thumbDeleteBtn: {
+  viewZoomOverlay: {
     position: "absolute",
-    top: 2,
-    right: 2,
-    backgroundColor: "rgba(15, 23, 42, 0.75)",
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    top: 8,
+    right: 8,
+    backgroundColor: "rgba(15, 23, 42, 0.7)",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
-  directActionColumn: {
-    gap: 4,
-  },
-  directCameraBtn: {
+  uploadedActionRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+  },
+  replaceBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
     backgroundColor: "#F1F5F9",
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 6,
   },
-  directBtnText: {
-    fontSize: 11,
-    fontWeight: "700",
+  replaceBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
     color: "#0F172A",
   },
-  directGalleryBtn: {
+  deleteBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
   },
-  directGalleryText: {
-    fontSize: 10,
+  deleteBtnText: {
+    fontSize: 12,
     fontWeight: "600",
-    color: "#64748B",
+    color: "#DC2626",
   },
   uploadOtherBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 10,
+    paddingVertical: 11,
     borderWidth: 1,
     borderColor: "#CBD5E1",
     borderRadius: 8,
     backgroundColor: "#F8FAFC",
+    marginTop: 4,
   },
   uploadOtherBtnText: {
     fontSize: 13,
@@ -831,10 +723,71 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.6)",
+    backgroundColor: "rgba(15, 23, 42, 0.65)",
     justifyContent: "center",
     alignItems: "center",
     padding: 16,
+  },
+  sourcePickerBox: {
+    width: "100%",
+    maxWidth: 340,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 18,
+    alignItems: "center",
+  },
+  sourcePickerTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#0F172A",
+    textAlign: "center",
+  },
+  sourcePickerSub: {
+    fontSize: 12,
+    color: "#64748B",
+    textAlign: "center",
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  sourceBtnRow: {
+    flexDirection: "row",
+    gap: 16,
+    width: "100%",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  sourceChoiceBtn: {
+    flex: 1,
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  sourceIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  sourceChoiceText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  sourceCancelBtn: {
+    paddingVertical: 8,
+    width: "100%",
+    alignItems: "center",
+  },
+  sourceCancelText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#64748B",
   },
   sampleModalBox: {
     width: "100%",
@@ -845,18 +798,13 @@ const styles = StyleSheet.create({
   },
   sampleModalHeader: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     marginBottom: 12,
   },
   sampleModalTitle: {
     fontSize: 15,
     fontWeight: "700",
     color: "#0F172A",
-  },
-  sampleModalSubtitle: {
-    fontSize: 11,
-    color: "#64748B",
-    marginTop: 2,
   },
   modalCloseBtn: {
     padding: 4,
@@ -874,20 +822,6 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  sampleInstructions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#E0F2FE",
-    padding: 8,
-    borderRadius: 6,
-    marginTop: 10,
-  },
-  sampleInstructionsText: {
-    fontSize: 11,
-    color: "#0284C7",
-    flex: 1,
-  },
   sampleCaptureBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -896,69 +830,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#0F172A",
     paddingVertical: 11,
     borderRadius: 8,
-    marginTop: 12,
+    marginTop: 14,
   },
   sampleCaptureBtnText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-  previewModalBox: {
-    width: "100%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 16,
-    alignItems: "center",
-  },
-  previewModalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-    marginBottom: 12,
-  },
-  previewModalTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  previewImage: {
-    width: "100%",
-    height: 280,
-    borderRadius: 10,
-    backgroundColor: "#F1F5F9",
-  },
-  previewBtnRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 14,
-    width: "100%",
-  },
-  previewCancelBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  previewCancelText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#475569",
-  },
-  previewConfirmBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: "#0F172A",
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  previewConfirmText: {
     fontSize: 13,
     fontWeight: "600",
     color: "#FFFFFF",
@@ -989,10 +863,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     color: "#FFFFFF",
-  },
-  fullViewerTime: {
-    fontSize: 12,
-    color: "#94A3B8",
-    marginTop: 3,
   },
 });

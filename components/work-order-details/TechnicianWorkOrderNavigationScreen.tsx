@@ -1227,6 +1227,8 @@ export default function TechnicianWorkOrderNavigationScreen({
               showPreviewModal={fsFileUpload.showPreviewModal}
               onDelete={fsFileUpload.handleFileDelete}
               isWarrantyCase={fsIsWarrantyCase}
+              captureAndUploadForType={fsFileUpload.captureAndUploadForType}
+              uploadDirectFile={fsFileUpload.uploadDirectFile}
             />
           )}
 
