@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { captureRef } from "react-native-view-shot";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WorkOrder } from "@/types/work-order";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -45,6 +46,11 @@ export default function WorkOrderCompletionModal({
   onConfirmComplete,
   isCompleting,
 }: WorkOrderCompletionModalProps) {
+  const insets = useSafeAreaInsets();
+  const safeModalBottom = useMemo(() => {
+    return Math.max(insets.bottom || 0, Platform.OS === "android" ? 24 : 20) + 12;
+  }, [insets.bottom]);
+
   // Step 1: Settlement & Billing | Step 2: Receipt & Confirmation
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
 
@@ -213,7 +219,7 @@ export default function WorkOrderCompletionModal({
       }}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContainer}>
+        <View style={[styles.modalContainer, { paddingBottom: safeModalBottom }]}>
           {/* Header */}
           <View style={styles.modalHeader}>
             <View style={{ flex: 1 }}>

@@ -558,6 +558,12 @@ export default function TechnicianWorkOrderNavigationScreen({
 
   const isFsCompletionReady = fsMissingItems.length === 0;
 
+  const fsBottomBarPadding = useMemo(() => {
+    // Generously clear bottom navigation (Android 3-button nav / gesture bar, iOS home bar, or persistent bottom tabs)
+    const baseInset = insets.bottom || 0;
+    return Math.max(baseInset + 14, Platform.OS === "android" ? 72 : 36);
+  }, [insets.bottom]);
+
   const [showCompletionModal, setShowCompletionModal] = useState<boolean>(false);
   const [isCompletingWorkOrder, setIsCompletingWorkOrder] = useState<boolean>(false);
 
@@ -1468,7 +1474,12 @@ export default function TechnicianWorkOrderNavigationScreen({
         </KeyboardAvoidingView>
 
         {/* ─── BOTTOM COMPLETION ACTION BAR ─── */}
-        <View style={styles.fsBottomCompleteBar}>
+        <View
+          style={[
+            styles.fsBottomCompleteBar,
+            { paddingBottom: fsBottomBarPadding },
+          ]}
+        >
           {isFsCompletionReady ? (
             <TouchableOpacity
               style={styles.fsCompleteBtnReady}
@@ -2616,12 +2627,11 @@ const styles = StyleSheet.create({
   fsScrollContent: {
     paddingHorizontal: 0,
     paddingTop: 0,
-    paddingBottom: 90,
+    paddingBottom: 170,
   },
   fsBottomCompleteBar: {
     paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: Platform.OS === "ios" ? 24 : 12,
+    paddingTop: 10,
     backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
     borderTopColor: "#E2E8F0",
