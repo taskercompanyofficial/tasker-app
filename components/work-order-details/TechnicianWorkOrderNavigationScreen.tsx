@@ -95,6 +95,7 @@ export interface TechnicianWorkOrderNavigationScreenProps {
   isAccepted?: boolean;
   currentStatusSlug?: string;
   onRefresh?: () => void;
+  refreshing?: boolean;
   handleAccept: () => Promise<void>;
   handleReject?: (reason: string) => Promise<void>;
   handleUpdateStatus?: (remarks: string) => Promise<void>;
@@ -184,6 +185,7 @@ export default function TechnicianWorkOrderNavigationScreen({
   handleAccept,
   isAccepted,
   onRefresh,
+  refreshing = false,
 }: TechnicianWorkOrderNavigationScreenProps) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();

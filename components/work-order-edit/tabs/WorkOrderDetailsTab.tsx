@@ -318,6 +318,84 @@ export default function WorkOrderDetailsTab({
     );
   }, [selectedWarrantyLabel, formData.warranty_type_id]);
 
+  // Brand & Equipment Details
+  const brandName = workOrder.brand?.name || (workOrder as any).brand_name || null;
+  const productName =
+    workOrder.product?.name ||
+    (workOrder as any).product_name ||
+    workOrder.parent_service?.name ||
+    workOrder.service?.name ||
+    null;
+  const indoorModel =
+    workOrder.product_indoor_model ||
+    (workOrder as any).indoor_model ||
+    workOrder.product_model ||
+    null;
+  const outdoorModel =
+    workOrder.product_outdoor_model ||
+    (workOrder as any).outdoor_model ||
+    null;
+  const brandComplaintNo =
+    workOrder.brand_complaint_no ||
+    (workOrder as any).brand_complaint_number ||
+    workOrder.reference ||
+    null;
+
+  // Customer Service Charges to Claim
+  const customerClaim = useMemo(() => {
+    if (isWarrantyCase) {
+      return {
+        amount: 0,
+        formattedText: "₨ 0 (Free Warranty)",
+        isWarranty: true,
+        label: "Under Warranty",
+        note: "Warranty coverage applies • Do NOT collect payment from customer.",
+        items: [] as Array<{ name?: string; description?: string; amount?: number }>,
+      };
+    }
+
+    let parsedAmount = 0;
+    let items: Array<{ name?: string; description?: string; amount?: number }> = [];
+
+    const rawCharges = workOrder.charges;
+    if (rawCharges && typeof rawCharges === "object") {
+      const rawItems = (rawCharges as any).items;
+      if (Array.isArray(rawItems) && rawItems.length > 0) {
+        items = rawItems;
+        parsedAmount = rawItems.reduce(
+          (sum: number, it: any) => sum + (Number(it?.amount) || 0),
+          0
+        );
+      }
+    }
+
+    if (parsedAmount <= 0) {
+      const rawVal =
+        (workOrder as any).claim_amount ??
+        workOrder.charges ??
+        workOrder.service_charges ??
+        workOrder.final_amount ??
+        workOrder.total_amount ??
+        workOrder.estimated_charges ??
+        workOrder.grand_total;
+
+      const num = Number(rawVal);
+      parsedAmount = Number.isFinite(num) && num > 0 ? num : 0;
+    }
+
+    return {
+      amount: parsedAmount,
+      formattedText: parsedAmount > 0 ? `₨ ${parsedAmount.toLocaleString()}` : "₨ 0",
+      isWarranty: false,
+      label: parsedAmount > 0 ? "Collect on Site" : "Standard Visit",
+      note:
+        parsedAmount > 0
+          ? "Collect this exact service amount in cash or online transfer from customer upon completion."
+          : "Standard service order • Any parts or additional charges to be finalized upon inspection.",
+      items,
+    };
+  }, [workOrder, isWarrantyCase]);
+
   return (
     <View style={styles.container}>
       {/* ─── 1. CUSTOMER & SITE CARD (MINIMAL, ZERO SHADOW) ─── */}
@@ -430,6 +508,151 @@ export default function WorkOrderDetailsTab({
             </Text>
           </View>
         )}
+
+        {/* ─── Service Charges to Claim from Customer ─── */}
+        <View
+          style={[
+            styles.claimBox,
+            customerClaim.isWarranty ? styles.claimBoxWarranty : styles.claimBoxPaid,
+          ]}
+        >
+          <View style={styles.claimHeader}>
+            <View style={styles.claimLabelRow}>
+              <Ionicons
+                name={customerClaim.isWarranty ? "shield-checkmark" : "cash-outline"}
+                size={14}
+                color={customerClaim.isWarranty ? "#15803D" : "#0F172A"}
+              />
+              <Text
+                style={[
+                  styles.claimLabel,
+                  customerClaim.isWarranty && styles.claimLabelWarranty,
+                ]}
+              >
+                Service Charges to Claim
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.claimBadge,
+                customerClaim.isWarranty && styles.claimBadgeWarranty,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.claimBadgeText,
+                  customerClaim.isWarranty && styles.claimBadgeTextWarranty,
+                ]}
+              >
+                {customerClaim.label}
+              </Text>
+            </View>
+          </View>
+
+          <Text
+            style={[
+              styles.claimAmount,
+              customerClaim.isWarranty && styles.claimAmountWarranty,
+            ]}
+          >
+            {customerClaim.formattedText}
+          </Text>
+
+          <Text style={styles.claimNote}>{customerClaim.note}</Text>
+
+          {customerClaim.items.length > 0 && (
+            <View style={styles.claimBreakdown}>
+              {customerClaim.items.map((it, idx) => (
+                <View key={idx} style={styles.claimBreakdownRow}>
+                  <Text style={styles.claimBreakdownTitle}>
+                    {it.name || it.description || `Charge Item #${idx + 1}`}
+                  </Text>
+                  <Text style={styles.claimBreakdownPrice}>
+                    ₨ {Number(it.amount || 0).toLocaleString()}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* ─── 3. BRAND & EQUIPMENT DETAILS CARD (MINIMAL, ZERO SHADOW) ─── */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardHeaderLeft}>
+            <Ionicons name="hardware-chip-outline" size={16} color="#0F172A" />
+            <Text style={styles.cardTitle}>Brand & Equipment Details</Text>
+          </View>
+          {Boolean(brandName) && (
+            <View style={styles.brandPill}>
+              <Ionicons name="pricetag-outline" size={11} color="#1D4ED8" />
+              <Text style={styles.brandPillText}>{brandName}</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.equipmentGrid}>
+          {/* Brand Name */}
+          <View style={styles.equipmentItem}>
+            <Text style={styles.equipmentLabel}>Brand</Text>
+            <Text style={styles.equipmentValue}>
+              {brandName || "Standard / General"}
+            </Text>
+          </View>
+
+          {/* Product / Model */}
+          <View style={styles.equipmentItem}>
+            <Text style={styles.equipmentLabel}>Appliance / Model</Text>
+            <Text style={styles.equipmentValue} numberOfLines={1}>
+              {productName || "Standard Unit"}
+            </Text>
+          </View>
+
+          {/* Brand Complaint / Reference # */}
+          {Boolean(brandComplaintNo) && (
+            <View style={styles.equipmentItem}>
+              <Text style={styles.equipmentLabel}>Complaint Ref #</Text>
+              <Text style={styles.equipmentValue} numberOfLines={1}>
+                {brandComplaintNo}
+              </Text>
+            </View>
+          )}
+
+          {/* Indoor Model (if available) */}
+          {Boolean(indoorModel) && (
+            <View style={styles.equipmentItem}>
+              <Text style={styles.equipmentLabel}>Indoor Model</Text>
+              <Text style={styles.equipmentValue} numberOfLines={1}>
+                {indoorModel}
+              </Text>
+            </View>
+          )}
+
+          {/* Outdoor Model (if available) */}
+          {Boolean(outdoorModel) && (
+            <View style={styles.equipmentItem}>
+              <Text style={styles.equipmentLabel}>Outdoor Model</Text>
+              <Text style={styles.equipmentValue} numberOfLines={1}>
+                {outdoorModel}
+              </Text>
+            </View>
+          )}
+
+          {/* Warranty Type */}
+          <View style={styles.equipmentItem}>
+            <Text style={styles.equipmentLabel}>Warranty Class</Text>
+            <Text
+              style={[
+                styles.equipmentValue,
+                isWarrantyCase && { color: "#15803D" },
+              ]}
+              numberOfLines={1}
+            >
+              {selectedWarrantyLabel}
+            </Text>
+          </View>
+        </View>
       </View>
 
       {/* ─── 3. SERIAL NUMBERS & BARCODE SCAN (3 SCAN FIELDS) ─── */}
@@ -1164,5 +1387,143 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#94A3B8",
     fontStyle: "italic",
+  },
+
+  // ─── Service Charges to Claim Box (Strictly Zero Shadow) ───
+  claimBox: {
+    marginTop: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 12,
+    elevation: 0,
+    shadowColor: "transparent",
+  },
+  claimBoxPaid: {
+    backgroundColor: "#F8FAFC",
+    borderColor: "#E2E8F0",
+  },
+  claimBoxWarranty: {
+    backgroundColor: "#F0FDF4",
+    borderColor: "#BBF7D0",
+  },
+  claimHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  claimLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  claimLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    color: "#334155",
+  },
+  claimLabelWarranty: {
+    color: "#15803D",
+  },
+  claimBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+    backgroundColor: "#E2E8F0",
+  },
+  claimBadgeWarranty: {
+    backgroundColor: "#DCFCE7",
+  },
+  claimBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#334155",
+  },
+  claimBadgeTextWarranty: {
+    color: "#15803D",
+  },
+  claimAmount: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginBottom: 4,
+  },
+  claimAmountWarranty: {
+    color: "#15803D",
+  },
+  claimNote: {
+    fontSize: 11,
+    color: "#64748B",
+    lineHeight: 15,
+  },
+  claimBreakdown: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+    gap: 4,
+  },
+  claimBreakdownRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  claimBreakdownTitle: {
+    fontSize: 11,
+    color: "#475569",
+  },
+  claimBreakdownPrice: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+
+  // ─── Brand & Equipment Details (Strictly Zero Shadow) ───
+  brandPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  brandPillText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#1D4ED8",
+  },
+  equipmentGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 6,
+  },
+  equipmentItem: {
+    flexGrow: 1,
+    flexBasis: "47%",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  equipmentLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    color: "#64748B",
+    marginBottom: 2,
+  },
+  equipmentValue: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0F172A",
   },
 });
