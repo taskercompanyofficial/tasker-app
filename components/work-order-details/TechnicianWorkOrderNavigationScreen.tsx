@@ -18,6 +18,9 @@ import {
   WorkOrderTabKey,
   BarcodeScanner,
 } from "@/components/work-order-edit";
+import WorkOrderCompletionModal, {
+  SettlementData,
+} from "@/components/work-order-details/WorkOrderCompletionModal";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { useRouteDirections } from "@/hooks/useRouteDirections";
@@ -221,23 +224,41 @@ export default function TechnicianWorkOrderNavigationScreen({
   );
   const isWorkStarted = isWorkAlreadyStarted || hasStartedWorkInSession;
 
-  // Live in-progress service elapsed timer
+  // Live in-progress service elapsed timer (persists across saves, auto-saves and tab switches)
   const startTimestamp = useMemo(() => {
-    if (workOrder.service_start_date && workOrder.service_start_time) {
-      const parsed = Date.parse(
-        `${workOrder.service_start_date}T${workOrder.service_start_time}`,
+    // 1. Try service_start_date & service_start_time from backend
+    if (workOrder.service_start_date) {
+      const cleanDate = String(workOrder.service_start_date).split("T")[0];
+      if (workOrder.service_start_time) {
+        const cleanTime = String(workOrder.service_start_time).split(" ")[0];
+        const parsed = Date.parse(`${cleanDate}T${cleanTime}`);
+        if (!isNaN(parsed) && parsed > 0) return parsed;
+      }
+      const parsedOnlyDate = Date.parse(String(workOrder.service_start_date));
+      if (!isNaN(parsedOnlyDate) && parsedOnlyDate > 0) return parsedOnlyDate;
+    }
+
+    // 2. Try history logs for start of work
+    if (Array.isArray(workOrder.histories)) {
+      const startHistory = workOrder.histories.find(
+        (h) =>
+          h.action_type === "start_work" ||
+          h.action_type === "work_started" ||
+          h.description?.toLowerCase().includes("started") ||
+          h.metadata?.status === "work-started"
       );
-      if (!isNaN(parsed) && parsed > 0) return parsed;
+      if (startHistory?.created_at) {
+        const parsed = Date.parse(startHistory.created_at);
+        if (!isNaN(parsed) && parsed > 0) return parsed;
+      }
     }
-    if (workOrder.updated_at) {
-      const parsed = Date.parse(workOrder.updated_at);
-      if (!isNaN(parsed) && parsed > 0) return parsed;
-    }
+
+    // 3. Fallback to session start time reference (NEVER uses updated_at which changes on every save)
     return sessionStartTimeRef.current;
   }, [
     workOrder.service_start_date,
     workOrder.service_start_time,
-    workOrder.updated_at,
+    workOrder.histories,
   ]);
 
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
@@ -486,6 +507,109 @@ export default function TechnicianWorkOrderNavigationScreen({
     const wTypeId = Number(fsFormData.warranty_type_id || workOrder.warranty_type?.id);
     return [1, 3, 7].includes(wTypeId) || Boolean(workOrder.is_warranty_case);
   }, [fsFormData.warranty_type_id, workOrder]);
+
+  // Completion Validation & Missing Items
+  const fsHasRejectedRequiredFile = useMemo(() => {
+    const reqIds = new Set(
+      workOrder.parent_service?.required_file_types
+        ?.filter((rf) => rf.is_required)
+        ?.map((rf) => rf.file_type_id) || []
+    );
+    return (workOrder.files || []).some(
+      (f) =>
+        reqIds.has(f.file_type?.id || (f as any).file_type_id) &&
+        f.approval_status === "rejected"
+    );
+  }, [workOrder.files, workOrder.parent_service]);
+
+  const fsRemarksLength = useMemo(() => {
+    return (fsFormData.technician_remarks || "").trim().length;
+  }, [fsFormData.technician_remarks]);
+
+  const fsHasValidRemarks = fsRemarksLength >= 20;
+
+  const fsHasAllRequiredAttachments =
+    fsRequiredCount === 0 || fsUploadedReqCount >= fsRequiredCount;
+
+  const fsMissingItems = useMemo(() => {
+    const missing: string[] = [];
+    if (!fsHasAllRequiredAttachments) {
+      missing.push(
+        `Required photos (${fsUploadedReqCount}/${fsRequiredCount} attached)`
+      );
+    }
+    if (fsHasRejectedRequiredFile) {
+      missing.push("Re-upload rejected attachment(s)");
+    }
+    if (!fsHasValidRemarks) {
+      missing.push(
+        `Technician remarks (min 20 characters, current: ${fsRemarksLength})`
+      );
+    }
+    return missing;
+  }, [
+    fsHasAllRequiredAttachments,
+    fsUploadedReqCount,
+    fsRequiredCount,
+    fsHasRejectedRequiredFile,
+    fsHasValidRemarks,
+    fsRemarksLength,
+  ]);
+
+  const isFsCompletionReady = fsMissingItems.length === 0;
+
+  const [showCompletionModal, setShowCompletionModal] = useState<boolean>(false);
+  const [isCompletingWorkOrder, setIsCompletingWorkOrder] = useState<boolean>(false);
+
+  const handleConfirmCompletion = useCallback(
+    async (settlementData: SettlementData) => {
+      try {
+        setIsCompletingWorkOrder(true);
+        const isStaff = appMode === "vendor_staff";
+        const statusUrl = isStaff
+          ? VENDOR_STAFF_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL(Number(workOrder.id))
+          : VENDOR_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL(Number(workOrder.id));
+
+        const subStatus = fsIsWarrantyCase ? "warranty-completed" : "work-completed";
+
+        await axios.post(statusUrl, {
+          status_slug: "completed",
+          sub_status_slug: subStatus,
+          remarks: fsFormData.technician_remarks,
+          customer_charged: settlementData.customer_charged,
+          customer_charged_amount: settlementData.customer_charged_amount,
+          customer_charge_remarks: settlementData.customer_charge_remarks,
+          parts_used: settlementData.parts_used,
+          parts_cost: settlementData.parts_cost,
+          parts_remarks: settlementData.parts_remarks,
+          labor_amount: settlementData.labor_amount,
+          is_amount_received: settlementData.is_amount_received,
+        });
+
+        setShowCompletionModal(false);
+        Toast.show({
+          type: "success",
+          text1: "🎉 Work Order Completed",
+          text2: "Service successfully completed and settled.",
+        });
+
+        if (onRefresh) {
+          await onRefresh();
+        }
+
+        router.replace("/vendor/(tabs)/jobs?status=completed");
+      } catch (err: any) {
+        console.error("Failed to complete work order:", err);
+        const msg =
+          err?.response?.data?.message ||
+          "Could not complete work order. Please verify required fields & attachments.";
+        Alert.alert("Completion Error", msg);
+      } finally {
+        setIsCompletingWorkOrder(false);
+      }
+    },
+    [appMode, workOrder.id, fsIsWarrantyCase, fsFormData.technician_remarks, onRefresh]
+  );
 
   const isAlreadyAccepted = Boolean(
     isAccepted ||
@@ -1342,6 +1466,60 @@ export default function TechnicianWorkOrderNavigationScreen({
             )}
           </ScrollView>
         </KeyboardAvoidingView>
+
+        {/* ─── BOTTOM COMPLETION ACTION BAR ─── */}
+        <View style={styles.fsBottomCompleteBar}>
+          {isFsCompletionReady ? (
+            <TouchableOpacity
+              style={styles.fsCompleteBtnReady}
+              onPress={() => setShowCompletionModal(true)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="checkmark-done-circle" size={20} color="#FFFFFF" />
+              <Text style={styles.fsCompleteBtnReadyText}>
+                Complete Work Order
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.fsCompleteBtnPending}
+              onPress={() => {
+                Alert.alert(
+                  "Requirements to Complete Job",
+                  "Please finish the following before completing:\n\n• " +
+                    fsMissingItems.join("\n• "),
+                  [{ text: "OK" }]
+                );
+              }}
+              activeOpacity={0.85}
+            >
+              <View style={styles.fsPendingLeft}>
+                <View style={styles.fsPendingPill}>
+                  <Text style={styles.fsPendingPillText}>
+                    {fsMissingItems.length} requirement{fsMissingItems.length > 1 ? "s" : ""} left
+                  </Text>
+                </View>
+                <Text style={styles.fsPendingSubText} numberOfLines={1}>
+                  {fsMissingItems[0]}
+                </Text>
+              </View>
+
+              <View style={styles.fsPendingRightBtn}>
+                <Text style={styles.fsPendingRightBtnText}>Complete Job</Text>
+                <Ionicons name="chevron-forward" size={14} color="#64748B" />
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Work Order Completion & Customer Settlement Modal */}
+        <WorkOrderCompletionModal
+          visible={showCompletionModal}
+          onClose={() => setShowCompletionModal(false)}
+          workOrder={workOrder}
+          onConfirmComplete={handleConfirmCompletion}
+          isCompleting={isCompletingWorkOrder}
+        />
 
         {/* Barcode Scanner */}
         <BarcodeScanner
@@ -2438,7 +2616,82 @@ const styles = StyleSheet.create({
   fsScrollContent: {
     paddingHorizontal: 0,
     paddingTop: 0,
-    paddingBottom: 40,
+    paddingBottom: 90,
+  },
+  fsBottomCompleteBar: {
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === "ios" ? 24 : 12,
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+    elevation: 0,
+    shadowColor: "transparent",
+  },
+  fsCompleteBtnReady: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#059669",
+    paddingVertical: 13,
+    borderRadius: 10,
+  },
+  fsCompleteBtnReadyText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: 0.3,
+  },
+  fsCompleteBtnPending: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+  },
+  fsPendingLeft: {
+    flex: 1,
+    marginRight: 8,
+  },
+  fsPendingPill: {
+    alignSelf: "flex-start",
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 4,
+    marginBottom: 2,
+  },
+  fsPendingPillText: {
+    fontSize: 9.5,
+    fontWeight: "700",
+    color: "#DC2626",
+  },
+  fsPendingSubText: {
+    fontSize: 11,
+    color: "#64748B",
+  },
+  fsPendingRightBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+  },
+  fsPendingRightBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#0F172A",
   },
   timerCard: {
     backgroundColor: "#FFFFFF",

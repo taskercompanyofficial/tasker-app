@@ -1014,7 +1014,12 @@ export default function WorkOrderDetailsTab({
         )}
 
         <TextInput
-          style={styles.textAreaInput}
+          style={[
+            styles.textAreaInput,
+            (formData.technician_remarks || "").trim().length > 0 &&
+              (formData.technician_remarks || "").trim().length < 20 &&
+              styles.textAreaInputWarning,
+          ]}
           value={formData.technician_remarks}
           onChangeText={(text) => setFormData("technician_remarks", text)}
           placeholder="Enter on-site diagnostic remarks, work performed, or recommendations (or tap Voice Type above)..."
@@ -1023,6 +1028,53 @@ export default function WorkOrderDetailsTab({
           numberOfLines={4}
           textAlignVertical="top"
         />
+
+        {/* Minimum 20 Characters Requirement Indicator */}
+        <View style={styles.remarksValidationRow}>
+          <View style={styles.remarksValidationLeft}>
+            <Ionicons
+              name={
+                (formData.technician_remarks || "").trim().length >= 20
+                  ? "checkmark-circle"
+                  : "alert-circle-outline"
+              }
+              size={13}
+              color={
+                (formData.technician_remarks || "").trim().length >= 20
+                  ? "#059669"
+                  : "#DC2626"
+              }
+            />
+            <Text
+              style={[
+                styles.remarksValidationMsg,
+                {
+                  color:
+                    (formData.technician_remarks || "").trim().length >= 20
+                      ? "#059669"
+                      : "#DC2626",
+                },
+              ]}
+            >
+              {(formData.technician_remarks || "").trim().length >= 20
+                ? "Remarks requirement met"
+                : "Minimum 20 characters required to complete job"}
+            </Text>
+          </View>
+          <Text
+            style={[
+              styles.remarksCharCountBadge,
+              {
+                color:
+                  (formData.technician_remarks || "").trim().length >= 20
+                    ? "#059669"
+                    : "#DC2626",
+              },
+            ]}
+          >
+            {(formData.technician_remarks || "").trim().length}/20 chars
+          </Text>
+        </View>
 
         {/* Footer: Smooth Auto-save Status + Manual Save Action */}
         <View style={styles.cardFooter}>
@@ -1454,6 +1506,32 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: "#0F172A",
     backgroundColor: "#FFFFFF",
+  },
+  textAreaInputWarning: {
+    borderColor: "#FCA5A5",
+    backgroundColor: "#FFFBFB",
+  },
+  remarksValidationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
+    marginBottom: 6,
+    paddingHorizontal: 2,
+  },
+  remarksValidationLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flex: 1,
+  },
+  remarksValidationMsg: {
+    fontSize: 10.5,
+    fontWeight: "600",
+  },
+  remarksCharCountBadge: {
+    fontSize: 10.5,
+    fontWeight: "700",
   },
   saveBtnRow: {
     marginTop: 10,
