@@ -172,37 +172,60 @@ export default function WorkOrderDetailsTab({
         throw new Error("Voice typing key is not configured. Please set EXPO_PUBLIC_GEMINI_API_KEY in .env");
       }
 
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      const modelsToTry = [
+        process.env.EXPO_PUBLIC_GEMINI_MODEL || "gemini-3.8-flash",
+        "gemini-3.5-flash-lite",
+        "gemini-3.1-flash-lite",
+      ];
 
-      const speechResponse = await fetch(geminiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [
+      let transcribedText = "";
+      let lastErrorMessage = "";
+
+      for (const model of modelsToTry) {
+        try {
+          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+          const speechResponse = await fetch(geminiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [
                 {
-                  text: "You are an audio transcriber for appliance repair and technical service orders. Listen to this spoken technician voice note and transcribe it accurately into text. Accurately capture technical appliance terms (gas, capacitor, compressor, leak, pipe, wiring, PCB, error code, outdoor unit, indoor unit) in English or Urdu/Roman Urdu. Return ONLY the transcribed text verbatim, without any preamble, explanation, or quotes.",
-                },
-                {
-                  inlineData: {
-                    mimeType: "audio/m4a",
-                    data: base64Audio,
-                  },
+                  role: "user",
+                  parts: [
+                    {
+                      text: "You are an audio transcriber for appliance repair and technical service orders. Listen to this spoken technician voice note and transcribe it accurately into text. Accurately capture technical appliance terms (gas, capacitor, compressor, leak, pipe, wiring, PCB, error code, outdoor unit, indoor unit) in English or Urdu/Roman Urdu. Return ONLY the transcribed text verbatim, without any preamble, explanation, or quotes.",
+                    },
+                    {
+                      inlineData: {
+                        mimeType: "audio/m4a",
+                        data: base64Audio,
+                      },
+                    },
+                  ],
                 },
               ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.1,
-          },
-        }),
-      });
+              generationConfig: {
+                temperature: 0.1,
+              },
+            }),
+          });
 
-      const json = await speechResponse.json();
-      const transcribedText =
-        json.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+          const json = await speechResponse.json();
+          if (json?.error) {
+            lastErrorMessage = json.error.message;
+            continue;
+          }
+
+          const candidateText = json.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (candidateText) {
+            transcribedText = candidateText;
+            break;
+          }
+        } catch (mErr: any) {
+          lastErrorMessage = mErr?.message || "Model request error";
+        }
+      }
 
       if (transcribedText) {
         try {
@@ -214,7 +237,7 @@ export default function WorkOrderDetailsTab({
           : transcribedText.trim();
         setFormData("technician_remarks", updated);
       } else {
-        throw new Error(json?.error?.message || "Could not transcribe spoken voice");
+        throw new Error(lastErrorMessage || "Could not transcribe spoken voice");
       }
     } catch (err: any) {
       console.warn("Client voice transcription failed:", err);
