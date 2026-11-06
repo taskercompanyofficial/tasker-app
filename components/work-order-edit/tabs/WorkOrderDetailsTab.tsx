@@ -836,21 +836,6 @@ export default function WorkOrderDetailsTab({
             <Ionicons name="calendar-outline" size={15} color="#64748B" />
           </TouchableOpacity>
         </View>
-            style={styles.selector}
-            onPress={() => setShowDatePicker(true)}
-            activeOpacity={0.8}
-          >
-            <Text
-              style={[
-                styles.selectorText,
-                !formData.purchase_date && styles.selectorPlaceholder,
-              ]}
-            >
-              {formData.purchase_date || "YYYY-MM-DD"}
-            </Text>
-            <Ionicons name="calendar-outline" size={16} color="#64748B" />
-          </TouchableOpacity>
-        </View>
 
         {showDatePicker && (
           <DateTimePicker
@@ -873,7 +858,7 @@ export default function WorkOrderDetailsTab({
         )}
       </View>
 
-      {/* ─── 4. TECHNICIAN NOTES & REMARKS CARD (WITH VOICE TYPING & AUTO-SAVE STATUS) ─── */}
+      {/* ─── 5. TECHNICIAN NOTES & REMARKS CARD (WITH VOICE TYPING & AUTO-SAVE STATUS) ─── */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderLeft}>
