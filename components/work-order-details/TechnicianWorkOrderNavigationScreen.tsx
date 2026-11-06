@@ -8,7 +8,18 @@ import axios from "@/lib/axios.config";
 import {
   VENDOR_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL,
   VENDOR_STAFF_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL,
+  VENDOR_UPDATE_WORK_ORDER_DETAILS_URL,
 } from "@/lib/api-endpoints";
+import {
+  WorkOrderMinimalTabBar,
+  WorkOrderDetailsTab,
+  WorkOrderAttachmentsTab,
+  WorkOrderActivityTab,
+  WorkOrderTabKey,
+  BarcodeScanner,
+} from "@/components/work-order-edit";
+import { useFileUpload } from "@/hooks/useFileUpload";
+import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { useRouteDirections } from "@/hooks/useRouteDirections";
 import { useVendorLocationTracker } from "@/hooks/useVendorLocationTracker";
 import { useWorkOrderActions } from "@/hooks/useWorkOrderActions";
@@ -244,6 +255,95 @@ export default function TechnicianWorkOrderNavigationScreen({
   const formattedCountdown = `${timerHours.toString().padStart(2, "0")}:${timerMinutes
     .toString()
     .padStart(2, "0")}:${timerSecs.toString().padStart(2, "0")}`;
+
+  // Full-Screen In-Progress Execution Tab State
+  const [activeFsTab, setActiveFsTab] = useState<WorkOrderTabKey>("details");
+  const [isSavingFsDetails, setIsSavingFsDetails] = useState(false);
+  const [fsFormData, setFsFormData] = useState({
+    indoor_serial_number: workOrder.indoor_serial_number || "",
+    outdoor_serial_number: workOrder.outdoor_serial_number || "",
+    product_indoor_model: workOrder.product_indoor_model || "",
+    product_outdoor_model: workOrder.product_outdoor_model || "",
+    purchase_date: workOrder.purchase_date || "",
+    technician_remarks: workOrder.technician_remarks || "",
+    service_concern_id: workOrder.service_concern?.id || null,
+    service_sub_concern_id: workOrder.service_sub_concern?.id || null,
+    warranty_type_id: workOrder.warranty_type?.id || null,
+  });
+
+  const handleFsFormChange = useCallback((key: string, value: any) => {
+    setFsFormData((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const handleFsSaveDetails = useCallback(async () => {
+    try {
+      setIsSavingFsDetails(true);
+      await axios.post(
+        VENDOR_UPDATE_WORK_ORDER_DETAILS_URL(Number(workOrder.id)),
+        fsFormData
+      );
+      Toast.show({
+        type: "success",
+        text1: "Saved",
+        text2: "Work order details updated successfully",
+      });
+      if (onRefresh) onRefresh();
+    } catch (e: any) {
+      Toast.show({
+        type: "error",
+        text1: "Save Failed",
+        text2: e?.response?.data?.message || "Could not save details",
+      });
+    } finally {
+      setIsSavingFsDetails(false);
+    }
+  }, [workOrder.id, fsFormData, onRefresh]);
+
+  // File Upload hook for Full-Screen In-Progress mode
+  const fsFileUpload = useFileUpload({
+    workOrderId: Number(workOrder.id),
+    onSuccess: (msg) => {
+      Toast.show({ type: "success", text1: "Upload Success", text2: msg });
+      if (onRefresh) onRefresh();
+    },
+    onError: (msg) => {
+      Toast.show({ type: "error", text1: "Upload Failed", text2: msg });
+    },
+    onFilesChanged: () => {
+      if (onRefresh) onRefresh();
+    },
+  });
+
+  // Barcode Scanner for Full-Screen mode
+  const fsScanner = useBarcodeScanner({
+    onIndoorScanned: (data) => handleFsFormChange("indoor_serial_number", data),
+    onOutdoorScanned: (data) => handleFsFormChange("outdoor_serial_number", data),
+    onError: (msg) => {
+      Toast.show({ type: "error", text1: "Scan Failed", text2: msg });
+    },
+  });
+
+  const fsRequiredCount = useMemo(() => {
+    return (
+      workOrder.parent_service?.required_file_types?.filter((rf) => rf.is_required)?.length || 0
+    );
+  }, [workOrder.parent_service]);
+
+  const fsUploadedReqCount = useMemo(() => {
+    const reqIds = new Set(
+      workOrder.parent_service?.required_file_types
+        ?.filter((rf) => rf.is_required)
+        ?.map((rf) => rf.file_type_id) || []
+    );
+    return (workOrder.files || []).filter((f) =>
+      reqIds.has(f.file_type?.id || (f as any).file_type_id)
+    ).length;
+  }, [workOrder.files, workOrder.parent_service]);
+
+  const fsIsWarrantyCase = useMemo(() => {
+    const wTypeId = Number(fsFormData.warranty_type_id || workOrder.warranty_type?.id);
+    return [1, 3, 7].includes(wTypeId) || Boolean(workOrder.is_warranty_case);
+  }, [fsFormData.warranty_type_id, workOrder]);
 
   const isAlreadyAccepted = Boolean(
     isAccepted ||
@@ -1031,43 +1131,63 @@ export default function TechnicianWorkOrderNavigationScreen({
           </View>
         </View>
 
+        {/* Minimal Tab Switcher (Details, Attachments, Activity) */}
+        <WorkOrderMinimalTabBar
+          activeTab={activeFsTab}
+          onTabChange={setActiveFsTab}
+          requiredAttachmentsCount={fsRequiredCount}
+          uploadedAttachmentsCount={fsUploadedReqCount}
+          activityCount={workOrder.histories?.length || 0}
+        />
+
         {/* Scrollable Work Order Update View */}
         <ScrollView
           contentContainerStyle={styles.fsScrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {activeFsTab === "details" && (
+            <WorkOrderDetailsTab
+              workOrder={workOrder}
+              formData={fsFormData}
+              setFormData={handleFsFormChange}
+              onScanIndoor={() => fsScanner.openScanner("indoor")}
+              onScanOutdoor={() => fsScanner.openScanner("outdoor")}
+              onSave={handleFsSaveDetails}
+              saving={isSavingFsDetails}
+            />
+          )}
 
-          {/* Customer & Location Card */}
-          <View style={styles.fsCard}>
-            <View style={styles.customerRow}>
-              <View style={styles.customerAvatar}>
-                <Text style={styles.customerAvatarText}>
-                  {customerName
-                    .split(" ")
-                    .map((n) => n[0])
-                    .slice(0, 2)
-                    .join("")
-                    .toUpperCase() || "TC"}
-                </Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.customerNameText}>{customerName}</Text>
-                <Text style={styles.addressText} numberOfLines={2}>
-                  {fullAddress || areaName}
-                </Text>
-              </View>
-            </View>
-          </View>
+          {activeFsTab === "attachments" && (
+            <WorkOrderAttachmentsTab
+              workOrder={workOrder}
+              files={workOrder.files || []}
+              fileTypes={fsFileUpload.fileTypes}
+              uploading={fsFileUpload.uploading}
+              processing={fsFileUpload.processing}
+              uploadData={fsFileUpload.uploadData}
+              onSelectFileType={fsFileUpload.handleSelectFileType}
+              onSelectCamera={fsFileUpload.handleSelectCamera}
+              onSelectGallery={fsFileUpload.handleSelectGallery}
+              onConfirmUpload={fsFileUpload.handleConfirmUpload}
+              onCancelPreview={fsFileUpload.handleCancelPreview}
+              showPreviewModal={fsFileUpload.showPreviewModal}
+              onDelete={fsFileUpload.handleFileDelete}
+              isWarrantyCase={fsIsWarrantyCase}
+            />
+          )}
 
-          {/* Blank Area Ready for Future Updates */}
-          <View style={styles.fsBlankCanvas}>
-            <Ionicons name="construct-outline" size={38} color="#94A3B8" />
-            <Text style={styles.fsBlankTitle}>Work Order In Progress</Text>
-            <Text style={styles.fsBlankSubtitle}>
-              Map and navigation have been dismissed. Work details and completion controls will be configured here.
-            </Text>
-          </View>
+          {activeFsTab === "activity" && (
+            <WorkOrderActivityTab workOrder={workOrder} />
+          )}
         </ScrollView>
+
+        {/* Barcode Scanner */}
+        <BarcodeScanner
+          visible={fsScanner.showScanner}
+          scanningField={fsScanner.scanningField}
+          onBarcodeScanned={({ data }) => fsScanner.onBarcodeScanned(data)}
+          onClose={fsScanner.closeScanner}
+        />
       </View>
     );
   }

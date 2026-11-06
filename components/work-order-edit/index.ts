@@ -5,3 +5,8 @@ export { default as FileUploadSection } from "./FileUploadSection";
 export { default as JobGuideModal } from "./JobGuideModal";
 export { default as ProductDetailsForm } from "./ProductDetailsForm";
 export { default as TechnicianRemarksForm } from "./TechnicianRemarksForm";
+export { default as WorkOrderMinimalTabBar } from "./tabs/WorkOrderMinimalTabBar";
+export { default as WorkOrderDetailsTab } from "./tabs/WorkOrderDetailsTab";
+export { default as WorkOrderAttachmentsTab } from "./tabs/WorkOrderAttachmentsTab";
+export { default as WorkOrderActivityTab } from "./tabs/WorkOrderActivityTab";
+export type { WorkOrderTabKey } from "./tabs/WorkOrderMinimalTabBar";

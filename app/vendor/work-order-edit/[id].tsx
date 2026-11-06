@@ -19,15 +19,20 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   BarcodeScanner,
   EditHeader,
-  FileUploadSection,
   JobGuideModal,
-  ProductDetailsForm,
-  TechnicianRemarksForm,
+  WorkOrderActivityTab,
+  WorkOrderAttachmentsTab,
+  WorkOrderDetailsTab,
+  WorkOrderMinimalTabBar,
+  WorkOrderTabKey,
 } from "@/components/work-order-edit";
 import { ServiceRequiredFile } from "@/types/work-order";
 
 export default function VendorWorkOrderEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+
+  // Active Tab state (details, attachments, activity)
+  const [activeTab, setActiveTab] = useState<WorkOrderTabKey>("details");
 
   // Modal visibility
   const [showCompleteModal, setShowCompleteModal] = useState(false);
@@ -55,10 +60,10 @@ export default function VendorWorkOrderEditScreen() {
   // File upload hook
   const fileUpload = useFileUpload({
     workOrderId: Number(id),
-    onSuccess: (msg) => {
+    onSuccess: () => {
       setShowSuccessModal(true);
     },
-    onError: (msg) => {
+    onError: () => {
       setShowErrorModal(true);
     },
     onFilesChanged: refreshWorkOrder,
@@ -68,7 +73,7 @@ export default function VendorWorkOrderEditScreen() {
   const scanner = useBarcodeScanner({
     onIndoorScanned: (data) => form.setData("indoor_serial_number", data),
     onOutdoorScanned: (data) => form.setData("outdoor_serial_number", data),
-    onError: (msg) => {
+    onError: () => {
       setShowErrorModal(true);
     },
   });
@@ -86,6 +91,20 @@ export default function VendorWorkOrderEditScreen() {
         .map((rf: ServiceRequiredFile) => rf.file_type_id) || []
     );
   }, [workOrder]);
+
+  const uploadedReqCount = useMemo(() => {
+    const reqSet = new Set(requiredFileTypeIds);
+    return (workOrder?.files || []).filter((f) =>
+      reqSet.has(f.file_type?.id || (f as any).file_type_id)
+    ).length;
+  }, [workOrder, requiredFileTypeIds]);
+
+  const isWarrantyCase = useMemo(() => {
+    const wTypeId = Number(
+      form.data.warranty_type_id || workOrder?.warranty_type?.id
+    );
+    return [1, 3, 7].includes(wTypeId) || Boolean(workOrder?.is_warranty_case);
+  }, [form.data.warranty_type_id, workOrder]);
 
   // Loading state
   if (loading) {
@@ -120,7 +139,7 @@ export default function VendorWorkOrderEditScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      {/* Header */}
+      {/* Header: Transparent bg, Back btn, Order #, Service Name, Countdown badge */}
       <EditHeader
         onInfoPress={() => setShowGuideModal(true)}
         workOrderNumber={workOrder?.work_order_number || workOrder?.id}
@@ -142,6 +161,16 @@ export default function VendorWorkOrderEditScreen() {
         </View>
       )}
 
+      {/* Minimal Tab Switcher (Details, Attachments, Activity) */}
+      <WorkOrderMinimalTabBar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        requiredAttachmentsCount={requiredFileTypeIds.length}
+        uploadedAttachmentsCount={uploadedReqCount}
+        activityCount={workOrder?.histories?.length || 0}
+      />
+
+      {/* Main Content Area */}
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
@@ -154,73 +183,46 @@ export default function VendorWorkOrderEditScreen() {
           />
         }
       >
-        {/* Product Details Form with Concerns */}
-        <ProductDetailsForm
-          workOrder={workOrder}
-          indoorSerial={form.data.indoor_serial_number}
-          outdoorSerial={form.data.outdoor_serial_number}
-          indoorModel={form.data.product_indoor_model}
-          outdoorModel={form.data.product_outdoor_model}
-          purchaseDate={form.data.purchase_date}
-          selectedConcernId={form.data.service_concern_id}
-          selectedSubConcernId={form.data.service_sub_concern_id}
-          selectedWarrantyTypeId={form.data.warranty_type_id}
-          onIndoorSerialChange={(v) =>
-            form.setData("indoor_serial_number", v.toUpperCase())
-          }
-          onOutdoorSerialChange={(v) =>
-            form.setData("outdoor_serial_number", v.toUpperCase())
-          }
-          onIndoorModelChange={(v) =>
-            form.setData("product_indoor_model", v.toUpperCase())
-          }
-          onOutdoorModelChange={(v) =>
-            form.setData("product_outdoor_model", v.toUpperCase())
-          }
-          onPurchaseDateChange={(v) => form.setData("purchase_date", v)}
-          onServiceConcernChange={(v) => form.setData("service_concern_id", v)}
-          onServiceSubConcernChange={(v) =>
-            form.setData("service_sub_concern_id", v)
-          }
-          onWarrantyTypeChange={(v) => form.setData("warranty_type_id", v)}
-          onScanIndoor={() => scanner.openScanner("indoor")}
-          onScanOutdoor={() => scanner.openScanner("outdoor")}
-        />
+        {activeTab === "details" && (
+          <WorkOrderDetailsTab
+            workOrder={workOrder}
+            formData={form.data}
+            setFormData={form.setData}
+            onScanIndoor={() => scanner.openScanner("indoor")}
+            onScanOutdoor={() => scanner.openScanner("outdoor")}
+            onSave={handleSaveDetails}
+            saving={form.processing}
+          />
+        )}
 
-        {/* Technician Remarks */}
-        <TechnicianRemarksForm
-          value={form.data.technician_remarks}
-          onChangeText={(v) => form.setData("technician_remarks", v)}
-        />
+        {activeTab === "attachments" && (
+          <WorkOrderAttachmentsTab
+            workOrder={workOrder}
+            files={workOrder.files || []}
+            fileTypes={fileUpload.fileTypes}
+            uploading={fileUpload.uploading}
+            processing={fileUpload.processing}
+            uploadData={fileUpload.uploadData}
+            onSelectFileType={fileUpload.handleSelectFileType}
+            onSelectCamera={fileUpload.handleSelectCamera}
+            onSelectGallery={fileUpload.handleSelectGallery}
+            onConfirmUpload={fileUpload.handleConfirmUpload}
+            onCancelPreview={fileUpload.handleCancelPreview}
+            showPreviewModal={fileUpload.showPreviewModal}
+            onDelete={fileUpload.handleFileDelete}
+            isWarrantyCase={isWarrantyCase}
+          />
+        )}
 
-        {/* File Upload Section */}
-        <FileUploadSection
-          files={workOrder.files || []}
-          uploading={fileUpload.uploading}
-          processing={fileUpload.processing}
-          fileTypes={fileUpload.fileTypes}
-          showFileTypeSheet={fileUpload.showFileTypeSheet}
-          showSourceSheet={fileUpload.showSourceSheet}
-          showPreviewModal={fileUpload.showPreviewModal}
-          uploadData={fileUpload.uploadData}
-          onAddFile={fileUpload.handleAddFile}
-          onSelectFileType={fileUpload.handleSelectFileType}
-          onSelectCamera={fileUpload.handleSelectCamera}
-          onSelectGallery={fileUpload.handleSelectGallery}
-          onConfirmUpload={fileUpload.handleConfirmUpload}
-          onCancelPreview={fileUpload.handleCancelPreview}
-          onCancelFileTypeSheet={fileUpload.cancelFileTypeSheet}
-          onCancelSourceSheet={fileUpload.cancelSourceSheet}
-          onDelete={fileUpload.handleFileDelete}
-          onClearAll={() => fileUpload.handleClearAll(workOrder.files || [])}
-          requiredFileTypeIds={requiredFileTypeIds}
-        />
+        {activeTab === "activity" && (
+          <WorkOrderActivityTab workOrder={workOrder} />
+        )}
 
-        {/* Action Buttons */}
+        {/* Action Buttons (Save & Complete) */}
         <View style={styles.actionsRow}>
           <View style={styles.actionButton}>
             <Button
-              title="Save"
+              title="Save Details"
               onPress={handleSaveDetails}
               variant="outline"
               size="small"
@@ -231,7 +233,7 @@ export default function VendorWorkOrderEditScreen() {
           </View>
           <View style={styles.actionButton}>
             <Button
-              title="Complete"
+              title="Complete Job"
               onPress={() => setShowCompleteModal(true)}
               variant="primary"
               size="small"
@@ -243,7 +245,7 @@ export default function VendorWorkOrderEditScreen() {
         </View>
       </ScrollView>
 
-      {/* Barcode Scanner */}
+      {/* Barcode Scanner Modal */}
       <BarcodeScanner
         visible={scanner.showScanner}
         scanningField={scanner.scanningField}
@@ -291,7 +293,6 @@ export default function VendorWorkOrderEditScreen() {
         onClose={() => setShowSuccessModal(false)}
       />
 
-      {/* Error Modal */}
       <Modal
         visible={showErrorModal}
         type="error"
@@ -306,29 +307,28 @@ export default function VendorWorkOrderEditScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral.gray[50],
+    backgroundColor: "#F8FAFC",
   },
   autoSaveIndicator: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.themes.provider.background,
+    backgroundColor: "#F1F5F9",
     paddingVertical: 4,
     gap: 6,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.themes.provider.primaryLight,
+    borderBottomColor: "#E2E8F0",
   },
   autoSaveText: {
     fontSize: 10,
-    color: Colors.themes.provider.primary,
-    fontWeight: "500",
+    color: "#0F172A",
+    fontWeight: "600",
   },
   content: {
     flex: 1,
   },
   scrollContent: {
-    padding: 10,
-    paddingBottom: 60,
+    paddingBottom: 40,
   },
   loadingContainer: {
     flex: 1,
@@ -337,8 +337,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   loadingText: {
-    fontSize: 11,
-    color: Colors.text.secondary,
+    fontSize: 12,
+    color: "#64748B",
   },
   errorContainer: {
     flex: 1,
@@ -348,22 +348,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   errorTitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
-    color: Colors.text.primary,
-  },
-  card: {
-    backgroundColor: Colors.neutral.white,
-    borderRadius: 6,
-    padding: 10,
-    marginBottom: 6,
-    borderWidth: 1,
-    borderColor: Colors.border.light,
+    color: "#0F172A",
   },
   actionsRow: {
     flexDirection: "row",
-    gap: 8,
-    marginTop: 4,
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 24,
   },
   actionButton: {
     flex: 1,

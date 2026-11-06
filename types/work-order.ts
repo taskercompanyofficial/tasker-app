@@ -21,6 +21,8 @@ export interface WorkOrderCustomer {
   phone: string;
   email?: string;
   whatsapp?: string;
+  expo_push_token?: string | null;
+  avatar_url?: string | null;
 }
 
 export interface WorkOrderAddress {
@@ -28,6 +30,16 @@ export interface WorkOrderAddress {
   address_line_1: string;
   address_line_2?: string;
   city: string;
+  area?: string | null;
+  main_service_area_id?: number | null;
+  main_service_area?: {
+    id: number;
+    name: string;
+    slug?: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    covering_radius_km?: number | null;
+  } | null;
   state: string;
   zip_code: string;
   latitude?: number;
@@ -57,6 +69,12 @@ export interface WorkOrder {
   // Customer
   customer: WorkOrderCustomer;
   address: WorkOrderAddress;
+  city?: {
+    id: number;
+    name: string;
+    latitude?: number | string | null;
+    longitude?: number | string | null;
+  } | null;
   brand_complaint_no?: string;
   reminders?: string;
   notes?: string;
@@ -124,8 +142,28 @@ export interface WorkOrder {
   service_end_date?: string;
   service_end_time?: string;
 
-  // Files
+  // Files & History
   files?: WorkOrderFile[];
+  histories?: Array<{
+    id: number;
+    action_type: string;
+    description: string;
+    field_name?: string | null;
+    old_value?: any;
+    new_value?: any;
+    user_name?: string | null;
+    created_at: string;
+    metadata?: any;
+  }>;
+
+  // Financial / Payout
+  payout?: number | string;
+  total_amount?: number | string;
+  grand_total?: number | string;
+  final_amount?: number | string;
+  charges?: number | string;
+  service_charges?: number | string;
+  estimated_charges?: number | string;
 
   // Timestamps
   created_at: string;
