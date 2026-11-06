@@ -11,35 +11,35 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import Colors from "@/constants/Colors";
 import { WorkOrder } from "@/types/work-order";
 import SheetSelect, { SheetSelectOption } from "@/components/SheetSelect";
 import axios from "@/lib/axios.config";
-import {
-  VENDOR_SERVICE_CONCERNS_URL,
-  VENDOR_SERVICE_SUB_CONCERNS_URL,
-  VENDOR_WARRANTY_TYPES_URL,
-} from "@/lib/api-endpoints";
+import { VENDOR_WARRANTY_TYPES_URL } from "@/lib/api-endpoints";
 
 interface WorkOrderDetailsTabProps {
   workOrder: WorkOrder;
   formData: {
     indoor_serial_number: string;
     outdoor_serial_number: string;
-    product_indoor_model: string;
-    product_outdoor_model: string;
+    warranty_serial_number?: string;
     purchase_date: string;
     technician_remarks: string;
-    service_concern_id: number | null;
-    service_sub_concern_id: number | null;
     warranty_type_id: number | null;
   };
   setFormData: (key: string, value: any) => void;
   onScanIndoor: () => void;
   onScanOutdoor: () => void;
+  onScanWarranty: () => void;
   onSave?: () => Promise<void>;
   saving?: boolean;
 }
+
+const DEFAULT_WARRANTY_TYPES: SheetSelectOption[] = [
+  { value: 1, label: "Brand Warranty", description: "Official manufacturer warranty" },
+  { value: 2, label: "Out of Warranty", description: "Standard paid customer repair" },
+  { value: 3, label: "Dealer Warranty", description: "Covered by authorized selling dealer" },
+  { value: 4, label: "Extended Warranty", description: "Extended protection coverage" },
+];
 
 const SINGLE_UNIT_SERVICES = new Set([
   "washing-machine",
@@ -57,58 +57,29 @@ export default function WorkOrderDetailsTab({
   setFormData,
   onScanIndoor,
   onScanOutdoor,
+  onScanWarranty,
   onSave,
   saving = false,
 }: WorkOrderDetailsTabProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
-  // Sheet pickers
-  const [showConcernPicker, setShowConcernPicker] = useState(false);
-  const [showSubConcernPicker, setShowSubConcernPicker] = useState(false);
+  // Sheet picker for Warranty Type
   const [showWarrantyTypePicker, setShowWarrantyTypePicker] = useState(false);
-
-  // Lookups data
-  const [concerns, setConcerns] = useState<SheetSelectOption[]>([]);
-  const [subConcerns, setSubConcerns] = useState<SheetSelectOption[]>([]);
-  const [warrantyTypes, setWarrantyTypes] = useState<SheetSelectOption[]>([]);
-  const [loadingConcerns, setLoadingConcerns] = useState(false);
-  const [loadingSubConcerns, setLoadingSubConcerns] = useState(false);
+  const [warrantyTypes, setWarrantyTypes] = useState<SheetSelectOption[]>(DEFAULT_WARRANTY_TYPES);
   const [loadingWarrantyTypes, setLoadingWarrantyTypes] = useState(false);
 
-  // Fetch concerns and warranty types
+  // Fetch active warranty types from backend with safe fallback
   React.useEffect(() => {
     let mounted = true;
-
-    const loadConcerns = async () => {
-      try {
-        setLoadingConcerns(true);
-        const res = await axios.get(VENDOR_SERVICE_CONCERNS_URL);
-        if (mounted && res.data?.data) {
-          const list = Array.isArray(res.data.data) ? res.data.data : [];
-          setConcerns(
-            list.map((c: any) => ({
-              value: c.id,
-              label: c.name,
-              description: c.description || null,
-            }))
-          );
-        }
-      } catch (err) {
-        console.warn("Failed to fetch service concerns:", err);
-      } finally {
-        if (mounted) setLoadingConcerns(false);
-      }
-    };
 
     const loadWarrantyTypes = async () => {
       try {
         setLoadingWarrantyTypes(true);
         const res = await axios.get(VENDOR_WARRANTY_TYPES_URL);
-        if (mounted && res.data?.data) {
-          const list = Array.isArray(res.data.data) ? res.data.data : [];
+        if (mounted && res.data?.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
           setWarrantyTypes(
-            list.map((w: any) => ({
+            res.data.data.map((w: any) => ({
               value: w.id,
               label: w.name,
               description: w.description || null,
@@ -116,13 +87,12 @@ export default function WorkOrderDetailsTab({
           );
         }
       } catch (err) {
-        console.warn("Failed to fetch warranty types:", err);
+        console.warn("Failed to fetch warranty types from server, using defaults:", err);
       } finally {
         if (mounted) setLoadingWarrantyTypes(false);
       }
     };
 
-    loadConcerns();
     loadWarrantyTypes();
 
     return () => {
@@ -130,45 +100,7 @@ export default function WorkOrderDetailsTab({
     };
   }, []);
 
-  // Fetch sub-concerns when selected concern changes
-  React.useEffect(() => {
-    let mounted = true;
-    if (!formData.service_concern_id) {
-      setSubConcerns([]);
-      return;
-    }
-
-    const loadSubConcerns = async () => {
-      try {
-        setLoadingSubConcerns(true);
-        const res = await axios.get(
-          VENDOR_SERVICE_SUB_CONCERNS_URL(formData.service_concern_id!)
-        );
-        if (mounted && res.data?.data) {
-          const list = Array.isArray(res.data.data) ? res.data.data : [];
-          setSubConcerns(
-            list.map((sc: any) => ({
-              value: sc.id,
-              label: sc.name,
-              description: sc.description || null,
-            }))
-          );
-        }
-      } catch (err) {
-        console.warn("Failed to fetch service sub concerns:", err);
-      } finally {
-        if (mounted) setLoadingSubConcerns(false);
-      }
-    };
-
-    loadSubConcerns();
-
-    return () => {
-      mounted = false;
-    };
-  }, [formData.service_concern_id]);
-
-  // Determine if service has outdoor unit
+  // Determine if service has outdoor unit (e.g. Split ACs)
   const hasOutdoorUnit = useMemo(() => {
     const parentSlug = (workOrder.parent_service?.name || "").toLowerCase();
     const serviceName = (workOrder.service?.name || "").toLowerCase();
@@ -183,7 +115,6 @@ export default function WorkOrderDetailsTab({
         return false;
       }
     }
-    // Default to true for AC services
     return (
       parentSlug.includes("ac") ||
       serviceName.includes("ac") ||
@@ -229,23 +160,6 @@ export default function WorkOrderDetailsTab({
     ].filter(Boolean);
     return parts.join(", ");
   }, [workOrder.address]);
-
-  // Selected labels
-  const selectedConcernLabel = useMemo(() => {
-    const found = concerns.find((c) => c.value === formData.service_concern_id);
-    return found?.label || workOrder.service_concern?.name || "Select Concern";
-  }, [concerns, formData.service_concern_id, workOrder.service_concern]);
-
-  const selectedSubConcernLabel = useMemo(() => {
-    const found = subConcerns.find(
-      (sc) => sc.value === formData.service_sub_concern_id
-    );
-    return (
-      found?.label ||
-      workOrder.service_sub_concern?.name ||
-      "Select Sub-Concern"
-    );
-  }, [subConcerns, formData.service_sub_concern_id, workOrder.service_sub_concern]);
 
   const selectedWarrantyLabel = useMemo(() => {
     const found = warrantyTypes.find(
@@ -343,12 +257,12 @@ export default function WorkOrderDetailsTab({
         </View>
       </View>
 
-      {/* ─── 2. JOB SCOPE & DIAGNOSTIC CONCERN CARD ─── */}
+      {/* ─── 2. JOB SCOPE CARD (MINIMAL, ZERO SHADOW) ─── */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderLeft}>
             <Ionicons name="construct-outline" size={16} color="#0F172A" />
-            <Text style={styles.cardTitle}>Job Scope & Concern</Text>
+            <Text style={styles.cardTitle}>Job Scope</Text>
           </View>
           <View style={styles.categoryBadge}>
             <Text style={styles.categoryBadgeText}>
@@ -364,7 +278,7 @@ export default function WorkOrderDetailsTab({
             "Booked Service Order"}
         </Text>
 
-        {/* Customer Reported Complaint */}
+        {/* Customer Reported Problem */}
         {Boolean(workOrder.customer_description) && (
           <View style={styles.complaintBox}>
             <View style={styles.complaintHeader}>
@@ -376,57 +290,14 @@ export default function WorkOrderDetailsTab({
             </Text>
           </View>
         )}
-
-        {/* Concern Dropdown Pickers */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Service Concern (Primary Fault)</Text>
-          <TouchableOpacity
-            style={styles.selector}
-            onPress={() => setShowConcernPicker(true)}
-            activeOpacity={0.8}
-          >
-            <Text
-              style={[
-                styles.selectorText,
-                !formData.service_concern_id && styles.selectorPlaceholder,
-              ]}
-              numberOfLines={1}
-            >
-              {selectedConcernLabel}
-            </Text>
-            <Ionicons name="chevron-down" size={16} color="#64748B" />
-          </TouchableOpacity>
-        </View>
-
-        {Boolean(formData.service_concern_id) && (
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Sub-Concern (Specific Fault)</Text>
-            <TouchableOpacity
-              style={styles.selector}
-              onPress={() => setShowSubConcernPicker(true)}
-              activeOpacity={0.8}
-            >
-              <Text
-                style={[
-                  styles.selectorText,
-                  !formData.service_sub_concern_id && styles.selectorPlaceholder,
-                ]}
-                numberOfLines={1}
-              >
-                {selectedSubConcernLabel}
-              </Text>
-              <Ionicons name="chevron-down" size={16} color="#64748B" />
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
 
-      {/* ─── 3. APPLIANCE & SERIAL NUMBERS CARD (WITH CRM WARRANTY RULES) ─── */}
+      {/* ─── 3. SERIAL NUMBERS & BARCODE SCAN (3 SCAN FIELDS) ─── */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderLeft}>
             <Ionicons name="barcode-outline" size={16} color="#0F172A" />
-            <Text style={styles.cardTitle}>Appliance & Serial Numbers</Text>
+            <Text style={styles.cardTitle}>Serial Verification & Scan</Text>
           </View>
           {isWarrantyCase && (
             <View style={styles.warrantyCaseBadge}>
@@ -436,7 +307,11 @@ export default function WorkOrderDetailsTab({
           )}
         </View>
 
-        {/* Warranty Type Selector */}
+        <Text style={styles.cardSubtitle}>
+          Scanning automatically captures barcode digits and attaches the photo to attachments.
+        </Text>
+
+        {/* Warranty Status Selector */}
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Warranty Status</Text>
           <TouchableOpacity
@@ -457,19 +332,19 @@ export default function WorkOrderDetailsTab({
           </TouchableOpacity>
         </View>
 
-        {/* Indoor Serial Number */}
+        {/* 1. Indoor Serial Number Field */}
         <View style={styles.inputGroup}>
           <View style={styles.labelRow}>
             <Text style={styles.inputLabel}>
-              Indoor Serial Number {isWarrantyCase && <Text style={styles.requiredStar}>*</Text>}
+              1. Indoor Serial Number {isWarrantyCase && <Text style={styles.requiredStar}>*</Text>}
             </Text>
             <TouchableOpacity
               style={styles.scanBtn}
               onPress={onScanIndoor}
               activeOpacity={0.8}
             >
-              <Ionicons name="scan-outline" size={13} color="#0F172A" />
-              <Text style={styles.scanBtnText}>Scan Barcode</Text>
+              <Ionicons name="camera" size={13} color="#0F172A" />
+              <Text style={styles.scanBtnText}>Scan & Attach Photo</Text>
             </TouchableOpacity>
           </View>
           <TextInput
@@ -484,20 +359,20 @@ export default function WorkOrderDetailsTab({
           />
         </View>
 
-        {/* Outdoor Serial Number (Conditional for Split ACs) */}
+        {/* 2. Outdoor Serial Number Field (Shown for Split ACs / applicable) */}
         {hasOutdoorUnit && (
           <View style={styles.inputGroup}>
             <View style={styles.labelRow}>
               <Text style={styles.inputLabel}>
-                Outdoor Serial Number {isWarrantyCase && <Text style={styles.requiredStar}>*</Text>}
+                2. Outdoor Serial Number {isWarrantyCase && <Text style={styles.requiredStar}>*</Text>}
               </Text>
               <TouchableOpacity
                 style={styles.scanBtn}
                 onPress={onScanOutdoor}
                 activeOpacity={0.8}
               >
-                <Ionicons name="scan-outline" size={13} color="#0F172A" />
-                <Text style={styles.scanBtnText}>Scan Barcode</Text>
+                <Ionicons name="camera" size={13} color="#0F172A" />
+                <Text style={styles.scanBtnText}>Scan & Attach Photo</Text>
               </TouchableOpacity>
             </View>
             <TextInput
@@ -513,36 +388,31 @@ export default function WorkOrderDetailsTab({
           </View>
         )}
 
-        {/* Models: Indoor & Outdoor */}
-        <View style={styles.twoColumnRow}>
-          <View style={[styles.inputGroup, { flex: 1 }]}>
-            <Text style={styles.inputLabel}>Indoor Model</Text>
-            <TextInput
-              style={styles.textInput}
-              value={formData.product_indoor_model}
-              onChangeText={(text) =>
-                setFormData("product_indoor_model", text.toUpperCase())
-              }
-              placeholder="e.g. HSU-18HNS"
-              placeholderTextColor="#94A3B8"
-              autoCapitalize="characters"
-            />
+        {/* 3. Warranty Card / Invoice Serial Number */}
+        <View style={styles.inputGroup}>
+          <View style={styles.labelRow}>
+            <Text style={styles.inputLabel}>
+              3. Warranty Card / Serial {isWarrantyCase && <Text style={styles.requiredStar}>*</Text>}
+            </Text>
+            <TouchableOpacity
+              style={styles.scanBtn}
+              onPress={onScanWarranty}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="camera" size={13} color="#0F172A" />
+              <Text style={styles.scanBtnText}>Scan & Attach Photo</Text>
+            </TouchableOpacity>
           </View>
-          {hasOutdoorUnit && (
-            <View style={[styles.inputGroup, { flex: 1 }]}>
-              <Text style={styles.inputLabel}>Outdoor Model</Text>
-              <TextInput
-                style={styles.textInput}
-                value={formData.product_outdoor_model}
-                onChangeText={(text) =>
-                  setFormData("product_outdoor_model", text.toUpperCase())
-                }
-                placeholder="e.g. HSU-18HNS-O"
-                placeholderTextColor="#94A3B8"
-                autoCapitalize="characters"
-              />
-            </View>
-          )}
+          <TextInput
+            style={styles.textInput}
+            value={formData.warranty_serial_number || ""}
+            onChangeText={(text) =>
+              setFormData("warranty_serial_number", text.toUpperCase())
+            }
+            placeholder="e.g. WC-9921448"
+            placeholderTextColor="#94A3B8"
+            autoCapitalize="characters"
+          />
         </View>
 
         {/* Purchase Date */}
@@ -591,7 +461,7 @@ export default function WorkOrderDetailsTab({
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderLeft}>
             <Ionicons name="clipboard-outline" size={16} color="#0F172A" />
-            <Text style={styles.cardTitle}>Technician Remarks & Actions</Text>
+            <Text style={styles.cardTitle}>Technician Remarks & Notes</Text>
           </View>
         </View>
 
@@ -599,7 +469,7 @@ export default function WorkOrderDetailsTab({
           style={styles.textAreaInput}
           value={formData.technician_remarks}
           onChangeText={(text) => setFormData("technician_remarks", text)}
-          placeholder="Enter diagnostic observations, work performed, or recommendations..."
+          placeholder="Enter on-site diagnostic remarks, work performed, or recommendations..."
           placeholderTextColor="#94A3B8"
           multiline
           numberOfLines={4}
@@ -627,34 +497,7 @@ export default function WorkOrderDetailsTab({
         )}
       </View>
 
-      {/* ─── MODAL SHEETS FOR SELECTION ─── */}
-      <SheetSelect
-        visible={showConcernPicker}
-        title="Select Service Concern"
-        options={concerns}
-        selectedValue={formData.service_concern_id}
-        onSelect={(val) => {
-          setFormData("service_concern_id", val);
-          setFormData("service_sub_concern_id", null);
-          setShowConcernPicker(false);
-        }}
-        onClose={() => setShowConcernPicker(false)}
-        loading={loadingConcerns}
-      />
-
-      <SheetSelect
-        visible={showSubConcernPicker}
-        title="Select Service Sub-Concern"
-        options={subConcerns}
-        selectedValue={formData.service_sub_concern_id}
-        onSelect={(val) => {
-          setFormData("service_sub_concern_id", val);
-          setShowSubConcernPicker(false);
-        }}
-        onClose={() => setShowSubConcernPicker(false)}
-        loading={loadingSubConcerns}
-      />
-
+      {/* ─── MODAL SHEET FOR WARRANTY TYPE ─── */}
       <SheetSelect
         visible={showWarrantyTypePicker}
         title="Select Warranty Type"
@@ -674,7 +517,7 @@ export default function WorkOrderDetailsTab({
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 12,
-    paddingTop: 12,
+    paddingTop: 10,
     paddingBottom: 40,
     gap: 12,
   },
@@ -684,9 +527,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
     padding: 14,
-    // ZERO SHADOWS AS REQUIRED
     elevation: 0,
     shadowColor: "transparent",
+  },
+  cardSubtitle: {
+    fontSize: 11,
+    color: "#64748B",
+    marginBottom: 8,
+    lineHeight: 15,
   },
   customerHeader: {
     flexDirection: "row",
@@ -816,7 +664,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   cardHeaderLeft: {
     flexDirection: "row",
@@ -853,7 +701,7 @@ const styles = StyleSheet.create({
     borderColor: "#FDE68A",
     borderRadius: 8,
     padding: 10,
-    marginBottom: 12,
+    marginBottom: 4,
   },
   complaintHeader: {
     flexDirection: "row",
@@ -896,7 +744,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     backgroundColor: "#F1F5F9",
     borderRadius: 6,
     borderWidth: 1,
@@ -934,10 +782,6 @@ const styles = StyleSheet.create({
   },
   selectorPlaceholder: {
     color: "#94A3B8",
-  },
-  twoColumnRow: {
-    flexDirection: "row",
-    gap: 10,
   },
   warrantyCaseBadge: {
     flexDirection: "row",

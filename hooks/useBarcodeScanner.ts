@@ -1,7 +1,7 @@
 import { useCameraPermissions } from "expo-camera";
 import { useCallback, useState } from "react";
 
-type ScanField = "indoor" | "outdoor" | null;
+export type ScanField = "indoor" | "outdoor" | "warranty" | null;
 
 interface UseBarcodeScannerReturn {
   // Scanner state
@@ -9,23 +9,25 @@ interface UseBarcodeScannerReturn {
   scanningField: ScanField;
 
   // Actions
-  openScanner: (field: "indoor" | "outdoor") => Promise<void>;
+  openScanner: (field: "indoor" | "outdoor" | "warranty") => Promise<void>;
   closeScanner: () => void;
-  onBarcodeScanned: (data: string) => void;
+  onBarcodeScanned: (data: string, imageUri?: string) => void;
 
   // Permission
   hasPermission: boolean;
 }
 
 interface UseBarcodeScannerOptions {
-  onIndoorScanned: (data: string) => void;
-  onOutdoorScanned: (data: string) => void;
+  onIndoorScanned: (data: string, imageUri?: string) => void;
+  onOutdoorScanned: (data: string, imageUri?: string) => void;
+  onWarrantyScanned?: (data: string, imageUri?: string) => void;
   onError: (message: string) => void;
 }
 
 export function useBarcodeScanner({
   onIndoorScanned,
   onOutdoorScanned,
+  onWarrantyScanned,
   onError,
 }: UseBarcodeScannerOptions): UseBarcodeScannerReturn {
   const [permission, requestPermission] = useCameraPermissions();
@@ -33,7 +35,7 @@ export function useBarcodeScanner({
   const [scanningField, setScanningField] = useState<ScanField>(null);
 
   const openScanner = useCallback(
-    async (field: "indoor" | "outdoor") => {
+    async (field: "indoor" | "outdoor" | "warranty") => {
       if (!permission?.granted) {
         const { granted } = await requestPermission();
         if (!granted) {
@@ -53,16 +55,18 @@ export function useBarcodeScanner({
   }, []);
 
   const onBarcodeScanned = useCallback(
-    (data: string) => {
+    (data: string, imageUri?: string) => {
       if (scanningField === "indoor") {
-        onIndoorScanned(data);
+        onIndoorScanned(data, imageUri);
       } else if (scanningField === "outdoor") {
-        onOutdoorScanned(data);
+        onOutdoorScanned(data, imageUri);
+      } else if (scanningField === "warranty" && onWarrantyScanned) {
+        onWarrantyScanned(data, imageUri);
       }
       setShowScanner(false);
       setScanningField(null);
     },
-    [scanningField, onIndoorScanned, onOutdoorScanned]
+    [scanningField, onIndoorScanned, onOutdoorScanned, onWarrantyScanned]
   );
 
   return {

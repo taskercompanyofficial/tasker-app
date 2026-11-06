@@ -314,10 +314,63 @@ export default function TechnicianWorkOrderNavigationScreen({
     },
   });
 
-  // Barcode Scanner for Full-Screen mode
+  // Barcode Scanner for Full-Screen mode (auto-attaches scanned photo as document)
   const fsScanner = useBarcodeScanner({
-    onIndoorScanned: (data) => handleFsFormChange("indoor_serial_number", data),
-    onOutdoorScanned: (data) => handleFsFormChange("outdoor_serial_number", data),
+    onIndoorScanned: (data, imageUri) => {
+      handleFsFormChange("indoor_serial_number", data);
+      if (imageUri) {
+        const ft = fsFileUpload.fileTypes.find(
+          (f) =>
+            f.slug === "indoor-serial" ||
+            f.name?.toLowerCase().includes("indoor serial") ||
+            f.name?.toLowerCase().includes("serial")
+        );
+        if (ft) {
+          fsFileUpload.uploadDirectFile(imageUri, ft.id);
+          Toast.show({
+            type: "success",
+            text1: "Indoor Serial Scanned",
+            text2: `${data} saved and photo attached`,
+          });
+        }
+      }
+    },
+    onOutdoorScanned: (data, imageUri) => {
+      handleFsFormChange("outdoor_serial_number", data);
+      if (imageUri) {
+        const ft = fsFileUpload.fileTypes.find(
+          (f) =>
+            f.slug === "outdoor-serial" ||
+            f.name?.toLowerCase().includes("outdoor serial")
+        );
+        if (ft) {
+          fsFileUpload.uploadDirectFile(imageUri, ft.id);
+          Toast.show({
+            type: "success",
+            text1: "Outdoor Serial Scanned",
+            text2: `${data} saved and photo attached`,
+          });
+        }
+      }
+    },
+    onWarrantyScanned: (data, imageUri) => {
+      handleFsFormChange("warranty_serial_number", data);
+      if (imageUri) {
+        const ft = fsFileUpload.fileTypes.find(
+          (f) =>
+            f.slug === "warranty-card" ||
+            f.name?.toLowerCase().includes("warranty")
+        );
+        if (ft) {
+          fsFileUpload.uploadDirectFile(imageUri, ft.id);
+          Toast.show({
+            type: "success",
+            text1: "Warranty Scanned",
+            text2: `${data} saved and photo attached`,
+          });
+        }
+      }
+    },
     onError: (msg) => {
       Toast.show({ type: "error", text1: "Scan Failed", text2: msg });
     },
@@ -1152,6 +1205,7 @@ export default function TechnicianWorkOrderNavigationScreen({
               setFormData={handleFsFormChange}
               onScanIndoor={() => fsScanner.openScanner("indoor")}
               onScanOutdoor={() => fsScanner.openScanner("outdoor")}
+              onScanWarranty={() => fsScanner.openScanner("warranty")}
               onSave={handleFsSaveDetails}
               saving={isSavingFsDetails}
             />
@@ -1185,7 +1239,9 @@ export default function TechnicianWorkOrderNavigationScreen({
         <BarcodeScanner
           visible={fsScanner.showScanner}
           scanningField={fsScanner.scanningField}
-          onBarcodeScanned={({ data }) => fsScanner.onBarcodeScanned(data)}
+          onBarcodeScanned={({ data, imageUri }) =>
+            fsScanner.onBarcodeScanned(data, imageUri)
+          }
           onClose={fsScanner.closeScanner}
         />
       </View>
@@ -2272,8 +2328,8 @@ const styles = StyleSheet.create({
     color: "#B45309",
   },
   fsScrollContent: {
-    padding: 16,
-    gap: 16,
+    paddingHorizontal: 0,
+    paddingTop: 0,
     paddingBottom: 40,
   },
   timerCard: {

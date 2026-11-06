@@ -69,10 +69,48 @@ export default function VendorWorkOrderEditScreen() {
     onFilesChanged: refreshWorkOrder,
   });
 
-  // Barcode scanner hook
+  // Barcode scanner hook (auto-attaches scanned barcode photo as document)
   const scanner = useBarcodeScanner({
-    onIndoorScanned: (data) => form.setData("indoor_serial_number", data),
-    onOutdoorScanned: (data) => form.setData("outdoor_serial_number", data),
+    onIndoorScanned: (data, imageUri) => {
+      form.setData("indoor_serial_number", data.toUpperCase());
+      if (imageUri) {
+        const ft = fileUpload.fileTypes.find(
+          (f) =>
+            f.slug === "indoor-serial" ||
+            f.name?.toLowerCase().includes("indoor serial") ||
+            f.name?.toLowerCase().includes("serial")
+        );
+        if (ft) {
+          fileUpload.uploadDirectFile(imageUri, ft.id);
+        }
+      }
+    },
+    onOutdoorScanned: (data, imageUri) => {
+      form.setData("outdoor_serial_number", data.toUpperCase());
+      if (imageUri) {
+        const ft = fileUpload.fileTypes.find(
+          (f) =>
+            f.slug === "outdoor-serial" ||
+            f.name?.toLowerCase().includes("outdoor serial")
+        );
+        if (ft) {
+          fileUpload.uploadDirectFile(imageUri, ft.id);
+        }
+      }
+    },
+    onWarrantyScanned: (data, imageUri) => {
+      form.setData("warranty_serial_number", data.toUpperCase());
+      if (imageUri) {
+        const ft = fileUpload.fileTypes.find(
+          (f) =>
+            f.slug === "warranty-card" ||
+            f.name?.toLowerCase().includes("warranty")
+        );
+        if (ft) {
+          fileUpload.uploadDirectFile(imageUri, ft.id);
+        }
+      }
+    },
     onError: () => {
       setShowErrorModal(true);
     },
@@ -190,6 +228,7 @@ export default function VendorWorkOrderEditScreen() {
             setFormData={form.setData}
             onScanIndoor={() => scanner.openScanner("indoor")}
             onScanOutdoor={() => scanner.openScanner("outdoor")}
+            onScanWarranty={() => scanner.openScanner("warranty")}
             onSave={handleSaveDetails}
             saving={form.processing}
           />
@@ -249,7 +288,9 @@ export default function VendorWorkOrderEditScreen() {
       <BarcodeScanner
         visible={scanner.showScanner}
         scanningField={scanner.scanningField}
-        onBarcodeScanned={({ data }) => scanner.onBarcodeScanned(data)}
+        onBarcodeScanned={({ data, imageUri }) =>
+          scanner.onBarcodeScanned(data, imageUri)
+        }
         onClose={scanner.closeScanner}
       />
 
@@ -328,6 +369,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
     paddingBottom: 40,
   },
   loadingContainer: {

@@ -11,7 +11,6 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Colors from "@/constants/Colors";
 import { FileType } from "@/types/file-type";
 import { WorkOrder, WorkOrderFile } from "@/types/work-order";
 import getImageUrl from "@/lib/utils";
@@ -38,8 +37,8 @@ interface WorkOrderAttachmentsTabProps {
 
 export default function WorkOrderAttachmentsTab({
   workOrder,
-  files,
-  fileTypes,
+  files = [],
+  fileTypes = [],
   uploading,
   processing = false,
   uploadData,
@@ -61,28 +60,39 @@ export default function WorkOrderAttachmentsTab({
   // Bottom sheet for "Upload Other"
   const [showOtherSheet, setShowOtherSheet] = useState(false);
 
-  // 1. Identify Required File Types (from parent_service + warranty rules)
-  const requiredFileTypes = useMemo(() => {
-    const fromParent =
-      workOrder.parent_service?.required_file_types
-        ?.filter((rf) => rf.is_required)
-        ?.map((rf) => rf.file_type || fileTypes.find((ft) => ft.id === rf.file_type_id))
-        ?.filter(Boolean) as FileType[] || [];
+  // 1. Safe list of all available file types (filtered against null/undefined)
+  const safeFileTypes = useMemo(() => {
+    if (!Array.isArray(fileTypes)) return [];
+    return fileTypes.filter(
+      (ft): ft is FileType => Boolean(ft && typeof ft === "object" && ft.id)
+    );
+  }, [fileTypes]);
 
-    // Fallback: If parentService didn't load relations, match fileTypes against required_file_types array
-    if (fromParent.length === 0 && workOrder.parent_service?.required_file_types) {
-      const ids = workOrder.parent_service.required_file_types.map((rf) => rf.file_type_id);
-      return fileTypes.filter((ft) => ids.includes(ft.id));
-    }
+  // 2. Identify Required File Types (from parent_service + warranty rules)
+  const requiredFileTypes = useMemo(() => {
+    const rawRequired = workOrder?.parent_service?.required_file_types || [];
+    const fromParent: FileType[] = [];
+
+    rawRequired.forEach((rf) => {
+      if (!rf || !rf.is_required) return;
+      if (rf.file_type && typeof rf.file_type === "object" && rf.file_type.id) {
+        fromParent.push(rf.file_type);
+      } else if (rf.file_type_id) {
+        const found = safeFileTypes.find((ft) => ft.id === rf.file_type_id);
+        if (found) fromParent.push(found);
+      }
+    });
 
     // Apply CRM Warranty Rules:
     // If it's a warranty job, serial barcode photos and warranty card must be required
-    let list = [...fromParent];
+    const list = [...fromParent];
     if (isWarrantyCase) {
-      const serialSlugs = ["indoor-serial", "outdoor-serial", "serial-number", "warranty-card"];
-      fileTypes.forEach((ft) => {
-        const matches = serialSlugs.some(
-          (s) => ft.slug?.includes(s) || ft.name?.toLowerCase().includes("serial") || ft.name?.toLowerCase().includes("warranty")
+      const serialKeywords = ["serial", "barcode", "warranty"];
+      safeFileTypes.forEach((ft) => {
+        const nameLower = (ft.name || "").toLowerCase();
+        const slugLower = (ft.slug || "").toLowerCase();
+        const matches = serialKeywords.some(
+          (k) => nameLower.includes(k) || slugLower.includes(k)
         );
         if (matches && !list.some((existing) => existing.id === ft.id)) {
           list.push(ft);
@@ -90,42 +100,53 @@ export default function WorkOrderAttachmentsTab({
       });
     }
 
-    // If still empty, default to common critical file types (Before, After)
+    // Default fallback if no requirement rules are configured
     if (list.length === 0) {
-      list = fileTypes.filter(
-        (ft) =>
-          ft.slug === "before-work" ||
-          ft.slug === "after-work" ||
-          ft.slug === "indoor-serial"
-      );
+      safeFileTypes.forEach((ft) => {
+        const slug = (ft.slug || "").toLowerCase();
+        if (
+          slug.includes("before") ||
+          slug.includes("after") ||
+          slug.includes("indoor")
+        ) {
+          list.push(ft);
+        }
+      });
     }
 
-    return list;
-  }, [workOrder.parent_service, fileTypes, isWarrantyCase]);
+    return list.filter(
+      (ft): ft is FileType => Boolean(ft && typeof ft === "object" && ft.id)
+    );
+  }, [workOrder?.parent_service, safeFileTypes, isWarrantyCase]);
 
-  // 2. Identify Non-Required File Types (for "+ Upload Other")
+  // 3. Identify Non-Required File Types (for "+ Upload Other")
   const otherFileTypeOptions: SheetSelectOption[] = useMemo(() => {
     const reqIds = new Set(requiredFileTypes.map((rf) => rf.id));
-    return fileTypes
+    return safeFileTypes
       .filter((ft) => !reqIds.has(ft.id))
       .map((ft) => ({
         value: ft.id,
-        label: ft.name,
+        label: ft.name || `File Type #${ft.id}`,
         description: ft.description || null,
       }));
-  }, [fileTypes, requiredFileTypes]);
+  }, [safeFileTypes, requiredFileTypes]);
 
-  // 3. Separate files into Required Files and Other Files
+  // 4. Separate files into Required Files and Other Files
   const reqIdSet = useMemo(
     () => new Set(requiredFileTypes.map((rf) => rf.id)),
     [requiredFileTypes]
   );
 
+  const safeFiles = useMemo(() => {
+    if (!Array.isArray(files)) return [];
+    return files.filter(Boolean);
+  }, [files]);
+
   const otherFiles = useMemo(() => {
-    return files.filter(
+    return safeFiles.filter(
       (f) => !reqIdSet.has(f.file_type?.id || (f as any).file_type_id)
     );
-  }, [files, reqIdSet]);
+  }, [safeFiles, reqIdSet]);
 
   // Direct 1-tap trigger for a specific required file type
   const handleDirectCapture = (fileTypeId: number, source: "camera" | "gallery") => {
@@ -138,9 +159,9 @@ export default function WorkOrderAttachmentsTab({
   };
 
   const selectedFileTypeName = useMemo(() => {
-    const ft = fileTypes.find((f) => f.id === uploadData?.fileTypeId);
+    const ft = safeFileTypes.find((f) => f.id === uploadData?.fileTypeId);
     return ft?.name || "Attachment";
-  }, [fileTypes, uploadData?.fileTypeId]);
+  }, [safeFileTypes, uploadData?.fileTypeId]);
 
   return (
     <View style={styles.container}>
@@ -153,9 +174,13 @@ export default function WorkOrderAttachmentsTab({
           </View>
           <View style={styles.counterBadge}>
             <Text style={styles.counterBadgeText}>
-              {requiredFileTypes.filter((rf) =>
-                files.some((f) => (f.file_type?.id || (f as any).file_type_id) === rf.id)
-              ).length}{" "}
+              {
+                requiredFileTypes.filter((rf) =>
+                  safeFiles.some(
+                    (f) => (f.file_type?.id || (f as any).file_type_id) === rf.id
+                  )
+                ).length
+              }{" "}
               / {requiredFileTypes.length} Done
             </Text>
           </View>
@@ -168,9 +193,9 @@ export default function WorkOrderAttachmentsTab({
         {/* Required Files Table Rows */}
         <View style={styles.table}>
           {requiredFileTypes.map((reqType, index) => {
-            const uploadedFile = files.find(
-              (f) =>
-                (f.file_type?.id || (f as any).file_type_id) === reqType.id
+            if (!reqType) return null;
+            const uploadedFile = safeFiles.find(
+              (f) => (f.file_type?.id || (f as any).file_type_id) === reqType.id
             );
             const isDone = Boolean(uploadedFile);
             const sampleUrl = reqType.reference_image_url || reqType.reference_image;
@@ -366,117 +391,121 @@ export default function WorkOrderAttachmentsTab({
         animationType="fade"
         onRequestClose={() => setSampleModalItem(null)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.sampleModalBox}>
-            <View style={styles.sampleModalHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.sampleModalTitle}>
-                  Sample Photo: {sampleModalItem?.name}
-                </Text>
-                <Text style={styles.sampleModalSubtitle}>
-                  Please match this angle and framing when capturing
-                </Text>
+        {Boolean(sampleModalItem) && (
+          <View style={styles.modalOverlay}>
+            <View style={styles.sampleModalBox}>
+              <View style={styles.sampleModalHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sampleModalTitle}>
+                    Sample Photo: {sampleModalItem?.name}
+                  </Text>
+                  <Text style={styles.sampleModalSubtitle}>
+                    Please match this angle and framing when capturing
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setSampleModalItem(null)}
+                  style={styles.modalCloseBtn}
+                >
+                  <Ionicons name="close" size={20} color="#0F172A" />
+                </TouchableOpacity>
               </View>
+
+              <View style={styles.sampleImageContainer}>
+                <Image
+                  source={{
+                    uri: getImageUrl(
+                      sampleModalItem?.reference_image_url ||
+                        sampleModalItem?.reference_image
+                    ),
+                  }}
+                  style={styles.sampleImageFull}
+                  resizeMode="contain"
+                />
+              </View>
+
+              {Boolean(sampleModalItem?.description) && (
+                <View style={styles.sampleInstructions}>
+                  <Ionicons name="information-circle-outline" size={16} color="#0284C7" />
+                  <Text style={styles.sampleInstructionsText}>
+                    {sampleModalItem?.description}
+                  </Text>
+                </View>
+              )}
+
               <TouchableOpacity
-                onPress={() => setSampleModalItem(null)}
-                style={styles.modalCloseBtn}
+                style={styles.sampleCaptureBtn}
+                onPress={() => {
+                  const typeId = sampleModalItem!.id;
+                  setSampleModalItem(null);
+                  setTimeout(() => handleDirectCapture(typeId, "camera"), 300);
+                }}
+                activeOpacity={0.8}
               >
-                <Ionicons name="close" size={20} color="#0F172A" />
+                <Ionicons name="camera" size={16} color="#FFFFFF" />
+                <Text style={styles.sampleCaptureBtnText}>
+                  Open Camera For This Photo
+                </Text>
               </TouchableOpacity>
             </View>
-
-            <View style={styles.sampleImageContainer}>
-              <Image
-                source={{
-                  uri: getImageUrl(
-                    sampleModalItem?.reference_image_url ||
-                      sampleModalItem?.reference_image
-                  ),
-                }}
-                style={styles.sampleImageFull}
-                resizeMode="contain"
-              />
-            </View>
-
-            {Boolean(sampleModalItem?.description) && (
-              <View style={styles.sampleInstructions}>
-                <Ionicons name="information-circle-outline" size={16} color="#0284C7" />
-                <Text style={styles.sampleInstructionsText}>
-                  {sampleModalItem?.description}
-                </Text>
-              </View>
-            )}
-
-            <TouchableOpacity
-              style={styles.sampleCaptureBtn}
-              onPress={() => {
-                const typeId = sampleModalItem!.id;
-                setSampleModalItem(null);
-                setTimeout(() => handleDirectCapture(typeId, "camera"), 300);
-              }}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="camera" size={16} color="#FFFFFF" />
-              <Text style={styles.sampleCaptureBtnText}>
-                Open Camera For This Photo
-              </Text>
-            </TouchableOpacity>
           </View>
-        </View>
+        )}
       </Modal>
 
       {/* ─── MODAL 2: UPLOAD CONFIRMATION PREVIEW ─── */}
       <Modal
-        visible={showPreviewModal}
+        visible={Boolean(showPreviewModal && uploadData)}
         transparent
         animationType="slide"
         onRequestClose={onCancelPreview}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.previewModalBox}>
-            <View style={styles.previewModalHeader}>
-              <Text style={styles.previewModalTitle}>
-                Confirm {selectedFileTypeName}
-              </Text>
-              <TouchableOpacity onPress={onCancelPreview} style={styles.modalCloseBtn}>
-                <Ionicons name="close" size={20} color="#0F172A" />
-              </TouchableOpacity>
-            </View>
+        {Boolean(uploadData) && (
+          <View style={styles.modalOverlay}>
+            <View style={styles.previewModalBox}>
+              <View style={styles.previewModalHeader}>
+                <Text style={styles.previewModalTitle}>
+                  Confirm {selectedFileTypeName}
+                </Text>
+                <TouchableOpacity onPress={onCancelPreview} style={styles.modalCloseBtn}>
+                  <Ionicons name="close" size={20} color="#0F172A" />
+                </TouchableOpacity>
+              </View>
 
-            {Boolean(uploadData?.imageUri) && (
-              <Image
-                source={{ uri: uploadData!.imageUri }}
-                style={styles.previewImage}
-                resizeMode="contain"
-              />
-            )}
+              {Boolean(uploadData?.imageUri) && (
+                <Image
+                  source={{ uri: uploadData!.imageUri }}
+                  style={styles.previewImage}
+                  resizeMode="contain"
+                />
+              )}
 
-            <View style={styles.previewBtnRow}>
-              <TouchableOpacity
-                style={styles.previewCancelBtn}
-                onPress={onCancelPreview}
-                disabled={uploading || processing}
-              >
-                <Text style={styles.previewCancelText}>Retake / Cancel</Text>
-              </TouchableOpacity>
+              <View style={styles.previewBtnRow}>
+                <TouchableOpacity
+                  style={styles.previewCancelBtn}
+                  onPress={onCancelPreview}
+                  disabled={uploading || processing}
+                >
+                  <Text style={styles.previewCancelText}>Retake / Cancel</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.previewConfirmBtn}
-                onPress={onConfirmUpload}
-                disabled={uploading || processing}
-              >
-                {uploading || processing ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
-                    <Ionicons name="cloud-upload" size={16} color="#FFFFFF" />
-                    <Text style={styles.previewConfirmText}>Upload Photo</Text>
-                  </>
-                )}
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.previewConfirmBtn}
+                  onPress={onConfirmUpload}
+                  disabled={uploading || processing}
+                >
+                  {uploading || processing ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Ionicons name="cloud-upload" size={16} color="#FFFFFF" />
+                      <Text style={styles.previewConfirmText}>Upload Photo</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
+        )}
       </Modal>
 
       {/* ─── MODAL 3: FULL VIEW OF UPLOADED FILE ─── */}
@@ -486,33 +515,35 @@ export default function WorkOrderAttachmentsTab({
         animationType="fade"
         onRequestClose={() => setViewingFile(null)}
       >
-        <View style={styles.fullViewerOverlay}>
-          <TouchableOpacity
-            style={styles.fullViewerCloseBtn}
-            onPress={() => setViewingFile(null)}
-          >
-            <Ionicons name="close" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
+        {Boolean(viewingFile) && (
+          <View style={styles.fullViewerOverlay}>
+            <TouchableOpacity
+              style={styles.fullViewerCloseBtn}
+              onPress={() => setViewingFile(null)}
+            >
+              <Ionicons name="close" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
 
-          {Boolean(viewingFile?.file_path) && (
-            <Image
-              source={{ uri: getImageUrl(viewingFile?.file_path) }}
-              style={styles.fullViewerImage}
-              resizeMode="contain"
-            />
-          )}
-
-          <View style={styles.fullViewerBottom}>
-            <Text style={styles.fullViewerTitle}>
-              {viewingFile?.file_type?.name || "Uploaded Photo"}
-            </Text>
-            {Boolean(viewingFile?.uploaded_at) && (
-              <Text style={styles.fullViewerTime}>
-                Uploaded: {new Date(viewingFile!.uploaded_at).toLocaleString()}
-              </Text>
+            {Boolean(viewingFile?.file_path) && (
+              <Image
+                source={{ uri: getImageUrl(viewingFile?.file_path) }}
+                style={styles.fullViewerImage}
+                resizeMode="contain"
+              />
             )}
+
+            <View style={styles.fullViewerBottom}>
+              <Text style={styles.fullViewerTitle}>
+                {viewingFile?.file_type?.name || "Uploaded Photo"}
+              </Text>
+              {Boolean(viewingFile?.uploaded_at) && (
+                <Text style={styles.fullViewerTime}>
+                  Uploaded: {new Date(viewingFile!.uploaded_at).toLocaleString()}
+                </Text>
+              )}
+            </View>
           </View>
-        </View>
+        )}
       </Modal>
 
       {/* ─── BOTTOM SHEET FOR "UPLOAD OTHER" FILE TYPE ─── */}
@@ -534,7 +565,7 @@ export default function WorkOrderAttachmentsTab({
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 12,
-    paddingTop: 12,
+    paddingTop: 10,
     paddingBottom: 40,
     gap: 12,
   },
