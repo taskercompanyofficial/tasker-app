@@ -21,6 +21,7 @@ let persistedUploadData: UploadData | null = null;
 interface UseFileUploadReturn {
   fileTypes: FileType[];
   uploading: boolean;
+  uploadingFileTypeId: number | null;
   processing: boolean;
   showFileTypeSheet: boolean;
   showSourceSheet: boolean;
@@ -55,6 +56,7 @@ export function useFileUpload({
 }: UseFileUploadOptions): UseFileUploadReturn {
   const [fileTypes, setFileTypes] = useState<FileType[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadingFileTypeId, setUploadingFileTypeId] = useState<number | null>(null);
   const [processing, setProcessing] = useState(false);
   const [showFileTypeSheet, setShowFileTypeSheet] = useState(false);
   const [showSourceSheet, setShowSourceSheet] = useState(false);
@@ -107,6 +109,7 @@ export function useFileUpload({
   const uploadImage = async (uri: string, fileTypeId: number) => {
     try {
       setUploading(true);
+      setUploadingFileTypeId(fileTypeId);
 
       let processedUri = uri;
       if (uri.match(/\.(jpg|jpeg|png)$/i) || !uri.includes(".")) {
@@ -146,6 +149,7 @@ export function useFileUpload({
       onError(msg);
     } finally {
       setUploading(false);
+      setUploadingFileTypeId(null);
     }
   };
 
@@ -332,6 +336,7 @@ export function useFileUpload({
       onError("Failed to delete some files");
     } finally {
       setUploading(false);
+      setUploadingFileTypeId(null);
     }
   };
 
@@ -346,6 +351,7 @@ export function useFileUpload({
   return {
     fileTypes,
     uploading,
+    uploadingFileTypeId,
     processing,
     showFileTypeSheet,
     showSourceSheet,

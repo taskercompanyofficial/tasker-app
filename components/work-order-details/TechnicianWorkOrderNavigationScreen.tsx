@@ -48,6 +48,7 @@ import {
   Linking,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -354,6 +355,18 @@ export default function TechnicianWorkOrderNavigationScreen({
       setIsSavingFsDetails(false);
     }
   }, [workOrder.id, fsFormData, onRefresh]);
+
+  const [isPullRefreshing, setIsPullRefreshing] = useState(false);
+  const handlePullToRefresh = useCallback(async () => {
+    try {
+      setIsPullRefreshing(true);
+      if (onRefresh) {
+        await onRefresh();
+      }
+    } finally {
+      setIsPullRefreshing(false);
+    }
+  }, [onRefresh]);
 
   // File Upload hook for Full-Screen In-Progress mode
   const fsFileUpload = useFileUpload({
@@ -1253,6 +1266,14 @@ export default function TechnicianWorkOrderNavigationScreen({
         <ScrollView
           contentContainerStyle={styles.fsScrollContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={Boolean(refreshing || isPullRefreshing)}
+              onRefresh={handlePullToRefresh}
+              colors={["#0F172A"]}
+              tintColor="#0F172A"
+            />
+          }
         >
           {activeFsTab === "details" && (
             <WorkOrderDetailsTab
@@ -1274,6 +1295,7 @@ export default function TechnicianWorkOrderNavigationScreen({
               files={workOrder.files || []}
               fileTypes={fsFileUpload.fileTypes}
               uploading={fsFileUpload.uploading}
+              uploadingFileTypeId={fsFileUpload.uploadingFileTypeId}
               processing={fsFileUpload.processing}
               uploadData={fsFileUpload.uploadData}
               onSelectFileType={fsFileUpload.handleSelectFileType}

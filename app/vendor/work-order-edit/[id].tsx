@@ -241,6 +241,7 @@ export default function VendorWorkOrderEditScreen() {
             files={workOrder.files || []}
             fileTypes={fileUpload.fileTypes}
             uploading={fileUpload.uploading}
+            uploadingFileTypeId={fileUpload.uploadingFileTypeId}
             processing={fileUpload.processing}
             uploadData={fileUpload.uploadData}
             onSelectFileType={fileUpload.handleSelectFileType}

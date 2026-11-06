@@ -25,6 +25,7 @@ interface WorkOrderAttachmentsTabProps {
   files: WorkOrderFile[];
   fileTypes: FileType[];
   uploading: boolean;
+  uploadingFileTypeId?: number | null;
   processing?: boolean;
   uploadData: { fileTypeId: number; imageUri: string } | null;
   onSelectFileType: (fileTypeId: number) => void;
@@ -44,6 +45,7 @@ export default function WorkOrderAttachmentsTab({
   files = [],
   fileTypes = [],
   uploading,
+  uploadingFileTypeId = null,
   processing = false,
   uploadData,
   onSelectFileType,
@@ -65,6 +67,9 @@ export default function WorkOrderAttachmentsTab({
 
   // Pick source sheet for a specific file type
   const [pickingFileType, setPickingFileType] = useState<FileType | null>(null);
+
+  // Local uploading file type tracker
+  const [localUploadingTypeId, setLocalUploadingTypeId] = useState<number | null>(null);
 
   // Bottom sheet for "Upload Other"
   const [showOtherSheet, setShowOtherSheet] = useState(false);
@@ -160,13 +165,14 @@ export default function WorkOrderAttachmentsTab({
     if (!pickingFileType) return;
     const targetType = pickingFileType;
     setPickingFileType(null);
-
-    if (captureAndUploadForType) {
-      await captureAndUploadForType(targetType.id, source);
-      return;
-    }
+    setLocalUploadingTypeId(targetType.id);
 
     try {
+      if (captureAndUploadForType) {
+        await captureAndUploadForType(targetType.id, source);
+        return;
+      }
+
       if (source === "camera") {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== "granted") {
@@ -205,6 +211,8 @@ export default function WorkOrderAttachmentsTab({
     } catch (err: any) {
       console.error("Direct pick & upload error:", err);
       Alert.alert("Upload Error", err.message || "Failed to pick or upload photo");
+    } finally {
+      setLocalUploadingTypeId(null);
     }
   };
 
@@ -223,6 +231,10 @@ export default function WorkOrderAttachmentsTab({
         );
         const isUploaded = Boolean(uploadedFile);
         const sampleUrl = reqType.reference_image_url || reqType.reference_image;
+
+        const isThisUploading =
+          (uploadingFileTypeId !== null && uploadingFileTypeId === reqType.id) ||
+          localUploadingTypeId === reqType.id;
 
         return (
           <View key={reqType.id} style={styles.card}>
@@ -267,10 +279,17 @@ export default function WorkOrderAttachmentsTab({
                   <TouchableOpacity
                     style={styles.replaceBtn}
                     onPress={() => setPickingFileType(reqType)}
+                    disabled={isThisUploading}
                     activeOpacity={0.8}
                   >
-                    <Ionicons name="camera-outline" size={14} color="#0F172A" />
-                    <Text style={styles.replaceBtnText}>Replace Photo</Text>
+                    {isThisUploading ? (
+                      <ActivityIndicator size="small" color="#0F172A" />
+                    ) : (
+                      <>
+                        <Ionicons name="camera-outline" size={14} color="#0F172A" />
+                        <Text style={styles.replaceBtnText}>Replace Photo</Text>
+                      </>
+                    )}
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -297,10 +316,10 @@ export default function WorkOrderAttachmentsTab({
                 <TouchableOpacity
                   style={styles.uploadMainBtn}
                   onPress={() => setPickingFileType(reqType)}
-                  disabled={uploading}
+                  disabled={isThisUploading}
                   activeOpacity={0.8}
                 >
-                  {uploading ? (
+                  {isThisUploading ? (
                     <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
                     <>

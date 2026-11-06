@@ -9,9 +9,14 @@ import {
   VENDOR_WORK_ORDER_DETAILS_URL,
   VENDOR_STAFF_WORK_ORDER_DETAILS_URL,
   VENDOR_STAFF_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL,
+  VENDOR_CLAIM_JOB_POOL_URL,
 } from "@/lib/api-endpoints";
 import axios from "@/lib/axios.config";
 import { useAuthStore } from "@/context/auth-store";
+import {
+  clearVendorActiveWorkOrderTracking,
+  setVendorActiveWorkOrderTracking,
+} from "@/lib/vendorBackgroundLocation";
 import { WorkOrder } from "@/types/work-order";
 import { VendorStaff } from "@/types/user";
 import * as Location from "expo-location";
@@ -35,19 +40,19 @@ interface UseWorkOrderReturn {
   accepting: boolean;
   rejecting: boolean;
   updatingStatus: boolean;
-  
+
   // Computed values
   isPendingAcceptance: boolean;
   isAccepted: boolean;
   currentStatusSlug: string | undefined;
   currentSubStatusSlug: string | undefined;
-  
+
   // Modal states
   pendingStatusUpdate: PendingStatusUpdate | null;
   modalMessage: string;
   showSuccessModal: boolean;
   showErrorModal: boolean;
-  
+
   // Actions
   onRefresh: () => void;
   handleAccept: () => Promise<void>;
@@ -71,12 +76,12 @@ export function useWorkOrder(id: string): UseWorkOrderReturn {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [approvedStaff, setApprovedStaff] = useState<VendorStaff[]>([]);
-  
+
   // Processing states
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  
+
   // Modal states
   const [pendingStatusUpdate, setPendingStatusUpdate] = useState<PendingStatusUpdate | null>(null);
   const [modalMessage, setModalMessage] = useState("");
@@ -84,35 +89,53 @@ export function useWorkOrder(id: string): UseWorkOrderReturn {
   const [showErrorModal, setShowErrorModal] = useState(false);
 
   // Computed values
-  const isPendingAcceptance = workOrder?.accepted_at === null && workOrder?.rejected_at === null && workOrder?.cancelled_at === null;
-  const isAccepted = workOrder?.accepted_at !== null && workOrder?.completed_at === null && workOrder?.cancelled_at === null;
+  const isPendingAcceptance =
+    workOrder?.accepted_at === null &&
+    workOrder?.rejected_at === null &&
+    workOrder?.cancelled_at === null;
+  const isAccepted =
+    workOrder?.accepted_at !== null &&
+    workOrder?.completed_at === null &&
+    workOrder?.cancelled_at === null;
   const currentStatusSlug = workOrder?.status?.slug;
   const currentSubStatusSlug = workOrder?.sub_status?.slug;
 
-  // Fetch work order details — use correct endpoint per role
-  const fetchWorkOrderDetails = useCallback(async () => {
+  // Fetch work order details — only set full-screen loading on initial mount
+  const fetchWorkOrderDetails = useCallback(async (isSilent = false) => {
     try {
-      if (!refreshing) setLoading(true);
+      setWorkOrder((current) => {
+        if (!current && !isSilent) {
+          setLoading(true);
+        }
+        return current;
+      });
       const url = isVendorStaff
         ? VENDOR_STAFF_WORK_ORDER_DETAILS_URL(Number(id))
         : VENDOR_WORK_ORDER_DETAILS_URL(Number(id));
       const response = await axios.get(url);
       setWorkOrder(response.data.data);
-    } catch (error) {
-      setModalMessage("Failed to load job details");
-      setShowErrorModal(true);
+    } catch {
+      setWorkOrder((current) => {
+        if (!current) {
+          setModalMessage("Failed to load job details");
+          setShowErrorModal(true);
+        }
+        return current;
+      });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [id, refreshing, isVendorStaff]);
+  }, [id, isVendorStaff]);
 
   const fetchApprovedStaff = useCallback(async () => {
     // Vendor-staff cannot manage staff — skip this fetch entirely
     if (isVendorStaff) return;
     try {
       const response = await axios.get(VENDOR_STAFF_URL);
-      const approved = response.data.data.filter((s: VendorStaff) => s.status === "approved");
+      const approved = response.data.data.filter(
+        (s: VendorStaff) => s.status === "approved",
+      );
       setApprovedStaff(approved);
     } catch (error) {
       console.error("Failed to fetch staff:", error);
@@ -120,119 +143,175 @@ export function useWorkOrder(id: string): UseWorkOrderReturn {
   }, [isVendorStaff]);
 
   useEffect(() => {
-    if (id) {
-      fetchWorkOrderDetails();
-      fetchApprovedStaff();
-    }
+    if (!id) return;
+    const timer = setTimeout(() => {
+      void fetchWorkOrderDetails(false);
+      void fetchApprovedStaff();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [id, fetchWorkOrderDetails, fetchApprovedStaff]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchWorkOrderDetails();
+    void fetchWorkOrderDetails(true);
   }, [fetchWorkOrderDetails]);
 
-  // Accept work order
+  // Accept work order -> Elevate existing online location tracking session to active_work_order profile
   const handleAccept = useCallback(async () => {
     try {
       setAccepting(true);
-      await axios.post(VENDOR_ACCEPT_WORK_ORDER_URL(Number(id)));
-      setModalMessage("Job accepted successfully");
+      const isJobPoolOrder =
+        workOrder?.sub_status?.slug === "in-job-pool" ||
+        (workOrder as any)?.is_in_job_pool ||
+        !workOrder?.assigned_vendor_id;
+
+      if (isJobPoolOrder) {
+        await axios.post(
+          VENDOR_CLAIM_JOB_POOL_URL(
+            Number(id),
+            isVendorStaff ? "vendor_staff" : "vendor",
+          ),
+        );
+        setModalMessage("Job claimed successfully! Moved to your active jobs.");
+      } else {
+        await axios.post(VENDOR_ACCEPT_WORK_ORDER_URL(Number(id)));
+        setModalMessage("Job accepted successfully");
+      }
+
+      await setVendorActiveWorkOrderTracking(
+        id,
+        workOrder?.work_order_number || String(id),
+        workOrder?.customer?.name,
+      );
       setShowSuccessModal(true);
-      fetchWorkOrderDetails();
-    } catch (error: any) {
-      setModalMessage(error.response?.data?.message || "Failed to accept job");
+      void fetchWorkOrderDetails();
+    } catch (error: unknown) {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message || "Failed to accept job";
+      setModalMessage(message);
       setShowErrorModal(true);
     } finally {
       setAccepting(false);
     }
-  }, [id, fetchWorkOrderDetails]);
+  }, [id, workOrder, isVendorStaff, fetchWorkOrderDetails]);
 
-  // Reject work order
-  const handleReject = useCallback(async (reason: string) => {
-    if (!reason.trim()) {
-      setModalMessage("Please provide a reason for rejection");
-      setShowErrorModal(true);
-      return;
-    }
+  // Reject work order -> Return tracking session to battery-conscious availability mode
+  const handleReject = useCallback(
+    async (reason: string) => {
+      if (!reason.trim()) {
+        setModalMessage("Please provide a reason for rejection");
+        setShowErrorModal(true);
+        return;
+      }
 
-    try {
-      setRejecting(true);
-      await axios.post(VENDOR_REJECT_WORK_ORDER_URL(Number(id)), { reason });
-      setModalMessage("Job rejected");
-      setShowSuccessModal(true);
-      setTimeout(() => router.back(), 1500);
-    } catch (error: any) {
-      setModalMessage(error.response?.data?.message || "Failed to reject job");
-      setShowErrorModal(true);
-    } finally {
-      setRejecting(false);
-    }
-  }, [id]);
+      try {
+        setRejecting(true);
+        await axios.post(VENDOR_REJECT_WORK_ORDER_URL(Number(id)), { reason });
+        await clearVendorActiveWorkOrderTracking();
+        setModalMessage("Job rejected");
+        setShowSuccessModal(true);
+        setTimeout(() => router.back(), 1500);
+      } catch (error: unknown) {
+        const message =
+          (error as { response?: { data?: { message?: string } } })?.response
+            ?.data?.message || "Failed to reject job";
+        setModalMessage(message);
+        setShowErrorModal(true);
+      } finally {
+        setRejecting(false);
+      }
+    },
+    [id],
+  );
 
-  // Cancel work order
-  const handleCancel = useCallback(async (reason: string) => {
-    if (!reason.trim()) {
-      setModalMessage("Please provide a reason for cancellation");
-      setShowErrorModal(true);
-      return;
-    }
+  // Cancel work order -> Return tracking session to battery-conscious availability mode
+  const handleCancel = useCallback(
+    async (reason: string) => {
+      if (!reason.trim()) {
+        setModalMessage("Please provide a reason for cancellation");
+        setShowErrorModal(true);
+        return;
+      }
 
-    try {
-      setRejecting(true);
-      await axios.post(VENDOR_CANCEL_WORK_ORDER_URL(Number(id)), { reason });
-      setModalMessage("Job cancelled");
-      setShowSuccessModal(true);
-      setTimeout(() => router.back(), 1500);
-    } catch (error: any) {
-      setModalMessage(error.response?.data?.message || "Failed to cancel job");
-      setShowErrorModal(true);
-    } finally {
-      setRejecting(false);
-    }
-  }, [id]);
+      try {
+        setRejecting(true);
+        await axios.post(VENDOR_CANCEL_WORK_ORDER_URL(Number(id)), { reason });
+        await clearVendorActiveWorkOrderTracking();
+        setModalMessage("Job cancelled");
+        setShowSuccessModal(true);
+        setTimeout(() => router.back(), 1500);
+      } catch (error: unknown) {
+        const message =
+          (error as { response?: { data?: { message?: string } } })?.response
+            ?.data?.message || "Failed to cancel job";
+        setModalMessage(message);
+        setShowErrorModal(true);
+      } finally {
+        setRejecting(false);
+      }
+    },
+    [id],
+  );
 
   // Schedule work order
-  const handleSchedule = useCallback(async (date: string, time: string, remarks: string) => {
-    try {
-      setUpdatingStatus(true);
-      await axios.post(VENDOR_SCHEDULE_WORK_ORDER_URL(Number(id)), {
-        scheduled_date: date,
-        scheduled_time: time,
-        remarks,
-      });
-      setModalMessage("Job scheduled successfully");
-      setShowSuccessModal(true);
-      fetchWorkOrderDetails();
-    } catch (error: any) {
-      setModalMessage(error.response?.data?.message || "Failed to schedule job");
-      setShowErrorModal(true);
-    } finally {
-      setUpdatingStatus(false);
-    }
-  }, [id, fetchWorkOrderDetails]);
-  
+  const handleSchedule = useCallback(
+    async (date: string, time: string, remarks: string) => {
+      try {
+        setUpdatingStatus(true);
+        await axios.post(VENDOR_SCHEDULE_WORK_ORDER_URL(Number(id)), {
+          scheduled_date: date,
+          scheduled_time: time,
+          remarks,
+        });
+        setModalMessage("Job scheduled successfully");
+        setShowSuccessModal(true);
+        void fetchWorkOrderDetails();
+      } catch (error: unknown) {
+        const message =
+          (error as { response?: { data?: { message?: string } } })?.response
+            ?.data?.message || "Failed to schedule job";
+        setModalMessage(message);
+        setShowErrorModal(true);
+      } finally {
+        setUpdatingStatus(false);
+      }
+    },
+    [id, fetchWorkOrderDetails],
+  );
+
   // Assign staff to work order
-  const handleAssignStaff = useCallback(async (staffId: number) => {
-    try {
-      setUpdatingStatus(true);
-      await axios.post(VENDOR_ASSIGN_STAFF_URL(Number(id)), {
-        vendor_staff_id: staffId,
-      });
-      setModalMessage("Staff assigned successfully");
-      setShowSuccessModal(true);
-      fetchWorkOrderDetails();
-    } catch (error: any) {
-      setModalMessage(error.response?.data?.message || "Failed to assign staff");
-      setShowErrorModal(true);
-    } finally {
-      setUpdatingStatus(false);
-    }
-  }, [id, fetchWorkOrderDetails]);
+  const handleAssignStaff = useCallback(
+    async (staffId: number) => {
+      try {
+        setUpdatingStatus(true);
+        await axios.post(VENDOR_ASSIGN_STAFF_URL(Number(id)), {
+          vendor_staff_id: staffId,
+        });
+        setModalMessage("Staff assigned successfully");
+        setShowSuccessModal(true);
+        void fetchWorkOrderDetails();
+      } catch (error: unknown) {
+        const message =
+          (error as { response?: { data?: { message?: string } } })?.response
+            ?.data?.message || "Failed to assign staff";
+        setModalMessage(message);
+        setShowErrorModal(true);
+      } finally {
+        setUpdatingStatus(false);
+      }
+    },
+    [id, fetchWorkOrderDetails],
+  );
 
   // Get current location helper
   const getCurrentLocation = async () => {
-    let locationData: { latitude?: number; longitude?: number; address?: string } = {};
-    
+    const locationData: {
+      latitude?: number;
+      longitude?: number;
+      address?: string;
+    } = {};
+
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === "granted") {
@@ -251,54 +330,78 @@ export function useWorkOrder(id: string): UseWorkOrderReturn {
 
           if (address) {
             locationData.address = [
-              address.name, address.street, address.district,
-              address.city, address.region, address.country,
-            ].filter(Boolean).join(", ");
+              address.name,
+              address.street,
+              address.district,
+              address.city,
+              address.region,
+              address.country,
+            ]
+              .filter(Boolean)
+              .join(", ");
           }
-        } catch (geocodeError) {
+        } catch {
           // Geocoding failed
         }
       }
-    } catch (locationError) {
+    } catch {
       // Location permission denied or error
     }
-    
+
     return locationData;
   };
 
-  // Update status
-  const handleUpdateStatus = useCallback(async (remarks: string) => {
-    if (!pendingStatusUpdate) return;
+  // Update status (when work order is completed/cancelled, return tracking to availability mode without stopping online tracking)
+  const handleUpdateStatus = useCallback(
+    async (remarks: string) => {
+      if (!pendingStatusUpdate) return;
 
-    try {
-      setUpdatingStatus(true);
-      const locationData = await getCurrentLocation();
+      try {
+        setUpdatingStatus(true);
+        const locationData = await getCurrentLocation();
 
-      const statusUrl = isVendorStaff
-        ? VENDOR_STAFF_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL(Number(id))
-        : VENDOR_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL(Number(id));
-      await axios.post(statusUrl, {
-        status_slug: pendingStatusUpdate.statusSlug,
-        sub_status_slug: pendingStatusUpdate.subStatusSlug,
-        remarks,
-        ...locationData,
-      });
+        const statusUrl = isVendorStaff
+          ? VENDOR_STAFF_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL(Number(id))
+          : VENDOR_UPDATE_WORK_ORDER_STATUS_BY_SLUG_URL(Number(id));
+        await axios.post(statusUrl, {
+          status_slug: pendingStatusUpdate.statusSlug,
+          sub_status_slug: pendingStatusUpdate.subStatusSlug,
+          remarks,
+          ...locationData,
+        });
 
-      setModalMessage(`Status updated to ${pendingStatusUpdate.statusName}`);
-      setShowSuccessModal(true);
-      fetchWorkOrderDetails();
-    } catch (error: any) {
-      setModalMessage(error.response?.data?.message || "Failed to update status");
-      setShowErrorModal(true);
-    } finally {
-      setUpdatingStatus(false);
-      setPendingStatusUpdate(null);
-    }
-  }, [id, pendingStatusUpdate, fetchWorkOrderDetails]);
+        const slug = pendingStatusUpdate.statusSlug.toLowerCase();
+        if (
+          slug === "completed" ||
+          slug === "cancelled" ||
+          slug === "closed"
+        ) {
+          await clearVendorActiveWorkOrderTracking();
+        }
 
-  const showStatusUpdateModal = useCallback((statusSlug: string, subStatusSlug: string, statusName: string) => {
-    setPendingStatusUpdate({ statusSlug, subStatusSlug, statusName });
-  }, []);
+        setModalMessage(`Status updated to ${pendingStatusUpdate.statusName}`);
+        setShowSuccessModal(true);
+        void fetchWorkOrderDetails();
+      } catch (error: unknown) {
+        const message =
+          (error as { response?: { data?: { message?: string } } })?.response
+            ?.data?.message || "Failed to update status";
+        setModalMessage(message);
+        setShowErrorModal(true);
+      } finally {
+        setUpdatingStatus(false);
+        setPendingStatusUpdate(null);
+      }
+    },
+    [id, isVendorStaff, pendingStatusUpdate, fetchWorkOrderDetails],
+  );
+
+  const showStatusUpdateModal = useCallback(
+    (statusSlug: string, subStatusSlug: string, statusName: string) => {
+      setPendingStatusUpdate({ statusSlug, subStatusSlug, statusName });
+    },
+    [],
+  );
 
   const clearStatusUpdate = useCallback(() => {
     setPendingStatusUpdate(null);
