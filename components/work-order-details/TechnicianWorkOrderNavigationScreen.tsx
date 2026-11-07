@@ -1101,9 +1101,16 @@ export default function TechnicianWorkOrderNavigationScreen({
     });
 
   const handleConfirmAccept = useCallback(async () => {
-    await onAccept();
-    setHasAcceptedInSession(true);
-  }, [onAccept]);
+    try {
+      await onAccept();
+      setHasAcceptedInSession(true);
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (e) {
+      console.warn("Accept or claim failed:", e);
+    }
+  }, [onAccept, onRefresh]);
 
   const fullAddress = [
     workOrder.address?.address_line_1,

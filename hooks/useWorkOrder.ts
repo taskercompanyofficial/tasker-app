@@ -169,7 +169,7 @@ export function useWorkOrder(id: string): UseWorkOrderReturn {
         await axios.post(
           VENDOR_CLAIM_JOB_POOL_URL(
             Number(id),
-            isVendorStaff ? "vendor_staff" : "vendor",
+            isVendorStaff ? "vendor-staff" : "vendor",
           ),
         );
         setModalMessage("Job claimed successfully! Moved to your active jobs.");
@@ -184,13 +184,14 @@ export function useWorkOrder(id: string): UseWorkOrderReturn {
         workOrder?.customer?.name,
       );
       setShowSuccessModal(true);
-      void fetchWorkOrderDetails();
+      await fetchWorkOrderDetails(true);
     } catch (error: unknown) {
       const message =
         (error as { response?: { data?: { message?: string } } })?.response
           ?.data?.message || "Failed to accept job";
       setModalMessage(message);
       setShowErrorModal(true);
+      throw error;
     } finally {
       setAccepting(false);
     }
