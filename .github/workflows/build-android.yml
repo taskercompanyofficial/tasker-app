@@ -33,7 +33,6 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '17'
-          cache: 'gradle'
 
       - name: Install npm dependencies
         run: npm ci
@@ -46,6 +45,9 @@ jobs:
           GOOGLE_MAPS_ANDROID_API_KEY=AIzaSyCIVVHDThwQ_aCBr_EAw_LpmA7U6vd4UUo
           GOOGLE_MAPS_IOS_API_KEY=AIzaSyCIVVHDThwQ_aCBr_EAw_LpmA7U6vd4UUo
           EOF
+
+      - name: Expo Prebuild (Generate Android native project)
+        run: npx expo prebuild --platform android --clean --no-install
 
       - name: Make Gradle executable
         run: chmod +x android/gradlew
