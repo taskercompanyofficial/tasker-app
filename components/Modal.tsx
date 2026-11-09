@@ -11,6 +11,8 @@ interface ModalAction {
   text: string;
   onPress: () => void;
   variant?: "primary" | "secondary" | "outline" | "ghost";
+  loading?: boolean;
+  disabled?: boolean;
 }
 
 interface ModalProps {
@@ -115,6 +117,8 @@ const Modal: React.FC<ModalProps> = ({
                   onPress={action.onPress}
                   variant={action.variant || "primary"}
                   size="medium"
+                  loading={action.loading}
+                  disabled={action.disabled}
                   fullWidth
                 />
               </View>

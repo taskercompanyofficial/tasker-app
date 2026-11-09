@@ -639,10 +639,11 @@ export default function TechnicianWorkOrderNavigationScreen({
   );
 
   const isAlreadyAccepted = Boolean(
-    isAccepted ||
-      workOrder.accepted_at ||
-      (workOrder.status?.slug &&
-        !["pending", "allocated", "offered"].includes(workOrder.status.slug)),
+    workOrder.assigned_vendor_id &&
+      (isAccepted ||
+        workOrder.accepted_at ||
+        (workOrder.status?.slug &&
+          !["pending", "allocated", "offered"].includes(workOrder.status.slug))),
   );
   const isPoolJob = Boolean(
     workOrder.sub_status?.slug === "in-job-pool" ||
@@ -1104,13 +1105,40 @@ export default function TechnicianWorkOrderNavigationScreen({
     try {
       await onAccept();
       setHasAcceptedInSession(true);
+      Toast.show({
+        type: "success",
+        text1: isPoolJob ? "⚡ Job Claimed Successfully!" : "Job Accepted",
+        text2: isPoolJob
+          ? "This work order has been added to your active jobs."
+          : "Work order accepted.",
+      });
       if (onRefresh) {
         onRefresh();
       }
-    } catch (e) {
+      if (isPoolJob) {
+        setTimeout(() => {
+          router.replace("/vendor/(tabs)/jobs?status=active" as any);
+        }, 1200);
+      }
+    } catch (e: any) {
       console.warn("Accept or claim failed:", e);
+      const msg =
+        e?.response?.data?.message ||
+        e?.message ||
+        (isPoolJob
+          ? "This job may have already been claimed or capacity limit reached."
+          : "Could not accept work order. Please try again.");
+      Alert.alert(isPoolJob ? "Claim Unsuccessful" : "Accept Failed", msg);
+      Toast.show({
+        type: "error",
+        text1: isPoolJob ? "Claim Failed" : "Accept Failed",
+        text2: msg,
+      });
+      if (onRefresh) {
+        onRefresh();
+      }
     }
-  }, [onAccept, onRefresh]);
+  }, [onAccept, onRefresh, isPoolJob]);
 
   const fullAddress = [
     workOrder.address?.address_line_1,
@@ -2094,14 +2122,52 @@ export default function TechnicianWorkOrderNavigationScreen({
             text: "Cancel",
             onPress: () => setShowAcceptModal(false),
             variant: "outline",
+            disabled: accepting,
           },
           {
             text: isPoolJob ? "⚡ Claim Now" : "Accept",
             onPress: handleConfirmAccept,
             variant: "primary",
+            loading: accepting,
+            disabled: accepting,
           },
         ]}
         onClose={() => setShowAcceptModal(false)}
+      />
+
+      <Modal
+        visible={showSuccessModal}
+        type="success"
+        title="Success"
+        message={modalMessage}
+        actions={[
+          {
+            text: "OK",
+            onPress: () => {
+              setShowSuccessModal(false);
+              if (isPoolJob) {
+                router.replace("/vendor/(tabs)/jobs?status=active" as any);
+              }
+            },
+            variant: "primary",
+          },
+        ]}
+        onClose={() => setShowSuccessModal(false)}
+      />
+
+      <Modal
+        visible={showErrorModal}
+        type="error"
+        title="Notice"
+        message={modalMessage}
+        actions={[
+          {
+            text: "OK",
+            onPress: () => setShowErrorModal(false),
+            variant: "primary",
+          },
+        ]}
+        onClose={() => setShowErrorModal(false)}
       />
     </View>
   );
